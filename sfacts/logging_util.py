@@ -3,6 +3,7 @@ from datetime import datetime
 import sys
 
 
-def info(*msg):
+def info(*msg, quiet=False):
     now = datetime.now()
-    print(f'[{now}]', *msg, file=sys.stderr, flush=True)
+    if not quiet:
+        print(f'[{now}]', *msg, file=sys.stderr, flush=True)

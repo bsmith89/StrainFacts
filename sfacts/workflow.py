@@ -9,6 +9,7 @@ from sfacts.estimation import (
 from sfacts.genotype import mask_missing_genotype
 from sfacts.evaluation import match_genotypes, sample_mean_masked_genotype_entropy, community_accuracy_test
 import time
+from sfacts.logging_util import info
 
 def fit_to_data(
     y,
@@ -19,10 +20,13 @@ def fit_to_data(
     postclust=True,
     postclust_kwargs=None,
     seed=1,
+    quiet=False
 ):
     n, g = y.shape
+    info(f"Setting RNG seed to {seed}.", quiet=quiet)
     pyro.util.set_rng_seed(seed)
     if preclust:
+        info(f"Preclustering {n} samples based on {g} positions.", quiet=quiet)
         assert preclust_kwargs is not None
         gamma_init, pi_init = initialize_parameters_by_clustering_samples(
             y,
@@ -30,22 +34,25 @@ def fit_to_data(
             **preclust_kwargs
         )
         initialize_params=dict(gamma=gamma_init, pi=pi_init)
-        s = gamma_init.shape[0]
+        s_fit = gamma_init.shape[0]
+        info(f"Estimated {s_fit} strains from {n} samples.", quiet=quiet)
     else:
         initialize_params = None
-        s = fit_kwargs.pop('s')
+        s_fit = fit_kwargs.pop('s')
 
+    info(f"Optimizing model parameters.", quiet=quiet)
     fit, history = estimate_parameters(
         model,
         data=dict(y=y, m=m),
         n=n,
         g=g,
-        s=s,
+        s=s_fit,
         initialize_params=initialize_params,
         **fit_kwargs,
     )
     
     if postclust:
+        info(f"Dereplicating highly similar strains.", quiet=quiet)
         merge_gamma, merge_pi, merge_delta = merge_similar_genotypes(
             fit['gamma'],
             fit['pi'],
@@ -56,6 +63,8 @@ def fit_to_data(
         mrg['gamma'] = merge_gamma
         mrg['pi'] = merge_pi
         mrg['delta'] = merge_delta
+        s_mrg = mrg['gamma'].shape[0]
+        info(f"Original {s_fit} strains merged into {s_mrg} output strains.", quiet=quiet)
     else:
         mrg = fit
         
@@ -74,9 +83,11 @@ def simulate_fit_and_evaluate(
     preclust_kwargs=None,
     postclust=True,
     postclust_kwargs=None,
-    return_raw=False,
+    quiet=False,
 ):
+    info(f"Setting RNG seed to {seed}.", quiet=quiet)
     pyro.util.set_rng_seed(seed)
+    info(f"Simulating data from model.", quiet=quiet)
     sim = simulate(
         condition_model(
             model,
@@ -87,6 +98,7 @@ def simulate_fit_and_evaluate(
         )
     )
     
+    info(f"Starting runtime clock.", quiet=quiet)
     start_time = time.time()
     mrg, fit, history = fit_to_data(
         sim['y'][:n_fit, :g_fit],
@@ -97,9 +109,12 @@ def simulate_fit_and_evaluate(
         postclust=postclust,
         postclust_kwargs=postclust_kwargs,
         seed=seed,
+        quiet=quiet,
     )
     end_time = time.time()
+    info(f"Stopping runtime clock.", quiet=quiet)
     
+    info(f"Calculating statistics.", quiet=quiet)
     s_mrg = mrg['gamma'].shape[0]
     
     sim_gamma_adj = mask_missing_genotype(sim['gamma'][:, :g_fit], sim['delta'][:, :g_fit])

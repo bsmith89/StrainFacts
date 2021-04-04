@@ -5,6 +5,7 @@ import matplotlib as mpl
 from sfacts.genotype import genotype_linkage, prob_to_sign
 from scipy.spatial.distance import squareform
 import pandas as pd
+import numpy as np
 
 def calculate_clustermap_dims(nx, ny, scalex=0.15, scaley=0.02, dwidth=0.2, dheight=1.0):
     mwidth = nx * scalex
