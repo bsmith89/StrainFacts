@@ -38,7 +38,7 @@ def plot_genotype(gamma, linkage_kw=None, **kwargs):
         yticklabels=0,
     )
     kw.update(kwargs)
-    sns.clustermap(prob_to_sign(gamma_t), **kw)
+    return sns.clustermap(prob_to_sign(gamma_t), **kw)
     
 def plot_missing(delta, **kwargs):
     delta_t = delta.T
@@ -51,7 +51,7 @@ def plot_missing(delta, **kwargs):
         vmin=0, vmax=1, dendrogram_ratio=dendrogram_ratio, figsize=(fwidth, fheight), xticklabels=1, yticklabels=0,
     )
     kw.update(kwargs)
-    sns.clustermap(delta_t, **kw)
+    return sns.clustermap(delta_t, **kw)
     
 def plot_community(pi, **kwargs):
     ny, nx = pi.shape
@@ -63,7 +63,7 @@ def plot_community(pi, **kwargs):
         metric='cosine', vmin=0, vmax=1, dendrogram_ratio=dendrogram_ratio, figsize=(fwidth, fheight), xticklabels=1,
     )
     kw.update(kwargs)
-    sns.clustermap(pi, **kw)
+    return sns.clustermap(pi, **kw)
     
 def plot_genotype_similarity(gamma, linkage_kw=None, **kwargs):
     if linkage_kw is None:
@@ -80,7 +80,7 @@ def plot_genotype_similarity(gamma, linkage_kw=None, **kwargs):
         vmin=0, vmax=1, dendrogram_ratio=dendrogram_ratio, row_linkage=linkage, col_linkage=linkage, figsize=(fwidth, fheight), xticklabels=1, yticklabels=1,
     )
     kw.update(kwargs)
-    sns.clustermap(1 - dmat, **kw)
+    return sns.clustermap(1 - dmat, **kw)
     
 def plot_genotype_comparison(data=None, **kwargs):
     stacked = pd.concat([
@@ -89,7 +89,7 @@ def plot_genotype_comparison(data=None, **kwargs):
     ])
     kw = dict(xticklabels=1)
     kw.update(kwargs)
-    plot_genotype(stacked, **kw)
+    return plot_genotype(stacked, **kw)
 
 def plot_community_comparison(data=None, **kwargs):
     stacked = pd.concat([
@@ -98,7 +98,7 @@ def plot_community_comparison(data=None, **kwargs):
     ], axis=1)
     kw = dict(xticklabels=1)
     kw.update(kwargs)
-    plot_community(stacked, **kw)
+    return plot_community(stacked, **kw)
 
 def plot_loss_history(trace):
     trace = np.array(trace)

@@ -1,5 +1,6 @@
 
 import pyro
+from sfacts.pandas_util import idxwhere
 from sfacts.metagenotype_model import model, simulate, condition_model
 from sfacts.estimation import (
     initialize_parameters_by_clustering_samples,
@@ -8,7 +9,9 @@ from sfacts.estimation import (
 )
 from sfacts.genotype import mask_missing_genotype
 from sfacts.evaluation import match_genotypes, sample_mean_masked_genotype_entropy, community_accuracy_test
+from sfacts.data import load_input_data, select_informative_positions
 import time
+import numpy as np
 from sfacts.logging_util import info
 
 def fit_to_data(
@@ -64,7 +67,7 @@ def fit_to_data(
         mrg['pi'] = merge_pi
         mrg['delta'] = merge_delta
         s_mrg = mrg['gamma'].shape[0]
-        info(f"Original {s_fit} strains merged into {s_mrg} output strains.", quiet=quiet)
+        info(f"Original {s_fit} strains down to {s_mrg} after dereplication.", quiet=quiet)
     else:
         mrg = fit
         
@@ -78,15 +81,16 @@ def simulate_fit_and_evaluate(
     g_fit,
     sim_kwargs,
     fit_kwargs,
-    seed=1,
+    seed_sim=1,
+    seed_fit=1,
     preclust=True,
     preclust_kwargs=None,
     postclust=True,
     postclust_kwargs=None,
     quiet=False,
 ):
-    info(f"Setting RNG seed to {seed}.", quiet=quiet)
-    pyro.util.set_rng_seed(seed)
+    info(f"Setting RNG seed to {seed_sim}.", quiet=quiet)
+    pyro.util.set_rng_seed(seed_sim)
     info(f"Simulating data from model.", quiet=quiet)
     sim = simulate(
         condition_model(
@@ -108,7 +112,7 @@ def simulate_fit_and_evaluate(
         preclust_kwargs=preclust_kwargs,
         postclust=postclust,
         postclust_kwargs=postclust_kwargs,
-        seed=seed,
+        seed=seed_fit,
         quiet=quiet,
     )
     end_time = time.time()
@@ -142,3 +146,83 @@ def simulate_fit_and_evaluate(
         sim,
         mrg
     )
+
+
+def filter_data(
+    data, 
+    incid_thresh=0.1,
+    cvrg_thresh=0.15,
+):
+    info("Filtering positions.")
+    informative_positions = select_informative_positions(
+        data, incid_thresh
+    )
+    npos_available = len(informative_positions)
+    info(
+        f"Found {npos_available} informative positions with minor "
+        f"allele incidence of >{incid_thresh}"
+    )
+
+    info("Filtering libraries.")
+    suff_cvrg_samples = idxwhere(
+        (
+            (
+                data.sel(position=informative_positions).sum(["allele"]) > 0
+            ).mean("position")
+            > cvrg_thresh
+        ).to_series()
+    )
+    nlibs = len(suff_cvrg_samples)
+    info(
+        f"Found {nlibs} libraries with >{cvrg_thresh:0.1%} "
+        f"of informative positions covered."
+    )
+    return informative_positions, suff_cvrg_samples
+
+def sample_positions(
+    informative_positions,
+    npos=1000,
+    seed=None,
+):
+    if seed is not None:
+        np.random.seed(seed)
+    npos_available = len(informative_positions)
+    _npos = min(npos, npos_available)
+    info(f"Randomly sampling {npos} positions.")
+    position_ss = np.random.choice(
+        informative_positions,
+        size=_npos,
+        replace=False,
+    )
+    return position_ss  
+
+def fit_from_files(
+    inpaths,
+    incid_thresh=0.1,
+    cvrg_thresh=0.15,
+    npos=1000,
+    seed=1,
+    **fit_to_data_kwargs
+):
+    info("Loading input data.")
+    data = load_input_data(inpaths)
+    info(f"Full data shape: {data.sizes}.")
+    info("Filtering input data.")
+    informative_positions, suff_cvrg_samples = filter_data(
+        data, incid_thresh=incid_thresh, cvrg_thresh=cvrg_thresh
+    )
+    info("Sampling input data.")
+    position_ss = sample_positions(informative_positions, npos, seed=seed)
+    info("Constructing input data.")
+    data_fit = data.sel(library_id=suff_cvrg_samples, position=position_ss)
+    m_ss = data_fit.sum("allele")
+    n, g_ss = m_ss.shape
+    y_obs_ss = data_fit.sel(allele="alt")  
+    info("Optimizing model parameters.")
+    mrg_ss, fit_ss, history = fit_to_data(
+        y_obs_ss.values,
+        m_ss.values,
+        seed=seed,
+        **fit_to_data_kwargs,
+    )
+    return mrg_ss, data_fit, history
