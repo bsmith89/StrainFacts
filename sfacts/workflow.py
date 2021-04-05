@@ -197,16 +197,14 @@ def sample_positions(
     )
     return position_ss  
 
-def fit_from_files(
-    inpaths,
+def filter_subsample_and_fit(
+    data,
     incid_thresh=0.1,
     cvrg_thresh=0.15,
     npos=1000,
     seed=1,
     **fit_to_data_kwargs
 ):
-    info("Loading input data.")
-    data = load_input_data(inpaths)
     info(f"Full data shape: {data.sizes}.")
     informative_positions, suff_cvrg_samples = filter_data(
         data, incid_thresh=incid_thresh, cvrg_thresh=cvrg_thresh
