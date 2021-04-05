@@ -38,7 +38,9 @@ def plot_genotype(gamma, linkage_kw=None, **kwargs):
         yticklabels=0,
     )
     kw.update(kwargs)
-    return sns.clustermap(prob_to_sign(gamma_t), **kw)
+    grid = sns.clustermap(prob_to_sign(gamma_t), **kw)
+    grid.cax.set_visible(False)
+    return grid
     
 def plot_missing(delta, **kwargs):
     delta_t = delta.T
@@ -51,7 +53,9 @@ def plot_missing(delta, **kwargs):
         vmin=0, vmax=1, dendrogram_ratio=dendrogram_ratio, figsize=(fwidth, fheight), xticklabels=1, yticklabels=0,
     )
     kw.update(kwargs)
-    return sns.clustermap(delta_t, **kw)
+    grid = sns.clustermap(delta_t, **kw)
+    grid.cax.set_visible(False)
+    return grid
     
 def plot_community(pi, **kwargs):
     ny, nx = pi.shape
@@ -63,7 +67,9 @@ def plot_community(pi, **kwargs):
         metric='cosine', vmin=0, vmax=1, dendrogram_ratio=dendrogram_ratio, figsize=(fwidth, fheight), xticklabels=1,
     )
     kw.update(kwargs)
-    return sns.clustermap(pi, **kw)
+    grid = sns.clustermap(pi, **kw)
+    grid.cax.set_visible(False)
+    return grid
     
 def plot_genotype_similarity(gamma, linkage_kw=None, **kwargs):
     if linkage_kw is None:
@@ -80,7 +86,9 @@ def plot_genotype_similarity(gamma, linkage_kw=None, **kwargs):
         vmin=0, vmax=1, dendrogram_ratio=dendrogram_ratio, row_linkage=linkage, col_linkage=linkage, figsize=(fwidth, fheight), xticklabels=1, yticklabels=1,
     )
     kw.update(kwargs)
-    return sns.clustermap(1 - dmat, **kw)
+    grid = sns.clustermap(1 - dmat, **kw)
+    grid.cax.set_visible(False)
+    return grid
     
 def plot_genotype_comparison(data=None, **kwargs):
     stacked = pd.concat([

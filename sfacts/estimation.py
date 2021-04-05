@@ -18,9 +18,13 @@ from sfacts.logging_util import info
 from sfacts.metagenotype_model import condition_model
 
 def cluster_genotypes(
-    gamma, thresh, progress=False
+    gamma, thresh, progress=False, precomputed_pdist=None
 ):
     
+    if precomputed_pdist is None:
+        compressed_dmat = genotype_pdist(gamma, progress=progress)
+    else:
+        compressed_dmat = precomputed_pdist
 
     clust = pd.Series(
         AgglomerativeClustering(
@@ -29,19 +33,19 @@ def cluster_genotypes(
             linkage="complete",
             distance_threshold=thresh,
         )
-        .fit(squareform(genotype_pdist(gamma, progress=progress)))
+        .fit(squareform(compressed_dmat))
         .labels_
     )
 
-    return clust
+    return clust, compressed_dmat
 
 def initialize_parameters_by_clustering_samples(
-    y, m, thresh, additional_strains_factor=0.5, progress=False,
+    y, m, thresh, additional_strains_factor=0.5, progress=False, precomputed_pdist=None,
 ):
     n, g = y.shape
 
     sample_genotype = (y + 1) / (m + 2)
-    clust = cluster_genotypes(sample_genotype, thresh=thresh, progress=progress)
+    clust, cdmat = cluster_genotypes(sample_genotype, thresh=thresh, progress=progress, precomputed_pdist=precomputed_pdist)
 
     y_total = (
         pd.DataFrame(pd.DataFrame(y))
@@ -76,7 +80,7 @@ def initialize_parameters_by_clustering_samples(
 
     assert (~np.isnan(gamma_init)).all()
 
-    return gamma_init, pi_init
+    return gamma_init, pi_init, cdmat
 
 
 def estimate_parameters(
@@ -146,24 +150,23 @@ def estimate_parameters(
     except KeyboardInterrupt:
         info("Interrupted")
         pass
-    finally:         
-        est = pyro.infer.Predictive(conditioned_model, guide=_guide, num_samples=1)()
-        est = {
-            k: est[k].detach().cpu().numpy().mean(0).squeeze()
-            for k in est.keys()
-        }
+    est = pyro.infer.Predictive(conditioned_model, guide=_guide, num_samples=1)()
+    est = {
+        k: est[k].detach().cpu().numpy().mean(0).squeeze()
+        for k in est.keys()
+    }
     return est, history
 
 
 def merge_similar_genotypes(
-    gamma, pi, thresh, delta=None,
+    gamma, pi, thresh, delta=None, progress=False,
 ):
     if delta is None:
         delta = np.ones_like(gamma)
         
     gamma_adjust = mask_missing_genotype(gamma, delta)
 
-    clust = cluster_genotypes(gamma_adjust, thresh=thresh)
+    clust, dmat = cluster_genotypes(gamma_adjust, thresh=thresh, progress=progress)
     gamma_mean = (
         pd.DataFrame(pd.DataFrame(gamma_adjust))
         .groupby(clust)

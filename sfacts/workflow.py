@@ -31,7 +31,7 @@ def fit_to_data(
     if preclust:
         info(f"Preclustering {n} samples based on {g} positions.", quiet=quiet)
         assert preclust_kwargs is not None
-        gamma_init, pi_init = initialize_parameters_by_clustering_samples(
+        gamma_init, pi_init, cdmat = initialize_parameters_by_clustering_samples(
             y,
             m,
             **preclust_kwargs
@@ -185,6 +185,7 @@ def sample_positions(
     seed=None,
 ):
     if seed is not None:
+        info(f"Setting RNG seed to {seed}.")
         np.random.seed(seed)
     npos_available = len(informative_positions)
     _npos = min(npos, npos_available)
@@ -207,18 +208,15 @@ def fit_from_files(
     info("Loading input data.")
     data = load_input_data(inpaths)
     info(f"Full data shape: {data.sizes}.")
-    info("Filtering input data.")
     informative_positions, suff_cvrg_samples = filter_data(
         data, incid_thresh=incid_thresh, cvrg_thresh=cvrg_thresh
     )
-    info("Sampling input data.")
     position_ss = sample_positions(informative_positions, npos, seed=seed)
     info("Constructing input data.")
     data_fit = data.sel(library_id=suff_cvrg_samples, position=position_ss)
     m_ss = data_fit.sum("allele")
     n, g_ss = m_ss.shape
     y_obs_ss = data_fit.sel(allele="alt")  
-    info("Optimizing model parameters.")
     mrg_ss, fit_ss, history = fit_to_data(
         y_obs_ss.values,
         m_ss.values,

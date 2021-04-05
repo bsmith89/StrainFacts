@@ -8,18 +8,6 @@ import pandas as pd
 import sfacts
 
 
-def load_input_data(allpaths):
-    data = []
-    for path in allpaths:
-        info(path)
-        d = xr.open_dataarray(path).squeeze()
-        info(f"Shape: {d.sizes}.")
-        data.append(d)
-    info("Concatenating data from {} files.".format(len(data)))
-    data = xr.concat(data, "library_id", fill_value=0)
-    return data
-
-
 def parse_args(argv):
     p = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
