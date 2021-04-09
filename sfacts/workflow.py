@@ -23,8 +23,12 @@ def fit_to_data(
     postclust=True,
     postclust_kwargs=None,
     seed=1,
-    quiet=False
+    quiet=False,
+    additional_conditioning_data=None
 ):
+    if additional_conditioning_data is None:
+        additional_conditioning_data = {}
+
     n, g = y.shape
     info(f"Setting RNG seed to {seed}.", quiet=quiet)
     pyro.util.set_rng_seed(seed)
@@ -46,7 +50,7 @@ def fit_to_data(
     info(f"Optimizing model parameters.", quiet=quiet)
     fit, history = estimate_parameters(
         model,
-        data=dict(y=y, m=m),
+        data=dict(y=y, m=m, **additional_conditioning_data),
         n=n,
         g=g,
         s=s_fit,
@@ -222,3 +226,84 @@ def filter_subsample_and_fit(
         **fit_to_data_kwargs,
     )
     return mrg_ss, data_fit, history
+    
+
+def filter_subsample_fit_and_refit_genotypes(
+    data,
+    fit_kwargs,
+    incid_thresh=0.1,
+    cvrg_thresh=0.15,
+    npos=1000,
+    seed=1,
+    **kwargs
+):
+    info(f"Full data shape: {data.sizes}.")
+    informative_positions, suff_cvrg_samples = filter_data(
+        data, incid_thresh=incid_thresh, cvrg_thresh=cvrg_thresh
+    )
+    position_ss = sample_positions(informative_positions, npos, seed=seed)
+    info("Constructing input data.")
+    data_filt = data.sel(library_id=suff_cvrg_samples)
+    data_ss = data_filt.sel(position=position_ss)
+    m_ss = data_ss.sum("allele")
+    n, g_ss = m_ss.shape
+    y_obs_ss = data_ss.sel(allele="alt")
+    mrg_ss, fit_ss, history = fit_to_data(
+        y_obs_ss.values,
+        m_ss.values,
+        seed=seed,
+        fit_kwargs=fit_kwargs,
+        **kwargs,
+    )
+    
+    info(f"Refitting genotypes at all positions")
+    s = mrg_ss['gamma'].shape[0]
+    refit_kwargs = fit_kwargs.copy()
+    if s in refit_kwargs:
+        del refit_kwargs['s']
+    n = len(suff_cvrg_samples)
+    g_total = len(informative_positions)
+    fixed = mrg_ss.copy()
+    for k in ['gamma', 'delta', 'nu', 'm', 'p_noerr', 'p', 'y', 'rho']:
+        del fixed[k]
+        
+    y = data_filt.sel(allele="alt").values
+    m = data_filt.sum("allele").values
+    out = fixed.copy()
+    gamma_out = []
+    delta_out = []
+    nu_out = []
+    m_out = []
+    p_noerr_out = []
+    p_out = []
+    y_out = []
+    nwindows = g_total // npos + 1
+    for window_i, j_start in enumerate(range(0, g_total, npos)):
+        window_ip1 = window_i + 1
+        info(f"Fitting genotype window {window_ip1} of {nwindows}.")
+        j_stop = min(j_start + g_ss, g_total)
+        refit, history = estimate_parameters(
+            model,
+            data=dict(y=y[:, j_start:j_stop], m=m[:, j_start:j_stop], **fixed),
+            n=n,
+            g=j_stop - j_start,
+            s=s,
+            **refit_kwargs,
+        )
+        gamma_out.append(refit['gamma'])
+        delta_out.append(refit['delta'])
+        nu_out.append(refit['nu'])
+        m_out.append(refit['m'])
+        p_noerr_out.append(refit['p_noerr'])
+        p_out.append(refit['p'])
+        y_out.append(refit['y'])
+        
+    out['gamma'] = np.concatenate(gamma_out, axis=1)
+    out['delta'] = np.concatenate(delta_out, axis=1)
+    out['nu'] = np.concatenate(nu_out, axis=1)
+    out['m'] = np.concatenate(m_out, axis=1)
+    out['p_noerr'] = np.concatenate(p_noerr_out, axis=1)
+    out['p'] = np.concatenate(p_out, axis=1)
+    out['y'] = np.concatenate(y_out, axis=1)
+
+    return out, data_filt, informative_positions, position_ss

@@ -155,6 +155,22 @@ def estimate_parameters(
         k: est[k].detach().cpu().numpy().mean(0).squeeze()
         for k in est.keys()
     }
+    
+    if device.startswith("cuda"):
+#         info(
+#             "CUDA available mem: {}".format(
+#                 torch.cuda.get_device_properties(0).total_memory
+#             ),
+#         )
+#         info("CUDA reserved mem: {}".format(torch.cuda.memory_reserved(0)))
+#         info("CUDA allocated mem: {}".format(torch.cuda.memory_allocated(0)))
+#         info(
+#             "CUDA free mem: {}".format(
+#                 torch.cuda.memory_reserved(0) - torch.cuda.memory_allocated(0)
+#             )
+#         )
+        torch.cuda.empty_cache()
+
     return est, history
 
 

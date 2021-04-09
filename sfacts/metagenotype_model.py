@@ -86,12 +86,12 @@ def model(
     alpha_hyper_mean = pyro.sample('alpha_hyper_mean', dist.LogNormal(loc=torch.log(alpha_hyper_hyper_mean), scale=alpha_hyper_hyper_scale))
     with pyro.plate('sample', n, dim=-1):
         # Community composition
-        pi = pyro.sample('pi', dist.RelaxedOneHotCategorical(temperature=pi_hyper, probs=rho))
+        pi = pyro.sample('pi', dist.Dirichlet(pi_hyper * rho, validate_args=False))
         # Sample coverage
         mu = pyro.sample('mu', dist.LogNormal(loc=torch.log(mu_hyper_mean), scale=mu_hyper_scale))
         # Sequencing error
         epsilon = pyro.sample('epsilon', dist.Beta(epsilon_hyper_alpha, epsilon_hyper_beta)).unsqueeze(-1)
-        alpha = pyro.sample('alpha', dist.LogNormal(loc=torch.log(alpha_hyper_mean, ), scale=alpha_hyper_scale)).unsqueeze(-1)
+        alpha = pyro.sample('alpha', dist.LogNormal(loc=torch.log(alpha_hyper_mean), scale=alpha_hyper_scale)).unsqueeze(-1)
         
     # Depth at each position
     nu = pyro.deterministic("nu", pi @ delta)

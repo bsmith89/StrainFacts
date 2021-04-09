@@ -16,7 +16,7 @@ def calculate_clustermap_dims(nx, ny, scalex=0.15, scaley=0.02, dwidth=0.2, dhei
     return fwidth, fheight, dendrogram_ratio
     
 
-def plot_genotype(gamma, linkage_kw=None, **kwargs):
+def plot_genotype(gamma, linkage_kw=None, scalex=0.15, scaley=0.02, dwidth=0.2, dheight=1.0, **kwargs):
     if linkage_kw is None:
         linkage_kw = {}
     linkage, _ = genotype_linkage(gamma, **linkage_kw)
@@ -24,7 +24,7 @@ def plot_genotype(gamma, linkage_kw=None, **kwargs):
     gamma_t = gamma.T
     ny, nx = gamma_t.shape
     fwidth, fheight, dendrogram_ratio = calculate_clustermap_dims(
-        nx, ny, scalex=0.15, scaley=0.02, dwidth=0.2, dheight=1.0
+        nx, ny, scalex=scalex, scaley=scaley, dwidth=dwidth, dheight=dheight,
     )
     
     kw = dict(
@@ -57,10 +57,10 @@ def plot_missing(delta, **kwargs):
     grid.cax.set_visible(False)
     return grid
     
-def plot_community(pi, **kwargs):
+def plot_community(pi, scalex=0.2, scaley=0.1, dwidth=0.2, dheight=1.0, **kwargs):
     ny, nx = pi.shape
     fwidth, fheight, dendrogram_ratio = calculate_clustermap_dims(
-        nx, ny, scalex=0.2, scaley=0.1, dwidth=0.2, dheight=1.0
+        nx, ny, scalex=scalex, scaley=scaley, dwidth=dwidth, dheight=dheight,
     )
     
     kw = dict(
