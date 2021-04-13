@@ -15,7 +15,7 @@ import torch
 from tqdm import tqdm
 from sfacts.logging_util import info
 
-from sfacts.metagenotype_model import condition_model
+from sfacts.model import condition_model
 
 def cluster_genotypes(
     gamma, thresh, progress=False, precomputed_pdist=None
@@ -90,9 +90,9 @@ def estimate_parameters(
     device='cpu',
     initialize_params=None,
     maxiter=10000,
-    lag=100,
-    lr=1e-0,
-    clip_norm=100,
+    lagA=20,
+    lagB=100,
+    opt=pyro.optim.Adamax({"lr": 1e-2}, {"clip_norm": 100}),
     progress=True,
     **model_kwargs,
 ):
@@ -112,7 +112,6 @@ def estimate_parameters(
             values=all_torch(**initialize_params, dtype=dtype, device=device)
         ),
     )
-    opt = pyro.optim.Adamax({"lr": lr}, {"clip_norm": clip_norm})
     svi = pyro.infer.SVI(
         conditioned_model,
         _guide,
@@ -128,6 +127,7 @@ def estimate_parameters(
             elbo = svi.step()
 
             if np.isnan(elbo):
+                pbar.close()
                 raise RuntimeError("ELBO NaN?")
 
             # Fit tracking
@@ -135,19 +135,23 @@ def estimate_parameters(
 
             # Reporting/Breaking
             if (i % 10 == 0):
-                if i > lag:
+                if i > lagB:
                     delta = history[-2] - history[-1]
-                    delta_lag = (history[-lag] - history[-1]) / lag
-                    if delta_lag <= 0:
+                    delta_lagA = (history[-lagA] - history[-1]) / lagA
+                    delta_lagB = (history[-lagB] - history[-1]) / lagB
+                    if (delta_lagA <= 0) and (delta_lagB <= 0):
                         if progress:
+                            pbar.close()
                             info("Converged")
                         break
                     pbar.set_postfix({
                         'ELBO': history[-1],
                         'delta': delta,
-                        f'lag{lag}': delta_lag,
+                        f'lag{lagA}': delta_lagA,
+                        f'lag{lagB}': delta_lagB,
                     })
     except KeyboardInterrupt:
+        pbar.close()
         info("Interrupted")
         pass
     est = pyro.infer.Predictive(conditioned_model, guide=_guide, num_samples=1)()

@@ -4,13 +4,30 @@ import pyro
 import pyro.distributions as dist
 import torch
 from functools import partial
+from torch.nn.functional import pad as torch_pad
+
+def stickbreaking_betas_to_probs(beta):
+    beta1m_cumprod = (1 - beta).cumprod(-1)
+    return torch_pad(beta, (0, 1), value=1) * torch_pad(beta1m_cumprod, (1, 0), value=1)
 
 
-def NegativeBinomialReparam(mu, r, eps=1e-5):
-    p = torch.clamp(1. / ((r / mu) + 1.), min=eps, max=1. - eps)
+def stickbreaking_betas_to_probs2(beta):
+    """I thought this might be more stable, but it turns out the gradient is NOT more stable."""
+    log_beta1m = torch.log(1 - beta)
+    log_beta1m_cumprod = log_beta1m.cumsum(-1)
+    log_beta_pad = torch_pad(torch.log(beta), (0, 1), value=0)
+    log_beta1m_cumprod_pad = torch_pad(log_beta1m_cumprod, (1, 0), value=0)
+#     beta1m_cumprod = (1 - beta).cumprod(-1)
+#     return torch_pad(beta, (0, 1), value=1) * torch_pad(beta1m_cumprod, (1, 0), value=1)
+    return torch.exp(log_beta_pad + log_beta1m_cumprod_pad)
+
+
+
+def NegativeBinomialReparam(mu, r, eps):
+    p = torch.clamp(1. / ((r / mu) + 1.), eps, 1 - eps)
     return dist.NegativeBinomial(
         total_count=r,
-        probs=p
+        probs=p,
     )
 
 def model(
@@ -29,7 +46,7 @@ def model(
     epsilon_hyper_beta=1.5 / 0.01,
     mu_hyper_mean=1.,
     mu_hyper_scale=1.,
-    m_hyper_r=1.,
+#     m_hyper_r=1.,
     m_eps=1e-5,
     dtype=torch.float32,
     device='cpu',
@@ -47,7 +64,7 @@ def model(
         epsilon_hyper_beta,
         mu_hyper_mean,
         mu_hyper_scale,
-        m_hyper_r,
+#         m_hyper_r,
         m_eps,
     ) = (
         as_torch(x, dtype=dtype, device=device)
@@ -64,12 +81,13 @@ def model(
             epsilon_hyper_beta,
             mu_hyper_mean,
             mu_hyper_scale,
-            m_hyper_r,
+#             m_hyper_r,
             m_eps,
         ]
     )
 
     # Genotypes
+#     delta_hyper_p = pyro.sample('delta_hyper_p', dist.Beta(1., 1.))
     with pyro.plate('position', g, dim=-1):
         with pyro.plate('strain', s, dim=-2):
             gamma = pyro.sample(
@@ -81,21 +99,24 @@ def model(
             )
     
     # Meta-community composition
-    rho = pyro.sample('rho', dist.Dirichlet(rho_hyper * torch.ones(s, dtype=dtype, device=device)))
+    rho_betas = pyro.sample('rho_betas', dist.Beta(1, rho_hyper).expand([s - 1]).to_event())
+    rho = pyro.deterministic('rho', stickbreaking_betas_to_probs(rho_betas))
+#     rho = pyro.sample('rho', dist.Dirichlet(rho_hyper * torch.ones(s, dtype=dtype, device=device)))
 
     alpha_hyper_mean = pyro.sample('alpha_hyper_mean', dist.LogNormal(loc=torch.log(alpha_hyper_hyper_mean), scale=alpha_hyper_hyper_scale))
     with pyro.plate('sample', n, dim=-1):
         # Community composition
         pi = pyro.sample('pi', dist.Dirichlet(pi_hyper * rho, validate_args=False))
-        # Sample coverage
-        mu = pyro.sample('mu', dist.LogNormal(loc=torch.log(mu_hyper_mean), scale=mu_hyper_scale))
         # Sequencing error
         epsilon = pyro.sample('epsilon', dist.Beta(epsilon_hyper_alpha, epsilon_hyper_beta)).unsqueeze(-1)
         alpha = pyro.sample('alpha', dist.LogNormal(loc=torch.log(alpha_hyper_mean), scale=alpha_hyper_scale)).unsqueeze(-1)
+        # Sample coverage
+        mu = pyro.sample('mu', dist.LogNormal(loc=torch.log(mu_hyper_mean), scale=mu_hyper_scale))
         
     # Depth at each position
     nu = pyro.deterministic("nu", pi @ delta)
-    m = pyro.sample('m', NegativeBinomialReparam(nu * mu.reshape((-1,1)), m_hyper_r, m_eps).to_event())
+    m_hyper_r = pyro.sample('m_hyper_r', dist.LogNormal(loc=1, scale=1))
+    m = pyro.sample('m', NegativeBinomialReparam(nu * mu.reshape((-1,1)), m_hyper_r, eps=m_eps).to_event())
 
     # Expected fractions of each allele at each position
     p_noerr = pyro.deterministic('p_noerr', pi @ (gamma * delta) / nu)
@@ -110,7 +131,7 @@ def model(
         dist.BetaBinomial(
             concentration1=alpha * p,
             concentration0=alpha * (1 - p),
-            total_count=m
+            total_count=m,
         ).to_event(),
     )
     

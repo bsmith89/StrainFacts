@@ -29,6 +29,9 @@ def match_genotypes(gammaA, gammaB):
 def _rmse(x, y):
     return np.sqrt(np.square(x - y).mean())
 
+def _rss(x, y):
+    return np.sqrt(np.square(x - y).sum())
+
 def community_accuracy_test(pi_sim, pi_fit, reps=99):
     bc_sim = 1 - pdist(pi_sim, metric='braycurtis')
     bc_fit = 1 - pdist(pi_fit, metric='braycurtis')
@@ -42,3 +45,13 @@ def community_accuracy_test(pi_sim, pi_fit, reps=99):
     null = np.array(null)
     
     return err, null, err / np.mean(null), (np.sort(null) < err).mean()
+
+def metacommunity_composition_rss(pi_sim, pi_fit):
+    mean_sim = pi_sim.mean(0)
+    mean_fit = pi_fit.mean(0)
+    s_sim = mean_sim.shape[0]
+    s_fit = mean_fit.shape[0]
+    s = max(s_sim, s_fit)
+    mean_sim = np.sort(np.pad(mean_sim, pad_width=(0, s - s_sim)))
+    mean_fit = np.sort(np.pad(mean_fit, pad_width=(0, s - s_fit)))
+    return _rss(mean_sim, mean_fit)

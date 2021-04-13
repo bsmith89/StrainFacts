@@ -1,14 +1,19 @@
 
 import pyro
 from sfacts.pandas_util import idxwhere
-from sfacts.metagenotype_model import model, simulate, condition_model
+from sfacts.model import model, simulate, condition_model
 from sfacts.estimation import (
     initialize_parameters_by_clustering_samples,
     estimate_parameters,
     merge_similar_genotypes
 )
 from sfacts.genotype import mask_missing_genotype
-from sfacts.evaluation import match_genotypes, sample_mean_masked_genotype_entropy, community_accuracy_test
+from sfacts.evaluation import (
+    match_genotypes,
+    sample_mean_masked_genotype_entropy,
+    community_accuracy_test,
+    metacommunity_composition_rss,
+)
 from sfacts.data import load_input_data, select_informative_positions
 import time
 import numpy as np
@@ -135,7 +140,7 @@ def simulate_fit_and_evaluate(
         community_accuracy_test(sim['pi'][:n_fit], mrg['pi'])
     )
     
-    strain_count_error = s_mrg - s_sim
+    metacommunity_composition_error = metacommunity_composition_rss(sim['pi'], mrg['pi'])
     
     mean_sample_weighted_genotype_entropy = (
         sample_mean_masked_genotype_entropy(mrg['pi'], mrg['gamma'], mrg['delta']).mean()
@@ -144,7 +149,7 @@ def simulate_fit_and_evaluate(
     return (
         weighted_mean_genotype_error,
         beta_diversity_error_ratio,
-        strain_count_error,
+        metacommunity_composition_error,
         mean_sample_weighted_genotype_entropy,
         runtime,
         sim,

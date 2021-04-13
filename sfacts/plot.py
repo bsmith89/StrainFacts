@@ -42,11 +42,11 @@ def plot_genotype(gamma, linkage_kw=None, scalex=0.15, scaley=0.02, dwidth=0.2, 
     grid.cax.set_visible(False)
     return grid
     
-def plot_missing(delta, **kwargs):
+def plot_missing(delta, scalex=0.15, scaley=0.02, dwidth=0.2, dheight=1.0, **kwargs):
     delta_t = delta.T
     ny, nx = delta_t.shape
     fwidth, fheight, dendrogram_ratio = calculate_clustermap_dims(
-        nx, ny, scalex=0.15, scaley=0.02, dwidth=0.2, dheight=1.0
+        nx, ny, scalex=scalex, scaley=scaley, dwidth=dwidth, dheight=dheight,
     )
     
     kw = dict(
