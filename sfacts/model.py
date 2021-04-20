@@ -85,23 +85,29 @@ def model(
             m_eps,
         ]
     )
+    
+    _zero = as_torch(0, dtype=dtype, device=device).squeeze()
+    _one = as_torch(1, dtype=dtype, device=device).squeeze()
 
     # Genotypes
 #     delta_hyper_p = pyro.sample('delta_hyper_p', dist.Beta(1., 1.))
     with pyro.plate('position', g, dim=-1):
         with pyro.plate('strain', s, dim=-2):
             gamma = pyro.sample(
-                'gamma', dist.RelaxedBernoulli(temperature=gamma_hyper, logits=torch.tensor(0, dtype=dtype, device=device).squeeze())
+                'gamma', dist.RelaxedBernoulli(temperature=gamma_hyper, logits=_zero)
             )
             # Position presence/absence
             delta = pyro.sample(
                 'delta', dist.RelaxedBernoulli(temperature=delta_hyper_temp, probs=delta_hyper_p)
             )
+#             delta = pyro.sample(
+#                 'delta', dist.Beta(delta_hyper_p * delta_hyper_temp, (1 - delta_hyper_p) * delta_hyper_temp)
+#             )
     
     # Meta-community composition
-    rho_betas = pyro.sample('rho_betas', dist.Beta(1, rho_hyper).expand([s - 1]).to_event())
-    rho = pyro.deterministic('rho', stickbreaking_betas_to_probs(rho_betas))
-#     rho = pyro.sample('rho', dist.Dirichlet(rho_hyper * torch.ones(s, dtype=dtype, device=device)))
+#     rho_betas = pyro.sample('rho_betas', dist.Beta(_one, rho_hyper).expand([s - 1]).to_event())
+#     rho = pyro.deterministic('rho', stickbreaking_betas_to_probs(rho_betas))
+    rho = pyro.sample('rho', dist.Dirichlet(rho_hyper * torch.ones(s, dtype=dtype, device=device)))
 
     alpha_hyper_mean = pyro.sample('alpha_hyper_mean', dist.LogNormal(loc=torch.log(alpha_hyper_hyper_mean), scale=alpha_hyper_hyper_scale))
     with pyro.plate('sample', n, dim=-1):
@@ -115,7 +121,7 @@ def model(
         
     # Depth at each position
     nu = pyro.deterministic("nu", pi @ delta)
-    m_hyper_r = pyro.sample('m_hyper_r', dist.LogNormal(loc=1, scale=1))
+    m_hyper_r = pyro.sample('m_hyper_r', dist.LogNormal(loc=_one, scale=_one))
     m = pyro.sample('m', NegativeBinomialReparam(nu * mu.reshape((-1,1)), m_hyper_r, eps=m_eps).to_event())
 
     # Expected fractions of each allele at each position

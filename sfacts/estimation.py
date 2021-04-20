@@ -1,5 +1,6 @@
 
 from sklearn.cluster import AgglomerativeClustering
+from sklearn.decomposition import non_negative_factorization
 from sfacts.genotype import genotype_pdist, mask_missing_genotype
 from sfacts.pyro_util import all_torch
 
@@ -81,6 +82,30 @@ def initialize_parameters_by_clustering_samples(
     assert (~np.isnan(gamma_init)).all()
 
     return gamma_init, pi_init, cdmat
+
+def initialize_parameters_by_nmf(
+    y, m, s, progress=False, solver='mu', alpha=100., l1_ratio=1.0, tol=1e-2, **kwargs
+):    
+    n, g = y.shape
+
+    # Fit to counts of both reference and alternative alleles by stacking them.
+    stacked_metagenotype = np.concatenate([y, m - y], axis=1)
+    pi_unnorm, gamma_unnorm, _ = non_negative_factorization(
+        stacked_metagenotype,
+        n_components=s,
+        solver=solver,
+        verbose=int(progress),
+        alpha=alpha,
+        l1_ratio=l1_ratio,
+        tol=tol,
+        **kwargs
+    )
+    
+    # TODO: Find a more principled way to convert pi_unnorm into pi_init.
+    pi_init = (pi_unnorm + 1) / (pi_unnorm + 1).sum(1, keepdims=True)
+    gamma_init = ((gamma_unnorm[:, :g] + 1) / (gamma_unnorm[:, :g] + gamma_unnorm[:, -g:] + 2))
+
+    return gamma_init, pi_init, None
 
 
 def estimate_parameters(

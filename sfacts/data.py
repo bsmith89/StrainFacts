@@ -13,6 +13,7 @@ def load_input_data(allpaths):
         data.append(d)
     info("Concatenating data from {} files.".format(len(data)))
     data = xr.concat(data, "library_id", fill_value=0)
+    info(f"Finished concatenating data: {data.sizes}")
     return data
 
 def select_informative_positions(data, incid_thresh):

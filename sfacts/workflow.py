@@ -4,6 +4,7 @@ from sfacts.pandas_util import idxwhere
 from sfacts.model import model, simulate, condition_model
 from sfacts.estimation import (
     initialize_parameters_by_clustering_samples,
+    initialize_parameters_by_nmf,
     estimate_parameters,
     merge_similar_genotypes
 )
@@ -23,8 +24,8 @@ def fit_to_data(
     y,
     m,
     fit_kwargs,
-    preclust=True,
-    preclust_kwargs=None,
+    initialize='nmf',
+    initialize_kwargs=None,
     postclust=True,
     postclust_kwargs=None,
     seed=1,
@@ -37,22 +38,38 @@ def fit_to_data(
     n, g = y.shape
     info(f"Setting RNG seed to {seed}.", quiet=quiet)
     pyro.util.set_rng_seed(seed)
-    if preclust:
-        info(f"Preclustering {n} samples based on {g} positions.", quiet=quiet)
-        assert preclust_kwargs is not None
-        gamma_init, pi_init, cdmat = initialize_parameters_by_clustering_samples(
+    if initialize == 'nmf':
+        info(f"Initializing {n} samples and {g} positions using NMF.", quiet=quiet)
+        assert initialize_kwargs is not None
+        gamma_init, pi_init, _ = initialize_parameters_by_nmf(
             y,
             m,
-            **preclust_kwargs
+            random_state=seed,
+            **initialize_kwargs
         )
         initialize_params=dict(gamma=gamma_init, pi=pi_init)
         s_fit = gamma_init.shape[0]
-        info(f"Estimated {s_fit} strains from {n} samples.", quiet=quiet)
-    else:
+        info(f"Initialized {s_fit} strains in {n} samples.", quiet=quiet)
+    elif initialize == 'clust':
+        info(f"Initializing {n} samples and {g} positions using hierarchical clustering.", quiet=quiet)
+        assert initialize_kwargs is not None
+        gamma_init, pi_init, _ = initialize_parameters_by_clustering_samples(
+            y,
+            m,
+            **initialize_kwargs
+        )
+        initialize_params=dict(gamma=gamma_init, pi=pi_init)
+        s_fit = gamma_init.shape[0]
+        info(f"Initialized {s_fit} strains in {n} samples.", quiet=quiet)
+    elif not initialize:
         initialize_params = None
         s_fit = fit_kwargs.pop('s')
+    else:
+        raise NotImplementedError(f"Initializing strategy: '{initialize}' not known.")
 
     info(f"Optimizing model parameters.", quiet=quiet)
+    info(f"Setting RNG seed to {seed}.", quiet=quiet)
+    pyro.util.set_rng_seed(seed)
     fit, history = estimate_parameters(
         model,
         data=dict(y=y, m=m, **additional_conditioning_data),
@@ -79,6 +96,7 @@ def fit_to_data(
         info(f"Original {s_fit} strains down to {s_mrg} after dereplication.", quiet=quiet)
     else:
         mrg = fit
+    info(f"Finished fitting to data.", quiet=quiet)
         
     return mrg, fit, history
 
@@ -145,6 +163,7 @@ def simulate_fit_and_evaluate(
     mean_sample_weighted_genotype_entropy = (
         sample_mean_masked_genotype_entropy(mrg['pi'], mrg['gamma'], mrg['delta']).mean()
     )
+    info(f"Finished calculating statistics.", quiet=quiet)
     
     return (
         weighted_mean_genotype_error,
@@ -204,6 +223,7 @@ def sample_positions(
         size=_npos,
         replace=False,
     )
+    info(f"Finished sampling.")
     return position_ss  
 
 def filter_subsample_and_fit(
@@ -302,6 +322,8 @@ def filter_subsample_fit_and_refit_genotypes(
         p_noerr_out.append(refit['p_noerr'])
         p_out.append(refit['p'])
         y_out.append(refit['y'])
+        info(f"Finished fitting genotype window {window_ip1} of {nwindows}.")
+    info(f"Finished all windows.")
         
     out['gamma'] = np.concatenate(gamma_out, axis=1)
     out['delta'] = np.concatenate(delta_out, axis=1)
@@ -310,5 +332,6 @@ def filter_subsample_fit_and_refit_genotypes(
     out['p_noerr'] = np.concatenate(p_noerr_out, axis=1)
     out['p'] = np.concatenate(p_out, axis=1)
     out['y'] = np.concatenate(y_out, axis=1)
+    info(f"Finished constructing arrays.")
 
     return out, data_filt, informative_positions, position_ss
