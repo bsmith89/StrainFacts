@@ -1,7 +1,24 @@
-
 from sfacts.logging_util import info
 from sfacts.pandas_util import idxwhere
 import xarray as xr
+import numpy as np
+
+
+def construct_metagenotype(counts, sample_index=None, position_index=None, allele_index=None):
+    assert len(counts.shape) == 3
+    n, g, a = counts.shape
+    if sample_index is None:
+        sample_index = np.arange(n)
+    if position_index is None:
+        position_index = np.arange(g)
+    if allele_index is None:
+        if a == 2:
+            allele_index = ['ref', 'alt']
+        else:
+            allele_index = np.arange(a)
+    d = xr.DataArray(counts)
+    return d
+
 
 
 def load_input_data(allpaths):
