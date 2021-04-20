@@ -1,4 +1,3 @@
-
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.decomposition import non_negative_factorization
 from sfacts.genotype import genotype_pdist, mask_missing_genotype
@@ -18,10 +17,9 @@ from sfacts.logging_util import info
 
 from sfacts.model import condition_model
 
-def cluster_genotypes(
-    gamma, thresh, progress=False, precomputed_pdist=None
-):
-    
+
+def cluster_genotypes(gamma, thresh, progress=False, precomputed_pdist=None):
+
     if precomputed_pdist is None:
         compressed_dmat = genotype_pdist(gamma, progress=progress)
     else:
@@ -40,31 +38,29 @@ def cluster_genotypes(
 
     return clust, compressed_dmat
 
+
 def initialize_parameters_by_clustering_samples(
-    y, m, thresh, additional_strains_factor=0.5, progress=False, precomputed_pdist=None,
+    y,
+    m,
+    thresh,
+    additional_strains_factor=0.5,
+    progress=False,
+    precomputed_pdist=None,
 ):
     n, g = y.shape
 
     sample_genotype = (y + 1) / (m + 2)
-    clust, cdmat = cluster_genotypes(sample_genotype, thresh=thresh, progress=progress, precomputed_pdist=precomputed_pdist)
+    clust, cdmat = cluster_genotypes(
+        sample_genotype,
+        thresh=thresh,
+        progress=progress,
+        precomputed_pdist=precomputed_pdist,
+    )
 
-    y_total = (
-        pd.DataFrame(pd.DataFrame(y))
-        .groupby(clust)
-        .sum()
-        .values
-    )
-    m_total = (
-        pd.DataFrame(pd.DataFrame(m))
-        .groupby(clust)
-        .sum()
-        .values
-    )
+    y_total = pd.DataFrame(pd.DataFrame(y)).groupby(clust).sum().values
+    m_total = pd.DataFrame(pd.DataFrame(m)).groupby(clust).sum().values
     clust_genotype = (y_total + 1) / (m_total + 2)
-    additional_haplotypes = int(
-        additional_strains_factor * clust_genotype.shape[0]
-    )
-
+    additional_haplotypes = int(additional_strains_factor * clust_genotype.shape[0])
 
     gamma_init = pd.concat(
         [
@@ -83,9 +79,10 @@ def initialize_parameters_by_clustering_samples(
 
     return gamma_init, pi_init, cdmat
 
+
 def initialize_parameters_by_nmf(
-    y, m, s, progress=False, solver='mu', alpha=100., l1_ratio=1.0, tol=1e-2, **kwargs
-):    
+    y, m, s, progress=False, solver="mu", alpha=100.0, l1_ratio=1.0, tol=1e-2, **kwargs
+):
     n, g = y.shape
 
     # Fit to counts of both reference and alternative alleles by stacking them.
@@ -98,12 +95,14 @@ def initialize_parameters_by_nmf(
         alpha=alpha,
         l1_ratio=l1_ratio,
         tol=tol,
-        **kwargs
+        **kwargs,
     )
-    
+
     # TODO: Find a more principled way to convert pi_unnorm into pi_init.
     pi_init = (pi_unnorm + 1) / (pi_unnorm + 1).sum(1, keepdims=True)
-    gamma_init = ((gamma_unnorm[:, :g] + 1) / (gamma_unnorm[:, :g] + gamma_unnorm[:, -g:] + 2))
+    gamma_init = (gamma_unnorm[:, :g] + 1) / (
+        gamma_unnorm[:, :g] + gamma_unnorm[:, -g:] + 2
+    )
 
     return gamma_init, pi_init, None
 
@@ -112,7 +111,7 @@ def estimate_parameters(
     model,
     data,
     dtype=torch.float32,
-    device='cpu',
+    device="cpu",
     initialize_params=None,
     maxiter=10000,
     lagA=20,
@@ -138,10 +137,7 @@ def estimate_parameters(
         ),
     )
     svi = pyro.infer.SVI(
-        conditioned_model,
-        _guide,
-        opt,
-        loss=pyro.infer.JitTrace_ELBO()
+        conditioned_model, _guide, opt, loss=pyro.infer.JitTrace_ELBO()
     )
     pyro.clear_param_store()
 
@@ -159,7 +155,7 @@ def estimate_parameters(
             history.append(elbo)
 
             # Reporting/Breaking
-            if (i % 10 == 0):
+            if i % 10 == 0:
                 if i > lagB:
                     delta = history[-2] - history[-1]
                     delta_lagA = (history[-lagA] - history[-1]) / lagA
@@ -169,46 +165,49 @@ def estimate_parameters(
                             pbar.close()
                             info("Converged")
                         break
-                    pbar.set_postfix({
-                        'ELBO': history[-1],
-                        'delta': delta,
-                        f'lag{lagA}': delta_lagA,
-                        f'lag{lagB}': delta_lagB,
-                    })
+                    pbar.set_postfix(
+                        {
+                            "ELBO": history[-1],
+                            "delta": delta,
+                            f"lag{lagA}": delta_lagA,
+                            f"lag{lagB}": delta_lagB,
+                        }
+                    )
     except KeyboardInterrupt:
         pbar.close()
         info("Interrupted")
         pass
     est = pyro.infer.Predictive(conditioned_model, guide=_guide, num_samples=1)()
-    est = {
-        k: est[k].detach().cpu().numpy().mean(0).squeeze()
-        for k in est.keys()
-    }
-    
+    est = {k: est[k].detach().cpu().numpy().mean(0).squeeze() for k in est.keys()}
+
     if device.startswith("cuda"):
-#         info(
-#             "CUDA available mem: {}".format(
-#                 torch.cuda.get_device_properties(0).total_memory
-#             ),
-#         )
-#         info("CUDA reserved mem: {}".format(torch.cuda.memory_reserved(0)))
-#         info("CUDA allocated mem: {}".format(torch.cuda.memory_allocated(0)))
-#         info(
-#             "CUDA free mem: {}".format(
-#                 torch.cuda.memory_reserved(0) - torch.cuda.memory_allocated(0)
-#             )
-#         )
+        #         info(
+        #             "CUDA available mem: {}".format(
+        #                 torch.cuda.get_device_properties(0).total_memory
+        #             ),
+        #         )
+        #         info("CUDA reserved mem: {}".format(torch.cuda.memory_reserved(0)))
+        #         info("CUDA allocated mem: {}".format(torch.cuda.memory_allocated(0)))
+        #         info(
+        #             "CUDA free mem: {}".format(
+        #                 torch.cuda.memory_reserved(0) - torch.cuda.memory_allocated(0)
+        #             )
+        #         )
         torch.cuda.empty_cache()
 
     return est, history
 
 
 def merge_similar_genotypes(
-    gamma, pi, thresh, delta=None, progress=False,
+    gamma,
+    pi,
+    thresh,
+    delta=None,
+    progress=False,
 ):
     if delta is None:
         delta = np.ones_like(gamma)
-        
+
     gamma_adjust = mask_missing_genotype(gamma, delta)
 
     clust, dmat = cluster_genotypes(gamma_adjust, thresh=thresh, progress=progress)
@@ -218,17 +217,7 @@ def merge_similar_genotypes(
         .apply(lambda x: sp.special.expit(sp.special.logit(x)).mean(0))
         .values
     )
-    delta_mean = (
-        pd.DataFrame(pd.DataFrame(delta))
-        .groupby(clust)
-        .mean()
-        .values
-    )
-    pi_sum = (
-        pd.DataFrame(pd.DataFrame(pi))
-        .groupby(clust, axis='columns')
-        .sum()
-        .values
-    )
-    
+    delta_mean = pd.DataFrame(pd.DataFrame(delta)).groupby(clust).mean().values
+    pi_sum = pd.DataFrame(pd.DataFrame(pi)).groupby(clust, axis="columns").sum().values
+
     return gamma_mean, pi_sum, delta_mean

@@ -9,9 +9,7 @@ import sfacts
 
 
 def parse_args(argv):
-    p = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
+    p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # Input
     p.add_argument(
         "pileup",
@@ -70,9 +68,7 @@ with the following dimensions:
         metavar="FLOAT",
         default=1e-1,
         type=float,
-        help=(
-            "Heterogeneity regularization parameter (will be scaled by 1 / s)."
-        ),
+        help=("Heterogeneity regularization parameter (will be scaled by 1 / s)."),
     )
     p.add_argument(
         "--rho-hyper",
@@ -81,9 +77,7 @@ with the following dimensions:
         type=float,
         help=("Diversity regularization parameter."),
     )
-    p.add_argument(
-        "--epsilon-hyper", metavar="FLOAT", default=0.01, type=float
-    )
+    p.add_argument("--epsilon-hyper", metavar="FLOAT", default=0.01, type=float)
     p.add_argument(
         "--epsilon",
         metavar="FLOAT",
@@ -163,9 +157,7 @@ if __name__ == "__main__":
     info(f"Full data shape: {data.sizes}.")
 
     info("Filtering positions.")
-    informative_positions = select_informative_positions(
-        data, args.incid_thresh
-    )
+    informative_positions = select_informative_positions(data, args.incid_thresh)
     npos_available = len(informative_positions)
     info(
         f"Found {npos_available} informative positions with minor "
@@ -182,9 +174,9 @@ if __name__ == "__main__":
     info("Filtering libraries.")
     suff_cvrg_samples = idxwhere(
         (
-            (
-                data.sel(position=informative_positions).sum(["allele"]) > 0
-            ).mean("position")
+            (data.sel(position=informative_positions).sum(["allele"]) > 0).mean(
+                "position"
+            )
             > args.cvrg_thresh
         ).to_series()
     )
