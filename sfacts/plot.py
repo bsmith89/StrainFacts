@@ -1,15 +1,17 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from sfacts.genotype import genotype_linkage, prob_to_sign
 from scipy.spatial.distance import squareform
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
+import sfacts as sf
 
 
-def calculate_clustermap_dims(
+def _calculate_clustermap_sizes(
     nx, ny, scalex=0.15, scaley=0.02, dwidth=0.2, dheight=1.0
 ):
+    # TODO: Incorporate colors.
     mwidth = nx * scalex
     mheight = ny * scaley
     fwidth = mwidth + dwidth
@@ -19,15 +21,14 @@ def calculate_clustermap_dims(
 
 
 def plot_genotype(
-    gamma, linkage_kw=None, scalex=0.15, scaley=0.02, dwidth=0.2, dheight=1.0, **kwargs
+    point, linkage_kw=None, scalex=0.15, scaley=0.02, dwidth=0.2, dheight=1.0, **kwargs
 ):
     if linkage_kw is None:
         linkage_kw = {}
-    linkage, _ = genotype_linkage(gamma, **linkage_kw)
+    linkage = point.genotypes.linkage(**linkage_kw)
 
-    gamma_t = gamma.T
-    ny, nx = gamma_t.shape
-    fwidth, fheight, dendrogram_ratio = calculate_clustermap_dims(
+    nx, ny = point.genotypes.data.shape
+    fwidth, fheight, dendrogram_ratio = _calculate_clustermap_sizes(
         nx,
         ny,
         scalex=scalex,
@@ -37,7 +38,7 @@ def plot_genotype(
     )
 
     kw = dict(
-        vmin=-1,
+        vmin=0,
         vmax=1,
         cmap="coolwarm",
         dendrogram_ratio=dendrogram_ratio,
@@ -47,15 +48,14 @@ def plot_genotype(
         yticklabels=0,
     )
     kw.update(kwargs)
-    grid = sns.clustermap(prob_to_sign(gamma_t), **kw)
+    grid = sns.clustermap(point.genotypes.data.to_pandas().T, **kw)
     grid.cax.set_visible(False)
     return grid
 
 
-def plot_missing(delta, scalex=0.15, scaley=0.02, dwidth=0.2, dheight=1.0, **kwargs):
-    delta_t = delta.T
-    ny, nx = delta_t.shape
-    fwidth, fheight, dendrogram_ratio = calculate_clustermap_dims(
+def plot_missing(point, scalex=0.15, scaley=0.02, dwidth=0.2, dheight=1.0, **kwargs):
+    nx, ny = point.missingness.data.shape
+    fwidth, fheight, dendrogram_ratio = _calculate_clustermap_sizes(
         nx,
         ny,
         scalex=scalex,
@@ -73,14 +73,14 @@ def plot_missing(delta, scalex=0.15, scaley=0.02, dwidth=0.2, dheight=1.0, **kwa
         yticklabels=0,
     )
     kw.update(kwargs)
-    grid = sns.clustermap(delta_t, **kw)
+    grid = sns.clustermap(point.missingness.data.to_pandas().T, **kw)
     grid.cax.set_visible(False)
     return grid
 
 
-def plot_community(pi, scalex=0.2, scaley=0.1, dwidth=0.2, dheight=1.0, **kwargs):
-    ny, nx = pi.shape
-    fwidth, fheight, dendrogram_ratio = calculate_clustermap_dims(
+def plot_community(point, scalex=0.2, scaley=0.15, dwidth=0.2, dheight=1.0, **kwargs):
+    ny, nx = point.communities.data.shape
+    fwidth, fheight, dendrogram_ratio = _calculate_clustermap_sizes(
         nx,
         ny,
         scalex=scalex,
@@ -96,21 +96,21 @@ def plot_community(pi, scalex=0.2, scaley=0.1, dwidth=0.2, dheight=1.0, **kwargs
         dendrogram_ratio=dendrogram_ratio,
         figsize=(fwidth, fheight),
         xticklabels=1,
+        yticklabels=1,
     )
     kw.update(kwargs)
-    grid = sns.clustermap(pi, **kw)
+    grid = sns.clustermap(point.communities.data.to_pandas(), **kw)
     grid.cax.set_visible(False)
     return grid
 
 
-def plot_genotype_similarity(gamma, linkage_kw=None, **kwargs):
+def plot_genotype_similarity(point, linkage_kw=None, **kwargs):
     if linkage_kw is None:
         linkage_kw = {}
-    linkage, dmat = genotype_linkage(gamma, **linkage_kw)
-    dmat = squareform(dmat)
-
-    nx = ny = gamma.shape[0]
-    fwidth, fheight, dendrogram_ratio = calculate_clustermap_dims(
+    linkage = point.genotypes.linkage(**linkage_kw)
+    dmat = point.genotypes.pdist()
+    nx = ny = point.genotypes.shape[0]
+    fwidth, fheight, dendrogram_ratio = _calculate_clustermap_sizes(
         nx, ny, scalex=0.15, scaley=0.15, dwidth=0.5, dheight=0.5
     )
 
@@ -130,29 +130,34 @@ def plot_genotype_similarity(gamma, linkage_kw=None, **kwargs):
     return grid
 
 
-def plot_genotype_comparison(data=None, **kwargs):
-    stacked = pd.concat(
-        [
-            pd.DataFrame(data[k], index=[f"{k}_{i}" for i in range(data[k].shape[0])])
-            for k in data
-        ]
-    )
+def plot_genotype_comparison(point_mapping, **kwargs):
+    stacked = sf.data.Genotypes.stack({k: point_mapping[k].genotypes for k in point_mapping}, 'strain', prefix=True)
     kw = dict(xticklabels=1)
     kw.update(kwargs)
     return plot_genotype(stacked, **kw)
 
 
-def plot_community_comparison(data=None, **kwargs):
-    stacked = pd.concat(
-        [
-            pd.DataFrame(data[k], columns=[f"{k}_{i}" for i in range(data[k].shape[1])])
-            for k in data
-        ],
-        axis=1,
-    )
+def plot_missing_comparison(point_mapping, **kwargs):
+    stacked = sf.data.Missingness.stack({k: point_mapping[k].missingness for k in point_mapping}, 'strain', prefix=True)
+    kw = dict(xticklabels=1)
+    kw.update(kwargs)
+    return plot_missing(stacked, **kw)
+
+
+def plot_community_comparison(point_mapping, **kwargs):
+    stacked = sf.data.Communities.stack({k: point_mapping[k].communities for k in point_mapping}, 'strain', prefix=True, validate=False)
     kw = dict(xticklabels=1)
     kw.update(kwargs)
     return plot_community(stacked, **kw)
+
+# def plot_community_comparison(points, **kwargs):
+#     stacked = pd.concat(
+#         [p.communities for p in points]
+#         axis=1,
+#     )
+#     kw = dict(xticklabels=1)
+#     kw.update(kwargs)
+#     return plot_community(stacked, **kw)
 
 
 def plot_loss_history(trace):

@@ -1,23 +1,37 @@
 import pyro
 from sfacts.pandas_util import idxwhere
-from sfacts.model import model, simulate, condition_model
+from sfacts.model import model0, simulate, condition_model
 from sfacts.estimation import (
     initialize_parameters_by_clustering_samples,
     initialize_parameters_by_nmf,
     estimate_parameters,
     merge_similar_genotypes,
 )
-from sfacts.genotype import mask_missing_genotype
+# from sfacts.genotype import mask_missing_genotype
 from sfacts.evaluation import (
     match_genotypes,
     sample_mean_masked_genotype_entropy,
     community_accuracy_test,
     metacommunity_composition_rss,
 )
-from sfacts.data import load_input_data, select_informative_positions
+# from sfacts.data import load_metagenotype, variable_metagenotype_positions
+import xarray as xr
 import time
 import numpy as np
 from sfacts.logging_util import info
+
+
+def load_input_data(paths_list):
+    data = []
+    for path in paths_list:
+        info(path)
+        d = load_metagenotype(path)
+        info(f"Shape: {d.sizes}.")
+        data.append(d)
+    info("Concatenating data from {} files.".format(len(data)))
+    data = xr.concat(data, "library_id", fill_value=0)
+    info(f"Finished concatenating data: {data.sizes}")
+    return data
 
 
 def fit_to_data(
@@ -188,7 +202,7 @@ def filter_data(
     cvrg_thresh=0.15,
 ):
     info("Filtering positions.")
-    informative_positions = select_informative_positions(data, incid_thresh)
+    informative_positions = variable_metagenotype_positions(data, incid_thresh)
     npos_available = len(informative_positions)
     info(
         f"Found {npos_available} informative positions with minor "
