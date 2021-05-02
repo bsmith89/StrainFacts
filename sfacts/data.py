@@ -29,7 +29,7 @@ class WrappedDataArrayMixin():
     # transparently passed through to self.data, but with
     # different symantics for the return value.
     dims = ()
-    safe_unwrapped = ['shape', 'sizes', 'to_pandas', 'min', 'max', 'mean', 'values']
+    safe_unwrapped = ['shape', 'sizes', 'to_pandas', 'to_dataframe', 'min', 'max', 'sum', 'mean', 'median', 'values', 'pipe', 'to_series']
     safe_lifted = ['isel', 'sel']
     variable_name = None
     
@@ -100,118 +100,21 @@ class WrappedDataArrayMixin():
     def __repr__(self):
         return f'{self.__class__.__name__}({self.data})'
     
+    @classmethod
+    def concat(cls, data, dim):
+        out_data = []
+        new_coords = []
+        for name in data:
+            d = data[name].data
+            out_data.append(d)
+            new_coords.extend([f"{name}_{i}" for i in d[dim].values])
+        out_data = xr.concat(out_data, dim)
+        out_data[dim] = new_coords
+        return cls(out_data)
+    
     def to_world(self):
         return World(self.data.to_dataset())
 
-
-class Genotypes(WrappedDataArrayMixin):
-    dims = ('strain', 'position')
-    constraints = dict(
-        on_2_simplex = _on_2_simplex
-    )
-    variable_name = 'genotypes'
-    
-    def fuzz_missing(self, missingness, eps=1e-10):
-        clip = partial(np.clip, a_min=eps, a_max=(1 - eps))
-        return self.lift(lambda g, m: sp.special.expit(sp.special.logit(clip(g)) * clip(m)), m=missingness.data)
-    
-    # TODO: Move distance metrics to a new module?
-    @staticmethod
-    def _convert_to_sign_representation(p):
-        "Alternative representation of binary genotype on a [-1, 1] interval."
-        return p * 2 - 1
-
-
-    @staticmethod
-    def _genotype_sign_representation_dissimilarity(x, y):
-        "Dissimilarity between 1D genotypes, accounting for fuzzyness."
-        dist = ((x - y) / 2) ** 2
-        weight = (x * y) ** 2
-        wmean_dist = ((weight * dist).mean()) / ((weight.mean()) + 1)
-        return wmean_dist
-
-    @staticmethod
-    def _genotype_dissimilarity(x, y):
-        return _genotype_s_distance(
-            _genotype_p_to_s(x), _genotype_p_to_s(y)
-        )
-    
-    @staticmethod
-    def _genotype_dissimilarity_cdmat(unwrapped_values, quiet=True):
-        g_sign = Genotypes._convert_to_sign_representation(unwrapped_values)
-        s, _ = g_sign.shape
-        cdmat = np.empty((s * (s - 1)) // 2)
-        k = 0
-        with tqdm(total=len(cdmat), disable=quiet) as pbar:
-            for i in range(0, s - 1):
-                for j in range(i + 1, s):
-                    cdmat[k] = Genotypes._genotype_sign_representation_dissimilarity(g_sign[i], g_sign[j])
-                    k = k + 1
-                    pbar.update()
-        return cdmat
-
-    @staticmethod
-    def _correlation_distance_cdmat(unwrapped_values, quiet=True):
-        return pdist(unwrapped_values, metric='correlation')
-    
-    def pdist(self, dim='strain', quiet=True):
-        index = getattr(self, dim)
-        if dim == 'strain':
-            unwrapped_values = self.values
-            cdmat = self._genotype_dissimilarity_cdmat(unwrapped_values, quiet=quiet)
-        elif dim == 'position':
-            unwrapped_values = self.values.T
-            cdmat = self._correlation_distance_cdmat(unwrapped_values, quiet=quiet)
-        # Reboxing
-        dmat = pd.DataFrame(squareform(cdmat), index=index, columns=index)
-        return dmat
-    
-    def linkage(self, dim='strain', quiet=True, **kwargs):
-        dmat = self.pdist(dim=dim, quiet=quiet)
-        cdmat = squareform(dmat)
-        kw = dict(method="complete")
-        kw.update(kwargs)
-        return linkage(cdmat, **kw)
-    
-    @property
-    def entropy(self):
-        p = self.data
-        q = 1 - p
-        ent = -(p * np.log2(p) + q * np.log2(q))
-        return ent.sum("position").rename("entropy")
-
-
-class Missingness(WrappedDataArrayMixin):
-    dims = ('strain', 'position')
-    constraints = dict(
-        on_2_simplex = _on_2_simplex
-    )
-    variable_name = 'missingness'
-        
-        
-class Communities(WrappedDataArrayMixin):
-    dims = ('sample', 'strain')
-    constraints = dict(
-        strains_sum_to_1 = lambda d: (d.sum('strain') == 1.0).all()
-    )
-    variable_name = 'communities'
-
-
-class Overdispersion(WrappedDataArrayMixin):
-    dims = ('sample',)
-    constraints = dict(
-        strains_sum_to_1 = _strictly_positive
-    )
-    variable_name = 'overdispersion'
-
-
-class ErrorRate(WrappedDataArrayMixin):
-    dims = ('sample',)
-    constraints = dict(
-        on_2_simplex = _on_2_simplex
-    )
-    variable_name = 'error_rate'
-    
 
 class Metagenotypes(WrappedDataArrayMixin):
     dims = ('sample', 'position', 'allele')
@@ -222,7 +125,8 @@ class Metagenotypes(WrappedDataArrayMixin):
 
     @classmethod
     def load(cls, filename_or_obj, validate=True):
-        data = xr.open_dataarray(filename_or_obj).squeeze().rename({'library_id': 'sample'})
+        data = xr.open_dataarray(filename_or_obj).rename({'library_id': 'sample'}).squeeze(drop=True)
+        data.name = 'metagenotypes'
         result = cls(data)
         if validate:
             result.validate_constraints()
@@ -266,19 +170,145 @@ class Metagenotypes(WrappedDataArrayMixin):
         "Convert metagenotype counts to a frequencies with optional pseudocount."
         return self.frequencies(pseudo=pseudo).max('allele')
 
-    @property
-    def genotypes(self):
-        return Genotypes(self.frequencies(pseudo=1.).sel(allele='alt').rename({'sample': 'strain'}))
+    def to_genotype_estimates(self, pseudo=1.):
+        data = self.frequencies(pseudo=pseudo).sel(allele='alt').rename({'sample': 'strain'})
+        return Genotypes(data)
 
     def to_counts_and_totals(self, binary_allele='alt'):
         return dict(y=self.data.sel(allele=binary_allele).values, m=self.data.sum('allele').values)
+    
+    def pdist(self, dim='strain', **kwargs):
+        return self.to_genotype_estimates().pdist(dim=dim, pseudo=pseudo, **kwargs)
+    
+    def linkage(self, dim='strain', **kwargs):
+        return self.to_genotype_estimates().linkage(dim=dim, **kwargs)
 
+
+class Genotypes(WrappedDataArrayMixin):
+    dims = ('strain', 'position')
+    constraints = dict(
+        on_2_simplex = _on_2_simplex
+    )
+    variable_name = 'genotypes'
+    
+    def fuzz_missing(self, missingness, eps=1e-10):
+        clip = partial(np.clip, a_min=eps, a_max=(1 - eps))
+        return self.lift(lambda g, m: sp.special.expit(sp.special.logit(clip(g)) * clip(m)), m=missingness.data)
+    
+    # TODO: Move distance metrics to a new module?
+    @staticmethod
+    def _convert_to_sign_representation(p):
+        "Alternative representation of binary genotype on a [-1, 1] interval."
+        return p * 2 - 1
+
+
+    @staticmethod
+    def _genotype_sign_representation_dissimilarity(x, y, pseudo=0.):
+        "Dissimilarity between 1D genotypes, accounting for fuzzyness."
+        dist = ((x - y) / 2) ** 2
+        weight = (x * y) ** 2
+        wmean_dist = ((weight * dist).mean()) / ((weight.mean() + pseudo))
+        return wmean_dist
+
+    @staticmethod
+    def _genotype_dissimilarity(x, y, pseudo=0.):
+        return self._genotype_sign_representation_dissimilarity(
+            self._genotype_p_to_s(x), self._genotype_p_to_s(y)
+        )
+    
+    @staticmethod
+    def _genotype_dissimilarity_cdmat(unwrapped_values, pseudo=0., quiet=True):
+        g_sign = Genotypes._convert_to_sign_representation(unwrapped_values)
+        s, _ = g_sign.shape
+        cdmat = np.empty((s * (s - 1)) // 2)
+        k = 0
+        with tqdm(total=len(cdmat), disable=quiet) as pbar:
+            for i in range(0, s - 1):
+                for j in range(i + 1, s):
+                    cdmat[k] = Genotypes._genotype_sign_representation_dissimilarity(g_sign[i], g_sign[j], pseudo=pseudo)
+                    k = k + 1
+                    pbar.update()
+        return cdmat
+
+    def pdist(self, dim='strain', pseudo=0., quiet=True):
+        index = getattr(self, dim)
+        if dim == 'strain':
+            unwrapped_values = self.values
+            cdmat = self._genotype_dissimilarity_cdmat(unwrapped_values, quiet=quiet, pseudo=pseudo)
+        elif dim == 'position':
+            unwrapped_values = self.values.T
+            cdmat = pdist(self._convert_to_sign_representation(self.values.T), metric='cosine')
+        # Reboxing
+        dmat = pd.DataFrame(squareform(cdmat), index=index, columns=index)
+        return dmat
+    
+    def linkage(self, dim='strain', pseudo=0., quiet=True, method="complete", optimal_ordering=True, **kwargs):
+        dmat = self.pdist(dim=dim, pseudo=pseudo, quiet=quiet)
+        cdmat = squareform(dmat)
+        return linkage(cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs)
+    
+    @property
+    def entropy(self):
+        p = self.data
+        q = 1 - p
+        ent = -(p * np.log2(p) + q * np.log2(q))
+        return ent.sum("position").rename("entropy")
+
+
+class Missingness(WrappedDataArrayMixin):
+    dims = ('strain', 'position')
+    constraints = dict(
+        on_2_simplex = _on_2_simplex
+    )
+    variable_name = 'missingness'
+        
+        
+class Communities(WrappedDataArrayMixin):
+    dims = ('sample', 'strain')
+    constraints = dict(
+        strains_sum_to_1 = lambda d: (d.sum('strain') == 1.0).all()
+    )
+    variable_name = 'communities'
+    
+    def pdist(self, dim='strain', quiet=True):
+        index = getattr(self, dim)
+        if dim == 'strain':
+            unwrapped_values = self.values.T
+            cdmat = pdist(unwrapped_values, metric='cosine') 
+        elif dim == 'sample':
+            unwrapped_values = self.values
+            cdmat = pdist(unwrapped_values, metric='braycurtis') 
+        # Reboxing
+        dmat = pd.DataFrame(squareform(cdmat), index=index, columns=index)
+        return dmat
+    
+    def linkage(self, dim='strain', quiet=True, method="average", optimal_ordering=True, **kwargs):
+        dmat = self.pdist(dim=dim, quiet=quiet)
+        cdmat = squareform(dmat)
+        return linkage(cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs)
+
+
+class Overdispersion(WrappedDataArrayMixin):
+    dims = ('sample',)
+    constraints = dict(
+        strains_sum_to_1 = _strictly_positive
+    )
+    variable_name = 'overdispersion'
+
+
+class ErrorRate(WrappedDataArrayMixin):
+    dims = ('sample',)
+    constraints = dict(
+        on_2_simplex = _on_2_simplex
+    )
+    variable_name = 'error_rate'
+    
 
 class World():
     safe_lifted = ['isel', 'sel']
-    safe_unwrapped = []
+    safe_unwrapped = ['sizes']
     dims = ('sample', 'position', 'strain', 'allele')
-    variables = [Genotypes, Missingness, Communities, Metagenotypes, ErrorRate, Overdispersion]
+    variables = [Genotypes, Missingness, Communities, Metagenotypes]
     _variable_wrapper_map = {wrapper.variable_name: wrapper for wrapper in variables}
     
     def __init__(self, data):
@@ -323,3 +353,16 @@ class World():
                                  f"'{self.__class__.__name__}.safe_unwrapped', "
                                  f"or '{self.__class__.__name__}.safe_lifted'. "
                                  f"Consider working with the '{self.__class__.__name__}.data' object directly.")
+            
+    @classmethod
+    def concat(cls, data, dim):
+        out_data = []
+        new_coords = []
+        for name in data:
+            d = data[name].data
+            d['_concat_from'] = xr.DataArray(name, dims=(dim,), coords={dim: d[dim]})
+            out_data.append(d)
+            new_coords.extend([f"{name}_{i}" for i in d[dim].values])
+        out_data = xr.concat(out_data, dim, data_vars='minimal', coords='minimal', compat='override')
+        out_data[dim] = new_coords
+        return cls(out_data)

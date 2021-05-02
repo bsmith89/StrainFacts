@@ -36,10 +36,12 @@ def stickbreaking_betas_to_probs(beta):
 
 
 def NegativeBinomialReparam(mu, r, eps):
-    p = torch.clamp(1.0 / ((r / mu) + 1.0), eps, 1 - eps)
+    p = 1.0 / ((r / mu) + 1.0)
+    logits = torch.logit(p)
+#     p = torch.clamp(p, eps, 1 - eps)
     return dist.NegativeBinomial(
         total_count=r,
-        probs=p,
+        logits=logits,
     )
 
 def unit_interval_power_transformation(p, alpha, beta):
@@ -52,55 +54,7 @@ def unit_interval_power_transformation(p, alpha, beta):
         torch.logsumexp(torch.stack([log_p_raised, log_q_raised]), dim=0)
     )
 
-@sf.model.structure(
-    dims=SHARED_DIMS,
-    description=_mapping_subset(
-        SHARED_DESCRIPTIONS,
-        ['rho', 'epsilon', 'm_hyper_r', 'mu',
-         'nu', 'p_noerr', 'p', 'm', 'y',
-         'alpha_hyper_mean', 'alpha',
-         'genotypes', 'missingness',
-         'communities', 'metagenotypes']
-    ),
-    default_hyperparameters=dict(
-        gamma_hyper=0.01,
-        delta_hyper_temp=0.01,
-        delta_hyper_r=0.9,
-        rho_hyper=5.0,
-        pi_hyper=0.2,
-        epsilon_hyper_alpha=1.5,
-        epsilon_hyper_beta=1.5 / 0.01,
-        mu_hyper_mean=1.0,
-        mu_hyper_scale=1.0,
-        m_hyper_r_mu=1.,
-        m_hyper_r_scale=1.,
-        m_eps=1e-5,
-        alpha_hyper_hyper_mean=100.0,
-        alpha_hyper_hyper_scale=1.0,
-        alpha_hyper_scale=0.5,
-    ),
-)
-def pp_fuzzy_missing_dp_betabinomial_metagenotype(
-        n,
-        g,
-        s,
-        a,
-        gamma_hyper,
-        delta_hyper_r,
-        delta_hyper_temp,
-        rho_hyper,  #=1.0,
-        pi_hyper,  #=1.0,
-        alpha_hyper_hyper_mean,  #=100.0,
-        alpha_hyper_hyper_scale,  #=1.0,
-        alpha_hyper_scale,  #=0.5,
-        epsilon_hyper_alpha,  #=1.5,
-        epsilon_hyper_beta,  #=1.5 / 0.01,
-        mu_hyper_mean,  #=1.0,
-        mu_hyper_scale,  #=1.0,
-        m_hyper_r_mu,
-        m_hyper_r_scale,
-        m_eps,  #=1e-5,
-    ):
+def _pp_gamma_delta_module(s, g, gamma_hyper, delta_hyper_r, delta_hyper_temp):
     # Genotypes
     #     delta_hyper_p = pyro.sample('delta_hyper_p', dist.Beta(1., 1.))
     with pyro.plate("position", g, dim=-1):
@@ -134,22 +88,86 @@ def pp_fuzzy_missing_dp_betabinomial_metagenotype(
     # These deterministics are accessed by PointMixin class properties.
     pyro.deterministic("genotypes", gamma)
     pyro.deterministic("missingness", delta)
+    return gamma, delta
 
-    # Meta-community composition
-    rho_betas = pyro.sample('rho_betas', dist.Beta(1., rho_hyper).expand([s - 1]).to_event())
-    rho = pyro.deterministic('rho', stickbreaking_betas_to_probs(rho_betas))
 
+def _gsm_gamma_delta_module(s, g, gamma_hyper, delta_hyper_r, delta_hyper_temp):
+    with pyro.plate("position", g, dim=-1):
+        with pyro.plate("strain", s, dim=-2):
+            gamma = pyro.sample(
+                'gamma',
+                dist.RelaxedBernoulli(
+                    temperature=gamma_hyper, probs=0.5,
+                ),
+            )
+            delta = pyro.sample(
+                'delta',
+                dist.RelaxedBernoulli(
+                    temperature=delta_hyper_temp, probs=delta_hyper_r
+                ),
+            )
+    pyro.deterministic("genotypes", gamma)
+    pyro.deterministic("missingness", delta)
+    return gamma, delta
+
+
+def _beta_gamma_delta_module(s, g, gamma_hyper, delta_hyper_r, delta_hyper_temp):
+    with pyro.plate("position", g, dim=-1):
+        with pyro.plate("strain", s, dim=-2):
+            gamma = pyro.sample(
+                'gamma',
+                dist.Beta(
+                    gamma_hyper, gamma_hyper,
+                ),
+            )
+            delta = pyro.sample(
+                'delta',
+                dist.RelaxedBernoulli(
+                    delta_hyper_r * delta_hyper_temp,
+                    (1 - delta_hyper_r) * delta_hyper_temp,
+                ),
+            )
+    pyro.deterministic("genotypes", gamma)
+    pyro.deterministic("missingness", delta)
+    return gamma, delta
+
+
+def _hybrid_gamma_delta_module(s, g, gamma_hyper, delta_hyper_r, delta_hyper_temp):
+    with pyro.plate("position", g, dim=-1):
+        with pyro.plate("strain", s, dim=-2):
+            _gamma = pyro.sample(
+                "_gamma", dist.Beta(1., 1.)
+            )
+            gamma = pyro.deterministic(
+                'gamma',
+                unit_interval_power_transformation(_gamma, 1 / gamma_hyper, 1 / gamma_hyper))
+#                 Position presence/absence
+            delta = pyro.sample(
+                'delta',
+                dist.RelaxedBernoulli(
+                    temperature=delta_hyper_temp, probs=delta_hyper_r
+                ),
+            )
+    pyro.deterministic("genotypes", gamma)
+    pyro.deterministic("missingness", delta)
+    return gamma, delta
+
+
+def _dp_rho_module(s, rho_hyper):
 #         # TODO: Will torch.ones(s) fail when I try to run this on the GPU because it's, by default on the CPU?
 #         rho = pyro.sample(
 #             "rho", dist.Dirichlet(rho_hyper * torch.ones(s))
 #         )
+    # Meta-community composition
+    rho_betas = pyro.sample('rho_betas', dist.Beta(1., rho_hyper).expand([s - 1]).to_event())
+    rho = pyro.deterministic('rho', stickbreaking_betas_to_probs(rho_betas))
+    pyro.deterministic("metacommunity", rho)
+    return rho
 
-    alpha_hyper_mean = pyro.sample(
-        "alpha_hyper_mean",
-        dist.LogNormal(
-            loc=torch.log(alpha_hyper_hyper_mean), scale=alpha_hyper_hyper_scale
-        ),
-    )
+
+def _dirichlet_pi_epsilon_alpha_mu_module(
+    n, pi_hyper, rho, epsilon_hyper_alpha, epsilon_hyper_beta, alpha_hyper_mean, alpha_hyper_scale, mu_hyper_mean, mu_hyper_scale
+):
     with pyro.plate("sample", n, dim=-1):
         # Community composition
         pi = pyro.sample("pi", dist.Dirichlet(pi_hyper * rho, validate_args=False))
@@ -165,9 +183,23 @@ def pp_fuzzy_missing_dp_betabinomial_metagenotype(
         mu = pyro.sample(
             "mu", dist.LogNormal(loc=torch.log(mu_hyper_mean), scale=mu_hyper_scale)
         )
-
     pyro.deterministic("communities", pi)
+    return pi, epsilon, alpha, mu
 
+
+def _lognormal_alpha_hyper_mean_module(alpha_hyper_hyper_mean, alpha_hyper_hyper_scale):
+    alpha_hyper_mean = pyro.sample(
+        "alpha_hyper_mean",
+        dist.LogNormal(
+            loc=torch.log(alpha_hyper_hyper_mean), scale=alpha_hyper_hyper_scale
+        ),
+    )
+    return alpha_hyper_mean
+
+
+def _betabinomial_observation_module(
+    pi, gamma, delta, m_hyper_r_mu, m_hyper_r_scale, mu, m_eps, epsilon, alpha
+):
     # Depth at each position
     nu = pyro.deterministic("nu", pi @ delta)
     m_hyper_r = pyro.sample("m_hyper_r", dist.LogNormal(loc=m_hyper_r_mu, scale=m_hyper_r_scale))
@@ -196,6 +228,190 @@ def pp_fuzzy_missing_dp_betabinomial_metagenotype(
 #             validate_args=False,
         ).to_event(),
     )
-
     # TODO: Check that dim=0 works?
-    pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
+    metagenotypes = pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
+
+
+@sf.model.structure(
+    dims=SHARED_DIMS,
+    description=_mapping_subset(
+        SHARED_DESCRIPTIONS,
+        ['rho', 'epsilon', 'm_hyper_r', 'mu',
+         'nu', 'p_noerr', 'p', 'm', 'y',
+         'alpha_hyper_mean', 'alpha',
+         'genotypes', 'missingness',
+         'communities', 'metagenotypes']
+    ),
+    default_hyperparameters=dict(
+        gamma_hyper=0.01,
+        delta_hyper_temp=0.01,
+        delta_hyper_r=0.9,
+        rho_hyper=5.0,
+        pi_hyper=0.2,
+        epsilon_hyper_alpha=1.5,
+        epsilon_hyper_beta=1.5 / 0.01,
+        mu_hyper_mean=1.0,
+        mu_hyper_scale=10.0,
+        m_hyper_r_mu=1.,
+        m_hyper_r_scale=1.,
+        m_eps=1e-5,
+        alpha_hyper_hyper_mean=100.0,
+        alpha_hyper_hyper_scale=1.0,
+        alpha_hyper_scale=0.5,
+    ),
+)
+def pp_fuzzy_missing_dp_betabinomial_metagenotype(
+        n,
+        g,
+        s,
+        a,
+        gamma_hyper,
+        delta_hyper_r,
+        delta_hyper_temp,
+        rho_hyper,  #=1.0,
+        pi_hyper,  #=1.0,
+        alpha_hyper_hyper_mean,  #=100.0,
+        alpha_hyper_hyper_scale,  #=1.0,
+        alpha_hyper_scale,  #=0.5,
+        epsilon_hyper_alpha,  #=1.5,
+        epsilon_hyper_beta,  #=1.5 / 0.01,
+        mu_hyper_mean,  #=1.0,
+        mu_hyper_scale,  #=1.0,
+        m_hyper_r_mu,
+        m_hyper_r_scale,
+        m_eps,  #=1e-5,
+    ):
+    gamma, delta = _pp_gamma_delta_module(s, g, gamma_hyper, delta_hyper_r, delta_hyper_temp)
+    rho = _dp_rho_module(s, rho_hyper)
+    alpha_hyper_mean = _lognormal_alpha_hyper_mean_module(
+        alpha_hyper_hyper_mean, alpha_hyper_hyper_scale
+    )
+    pi, epsilon, alpha, mu = _dirichlet_pi_epsilon_alpha_mu_module(
+        n, pi_hyper, rho, epsilon_hyper_alpha, epsilon_hyper_beta, alpha_hyper_mean, alpha_hyper_scale, mu_hyper_mean, mu_hyper_scale
+    )
+    _betabinomial_observation_module(
+        pi, gamma, delta, m_hyper_r_mu, m_hyper_r_scale, mu, m_eps, epsilon, alpha
+    )
+    
+@sf.model.structure(
+    dims=SHARED_DIMS,
+    description=_mapping_subset(
+        SHARED_DESCRIPTIONS,
+        ['rho', 'epsilon', 'm_hyper_r', 'mu',
+         'nu', 'p_noerr', 'p', 'm', 'y',
+         'alpha_hyper_mean', 'alpha',
+         'genotypes', 'missingness',
+         'communities', 'metagenotypes']
+    ),
+    default_hyperparameters=dict(
+        gamma_hyper=0.01,
+        delta_hyper_temp=0.01,
+        delta_hyper_r=0.9,
+        rho_hyper=5.0,
+        pi_hyper=0.2,
+        epsilon_hyper_alpha=1.5,
+        epsilon_hyper_beta=1.5 / 0.01,
+        mu_hyper_mean=1.0,
+        mu_hyper_scale=10.0,
+        m_hyper_r_mu=1.,
+        m_hyper_r_scale=1.,
+        m_eps=1e-5,
+        alpha_hyper_hyper_mean=100.0,
+        alpha_hyper_hyper_scale=1.0,
+        alpha_hyper_scale=0.5,
+    ),
+)
+def gsm_fuzzy_missing_dp_betabinomial_metagenotype(
+        n,
+        g,
+        s,
+        a,
+        gamma_hyper,
+        delta_hyper_r,
+        delta_hyper_temp,
+        rho_hyper,  #=1.0,
+        pi_hyper,  #=1.0,
+        alpha_hyper_hyper_mean,  #=100.0,
+        alpha_hyper_hyper_scale,  #=1.0,
+        alpha_hyper_scale,  #=0.5,
+        epsilon_hyper_alpha,  #=1.5,
+        epsilon_hyper_beta,  #=1.5 / 0.01,
+        mu_hyper_mean,  #=1.0,
+        mu_hyper_scale,  #=1.0,
+        m_hyper_r_mu,
+        m_hyper_r_scale,
+        m_eps,  #=1e-5,
+    ):
+    gamma, delta = _gsm_gamma_delta_module(s, g, gamma_hyper, delta_hyper_r, delta_hyper_temp)
+    rho = _dp_rho_module(s, rho_hyper)
+    alpha_hyper_mean = _lognormal_alpha_hyper_mean_module(
+        alpha_hyper_hyper_mean, alpha_hyper_hyper_scale
+    )
+    pi, epsilon, alpha, mu = _dirichlet_pi_epsilon_alpha_mu_module(
+        n, pi_hyper, rho, epsilon_hyper_alpha, epsilon_hyper_beta, alpha_hyper_mean, alpha_hyper_scale, mu_hyper_mean, mu_hyper_scale
+    )
+    _betabinomial_observation_module(
+        pi, gamma, delta, m_hyper_r_mu, m_hyper_r_scale, mu, m_eps, epsilon, alpha
+    )
+    
+    
+@sf.model.structure(
+    dims=SHARED_DIMS,
+    description=_mapping_subset(
+        SHARED_DESCRIPTIONS,
+        ['rho', 'epsilon', 'm_hyper_r', 'mu',
+         'nu', 'p_noerr', 'p', 'm', 'y',
+         'alpha_hyper_mean', 'alpha',
+         'genotypes', 'missingness',
+         'communities', 'metagenotypes']
+    ),
+    default_hyperparameters=dict(
+        gamma_hyper=0.01,
+        delta_hyper_temp=0.01,
+        delta_hyper_r=0.9,
+        rho_hyper=5.0,
+        pi_hyper=0.2,
+        epsilon_hyper_alpha=1.5,
+        epsilon_hyper_beta=1.5 / 0.01,
+        mu_hyper_mean=1.0,
+        mu_hyper_scale=10.0,
+        m_hyper_r_mu=1.,
+        m_hyper_r_scale=1.,
+        m_eps=1e-5,
+        alpha_hyper_hyper_mean=100.0,
+        alpha_hyper_hyper_scale=1.0,
+        alpha_hyper_scale=0.5,
+    ),
+)
+def hybrid_fuzzy_missing_dp_betabinomial_metagenotype(
+        n,
+        g,
+        s,
+        a,
+        gamma_hyper,
+        delta_hyper_r,
+        delta_hyper_temp,
+        rho_hyper,  #=1.0,
+        pi_hyper,  #=1.0,
+        alpha_hyper_hyper_mean,  #=100.0,
+        alpha_hyper_hyper_scale,  #=1.0,
+        alpha_hyper_scale,  #=0.5,
+        epsilon_hyper_alpha,  #=1.5,
+        epsilon_hyper_beta,  #=1.5 / 0.01,
+        mu_hyper_mean,  #=1.0,
+        mu_hyper_scale,  #=1.0,
+        m_hyper_r_mu,
+        m_hyper_r_scale,
+        m_eps,  #=1e-5,
+    ):
+    gamma, delta = _hybrid_gamma_delta_module(s, g, gamma_hyper, delta_hyper_r, delta_hyper_temp)
+    rho = _dp_rho_module(s, rho_hyper)
+    alpha_hyper_mean = _lognormal_alpha_hyper_mean_module(
+        alpha_hyper_hyper_mean, alpha_hyper_hyper_scale
+    )
+    pi, epsilon, alpha, mu = _dirichlet_pi_epsilon_alpha_mu_module(
+        n, pi_hyper, rho, epsilon_hyper_alpha, epsilon_hyper_beta, alpha_hyper_mean, alpha_hyper_scale, mu_hyper_mean, mu_hyper_scale
+    )
+    _betabinomial_observation_module(
+        pi, gamma, delta, m_hyper_r_mu, m_hyper_r_scale, mu, m_eps, epsilon, alpha
+    )
