@@ -163,25 +163,65 @@ class Metagenotypes(WrappedDataArrayMixin):
         return self.__class__(x.sel(sample=covered_samples))
 
     def frequencies(self, pseudo=0.):
-        "Convert metagenotype counts to a frequencies with optional pseudocount."
+        "Convert metagenotype counts to a frequency with optional pseudocount."
         return (self.data + pseudo) / (self.data.sum('allele') + pseudo * self.sizes['allele'])
     
     def dominant_allele_fraction(self, pseudo=0.):
         "Convert metagenotype counts to a frequencies with optional pseudocount."
         return self.frequencies(pseudo=pseudo).max('allele')
+    
+    def alt_allele_fraction(self, pseudo=0.):
+        return self.frequencies(pseudo=pseudo).sel(allele='alt')
 
-    def to_genotype_estimates(self, pseudo=1.):
-        data = self.frequencies(pseudo=pseudo).sel(allele='alt').rename({'sample': 'strain'})
-        return Genotypes(data)
+    def to_estimated_genotypes(self, pseudo=1.):
+        return Genotypes(self.alt_allele_fraction(pseudo=pseudo).rename({'sample': 'strain'}))
 
+    def total_counts(self):
+        return self.data.sum('allele')
+    
+    def allele_counts(self, allele='alt'):
+        return self.data.sel(allele=allele)
+    
+    def mean_depth(self, dim='sample'):
+        if dim == "sample":
+            over = "position"
+        elif dim == "position":
+            over = "sample"
+        return self.total_counts().mean(over)
+    
     def to_counts_and_totals(self, binary_allele='alt'):
-        return dict(y=self.data.sel(allele=binary_allele).values, m=self.data.sum('allele').values)
+        return dict(
+            y=self.allele_counts(allele=binary_allele).values,
+            m=self.total_counts().values
+        )
     
-    def pdist(self, dim='strain', **kwargs):
-        return self.to_genotype_estimates().pdist(dim=dim, pseudo=pseudo, **kwargs)
+    def cosine_pdist(self, dim="sample"):
+        d = self.to_dataframe().unstack(dim).T
+        return pd.DataFrame(squareform(pdist(d.values, metric='cosine')), index=d.index, columns=d.index)
     
-    def linkage(self, dim='strain', **kwargs):
-        return self.to_genotype_estimates().linkage(dim=dim, **kwargs)
+    def pdist(self, dim="sample", pseudo=1., **kwargs):
+        if dim == 'sample':
+            _dim = 'strain'
+        else:
+            _dim = dim
+        return self.to_estimated_genotypes(pseudo=pseudo).pdist(dim=_dim, **kwargs).rename_axis(columns=dim, index=dim)
+    
+    def linkage(self, dim='sample', pseudo=1., **kwargs):
+        if dim == 'sample':
+            _dim = 'strain'
+        else:
+            _dim = dim
+        return self.to_estimated_genotypes(pseudo=pseudo).linkage(dim=_dim, **kwargs)
+    
+    def entropy(self, dim="sample"):
+        if dim == "sample":
+            over = "position"
+        elif dim == "position":
+            over = "sample"
+        p = self.dominant_allele_fraction()
+        q = 1 - p
+        ent = -(p * np.log2(p) + q * np.log2(q))
+        return ent.sum(over).rename("entropy")
 
 
 class Genotypes(WrappedDataArrayMixin):
@@ -191,9 +231,12 @@ class Genotypes(WrappedDataArrayMixin):
     )
     variable_name = 'genotypes'
     
-    def fuzz_missing(self, missingness, eps=1e-10):
+    def softmask_missing(self, missingness, eps=1e-10):
         clip = partial(np.clip, a_min=eps, a_max=(1 - eps))
         return self.lift(lambda g, m: sp.special.expit(sp.special.logit(clip(g)) * clip(m)), m=missingness.data)
+    
+    def fuzzed(self, eps=1e-5):
+        return self.lift(lambda x: (x + eps / (1 + 2 * eps)))
     
     # TODO: Move distance metrics to a new module?
     @staticmethod
@@ -229,7 +272,7 @@ class Genotypes(WrappedDataArrayMixin):
                     k = k + 1
                     pbar.update()
         return cdmat
-
+    
     def pdist(self, dim='strain', pseudo=0., quiet=True):
         index = getattr(self, dim)
         if dim == 'strain':
@@ -247,12 +290,30 @@ class Genotypes(WrappedDataArrayMixin):
         cdmat = squareform(dmat)
         return linkage(cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs)
     
-    @property
-    def entropy(self):
+    def cosine_pdist(self, dim='strain'):
+        d = self.data.pipe(self._convert_to_sign_representation)
+        if dim == 'strain':
+            d = self.values
+            index = self.strain
+        elif dim == 'position':
+            d = self.values.T
+            index = self.position
+        cdmat = pdist(d, metric='cosine')
+        return pd.DataFrame(squareform(cdmat), index=index, columns=index)
+        
+    def cosine_linkage(self, dim='strain', method="complete", optimal_ordering=True, **kwargs):
+        cdmat = squareform(self.cosine_pdist(dim=dim))
+        return linkage(cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs)
+
+    def entropy(self, dim="strain"):
+        if dim == "strain":
+            sum_over = "position"
+        elif dim == "position":
+            sum_over = "strain"
         p = self.data
         q = 1 - p
         ent = -(p * np.log2(p) + q * np.log2(q))
-        return ent.sum("position").rename("entropy")
+        return ent.sum(sum_over).rename("entropy")
 
 
 class Missingness(WrappedDataArrayMixin):
@@ -331,8 +392,8 @@ class World():
                 wrapped_variable.validate_constraints()
     
     @property
-    def fuzzed_genotypes(self):
-        return self.genotypes.fuzz_missing(self.missingness)
+    def masked_genotypes(self):
+        return self.genotypes.softmask_missing(self.missingness)
     
     def __getattr__(self, name):
         if name in self.dims:
@@ -356,13 +417,21 @@ class World():
             
     @classmethod
     def concat(cls, data, dim):
-        out_data = []
         new_coords = []
+        # Add source metadata and rename concatenation coordinates
+        renamed_data = []
+        shared_variables = set([str(v) for v in list(data.values())[0].data.variables])
         for name in data:
-            d = data[name].data
+            d = data[name].data.copy()
             d['_concat_from'] = xr.DataArray(name, dims=(dim,), coords={dim: d[dim]})
-            out_data.append(d)
             new_coords.extend([f"{name}_{i}" for i in d[dim].values])
-        out_data = xr.concat(out_data, dim, data_vars='minimal', coords='minimal', compat='override')
+            shared_variables &= set([str(v) for v in d.variables])
+            renamed_data.append(d)
+        # Drop unshared variables
+        ready_data = []
+        for d in renamed_data:
+            ready_data.append(d[list(shared_variables - set(cls.dims))])
+        # Concatenate
+        out_data = xr.concat(ready_data, dim, data_vars='minimal', coords='minimal', compat='override')
         out_data[dim] = new_coords
         return cls(out_data)

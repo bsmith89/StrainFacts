@@ -7,7 +7,7 @@ from sfacts import (
     plot,
     estimation,
     evaluation,
-#     workflow,
+    workflow,
     data,
 #     app,
 )

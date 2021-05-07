@@ -16,7 +16,7 @@ class Structure():
         *generative* :: Pyro generative model function(shape_dim_0, shape_dim_1, shape_dim_2, ..., **hyper_parameters)
         *dims* :: Sequence of names for dim_0, dim_1, dim_2, ...
         *description* :: Mapping from model variable to its dims.
-        *default_hyperparamters* :: Values to use for hyperparameters when not explicitly set.
+        *default_hyperparameters* :: Values to use for hyperparameters when not explicitly set.
         """
         if default_hyperparameters is None:
             default_hyperparameters = {}
@@ -126,6 +126,18 @@ class ParameterizedModel():
             data=self.data,
         )
     
+    def with_amended_coords(self, **coords):
+        new_coords = self.coords.copy()
+        new_coords.update(coords)
+        return self.__class__(
+            structure=self.structure,
+            coords=new_coords,
+            dtype=self.dtype,
+            device=self.device,
+            hyperparameters=self.hyperparameters,
+            data=self.data,
+        )
+    
     def condition(self, **data):
         new_data = self.data.copy()
         new_data.update(data)
@@ -155,4 +167,4 @@ class ParameterizedModel():
         return obs
     
     def simulate_world(self, seed=None):
-        return self.format_world(self.simulate(n=1, seed=seed))
+        return self.format_world(self.simulate(n=1))

@@ -1,9 +1,9 @@
 import sfacts as sf
-# from sklearn.cluster import AgglomerativeClustering
+from sklearn.cluster import AgglomerativeClustering
 # from sklearn.decomposition import non_negative_factorization
 # from sfacts.genotype import genotype_pdist, adjust_genotype_by_missing
 from sfacts.pyro_util import all_torch
-# import pandas as pd
+import pandas as pd
 import numpy as np
 # import scipy as sp
 # from scipy.spatial.distance import squareform
@@ -110,7 +110,6 @@ from sfacts.logging_util import info
 
 def estimate_parameters(
     model,
-#     data,
     dtype=torch.float32,
     device="cpu",
     initialize_params=None,
@@ -120,22 +119,11 @@ def estimate_parameters(
     opt=pyro.optim.Adamax({"lr": 1e-2}, {"clip_norm": 100}),
     quiet=False,
     seed=None,
-#     **model_kwargs,
 ):
     if initialize_params is None:
         initialize_params = {}
         
     sf.pyro_util.set_random_seed(seed, warn=(not quiet))
-
-#     conditioned_model = model.with_hyperparameters(**hyperparameters).condition(**data)
-    
-#     condition_model(
-#         model,
-#         data=data,
-#         dtype=dtype,
-#         device=device,
-#         **model_kwargs,
-#     )
 
     _guide = pyro.infer.autoguide.AutoLaplaceApproximation(
         model,
@@ -204,26 +192,17 @@ def estimate_parameters(
     return model.format_world(est), history
 
 
-# def merge_similar_genotypes(
-#     gamma,
-#     pi,
-#     thresh,
-#     delta=None,
-#     progress=False,
-# ):
-#     if delta is None:
-#         delta = np.ones_like(gamma)
+def strain_cluster(world, thresh, linkage="complete", pdist_func=None):
+    if pdist_func is None:
+        pdist_func = lambda w: w.genotypes.pdist()
+    clust = pd.Series(AgglomerativeClustering(
+        n_clusters=None, distance_threshold=thresh, linkage='complete', affinity='precomputed'
+    ).fit(pdist_func(world)).labels_, index=world.strain)
+    return clust
 
-#     gamma_adjust = adjust_genotype_by_missing(gamma, delta)
 
-#     clust, dmat = cluster_genotypes(gamma_adjust, thresh=thresh, progress=progress)
-#     gamma_mean = (
-#         pd.DataFrame(pd.DataFrame(gamma_adjust))
-#         .groupby(clust)
-#         .apply(lambda x: sp.special.expit(sp.special.logit(x)).mean(0))
-#         .values
-#     )
-#     delta_mean = pd.DataFrame(pd.DataFrame(delta)).groupby(clust).mean().values
-#     pi_sum = pd.DataFrame(pd.DataFrame(pi)).groupby(clust, axis="columns").sum().values
-
-#     return gamma_mean, pi_sum, delta_mean
+def communities_aggregated_by_strain_cluster(world, thresh, **kwargs):
+    clust = strain_cluster(world, thresh, **kwargs)
+    return sf.data.Communities(
+        world.communities.to_pandas().groupby(clust, axis='columns').sum().rename_axis(columns='strain').stack().to_xarray()
+    )
