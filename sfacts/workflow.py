@@ -2,6 +2,10 @@ import sfacts as sf
 import pyro
 import time
 
+
+simple_fit = sf.estimation.estimate_parameters
+
+
 def simulation_benchmark(
     nsample,
     nposition,
@@ -21,35 +25,31 @@ def simulation_benchmark(
     if fit_model is None:
         fit_model = sim_model
 
-    sim = (
-        sf.model.ParameterizedModel(
-            sim_model,
-            coords=dict(
-                sample=nsample,
-                position=nposition,
-                allele=['alt', 'ref'],
-                strain=sim_nstrain
-            ),
-            data=sim_data,
-            hyperparameters=sim_hyperparameters,
-        )
-        .simulate_world(seed=sim_seed)
-    )
+    sim = sf.model.ParameterizedModel(
+        sim_model,
+        coords=dict(
+            sample=nsample,
+            position=nposition,
+            allele=["alt", "ref"],
+            strain=sim_nstrain,
+        ),
+        data=sim_data,
+        hyperparameters=sim_hyperparameters,
+    ).simulate_world(seed=sim_seed)
 
     start_time = time.time()
-    est, history = sf.estimation.estimate_parameters(
+    est, history, *_ = simple_fit(
         sf.model.ParameterizedModel(
             fit_model,
             coords=dict(
                 sample=nsample,
                 position=nposition,
-                allele=['alt', 'ref'],
-                strain=fit_nstrain
+                allele=["alt", "ref"],
+                strain=fit_nstrain,
             ),
             data=fit_data,
             hyperparameters=fit_hyperparameters,
-        )
-        .condition(
+        ).condition(
             **sim.metagenotypes.to_counts_and_totals(),
         ),
         opt=opt,
@@ -57,7 +57,7 @@ def simulation_benchmark(
         **fit_kwargs,
     )
     end_time = time.time()
-    
+
     return (
         sf.evaluation.weighted_genotype_error(sim, est),
         sf.evaluation.community_error(sim, est),
@@ -65,43 +65,71 @@ def simulation_benchmark(
     )
 
 
-def fit_and_refit(
+def fit_fix_pi_refit(
     model,
     stage2_hyperparameters,
+    initialize_params=None,
     **kwargs,
-    ):
-    est0, history0 = sf.estimation.estimate_parameters(
-        model,
-        **kwargs
+):
+    est0, history0, *_ = simple_fit(
+        model, initialize_params=initialize_params, **kwargs
     )
-    est1, history1 = sf.estimation.estimate_parameters(
-        model
-        .with_hyperparameters(**stage2_hyperparameters)
-        .condition(pi=est0.communities.values),
-        **kwargs
+    est1, history1, *_ = simple_fit(
+        model.with_hyperparameters(**stage2_hyperparameters).condition(
+            pi=est0.communities.values
+        ),
+        **kwargs,
     )
-    return est1, history0 + history1
-    
+    return est1, history0 + history1, est0
 
-def three_stage_fitting(
+
+def fit_fix_pi_refit_merge_strains_refit(
     model,
     thresh,
+    initialize_params=None,
     stage2_hyperparameters=None,
     **kwargs,
 ):
     if stage2_hyperparameters is None:
         stage2_hyperparameters = {}
-    est1, history1 = fit_and_refit(
+    est1, history1, est0, *_ = fit_fix_pi_refit(
         model,
         stage2_hyperparameters,
-        **kwargs
+        initialize_params=initialize_params,
+        **kwargs,
     )
-    agg_communities = sf.estimation.communities_aggregated_by_strain_cluster(est1, thresh=thresh)
-    est2, history2 = sf.estimation.estimate_parameters(
-        model
-        .with_amended_coords(strain=agg_communities.strain)
+    agg_communities = sf.estimation.communities_aggregated_by_strain_cluster(
+        est1, thresh=thresh
+    )
+    est2, history2 = simple_fit(
+        model.with_amended_coords(strain=agg_communities.strain)
         .with_hyperparameters(**stage2_hyperparameters)
         .condition(pi=agg_communities.values),
-        **kwargs
+        **kwargs,
     )
-    return est2, history1 + history2
+    return est2, history1 + history2, est0, est1
+
+
+def fit_fix_pi_refit_merge_strains_unfix_pi_refit(
+    model,
+    thresh,
+    initialize_params=None,
+    stage2_hyperparameters=None,
+    **kwargs,
+):
+    if stage2_hyperparameters is None:
+        stage2_hyperparameters = {}
+    est1, history1, est0, *_ = fit_fix_pi_refit(
+        model,
+        stage2_hyperparameters,
+        initialize_params=initialize_params,
+        **kwargs,
+    )
+    agg_communities = sf.estimation.communities_aggregated_by_strain_cluster(
+        est1, thresh=thresh
+    )
+    est2, history2 = simple_fit(
+        model.with_amended_coords(strain=agg_communities.strain),
+        **kwargs,
+    )
+    return est2, history1 + history2, est0, est1

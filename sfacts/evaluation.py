@@ -26,7 +26,6 @@ import xarray as xr
 #     return (pi @ mean_masked_genotype_entropy(gamma, delta).reshape((-1, 1))).squeeze()
 
 
-
 def _rmse(x, y):
     return np.sqrt(np.square(x - y).mean())
 
@@ -46,7 +45,7 @@ def match_genotypes(worldA, worldB):
 
 def weighted_genotype_error(worldA, worldB):
     _, accuracy = match_genotypes(worldA, worldB)
-    error = xr.DataArray(accuracy, dims=('strain',), coords=dict(strain=worldA.strain))
+    error = xr.DataArray(accuracy, dims=("strain",), coords=dict(strain=worldA.strain))
     total_coverage = (worldA.data.mu * worldA.data.communities).sum("sample")
     return float((error * total_coverage).sum() / total_coverage.sum())
 
@@ -62,7 +61,7 @@ def community_error(worldA, worldB, reps=99):
 def community_error_test(worldA, worldB, reps=99):
     pi_sim = worldA.communities.to_pandas()
     pi_fit = worldB.communities.to_pandas()
-    
+
     bc_sim = 1 - pdist(pi_sim, metric="braycurtis")
     bc_fit = 1 - pdist(pi_fit, metric="braycurtis")
     err = _rmse(bc_sim, bc_fit)

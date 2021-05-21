@@ -9,8 +9,16 @@ import sfacts as sf
 from functools import partial
 from sklearn.manifold import MDS
 
+
 def _calculate_clustermap_sizes(
-    nx, ny, scalex=0.15, scaley=0.02, cwidth=0, cheight=0, dwidth=0.2, dheight=1.0
+    nx,
+    ny,
+    scalex=0.15,
+    scaley=0.02,
+    cwidth=0,
+    cheight=0,
+    dwidth=0.2,
+    dheight=1.0,
 ):
     # TODO: Incorporate colors.
     mwidth = nx * scalex
@@ -46,23 +54,21 @@ def plot_generic_clustermap_factory(
     row_col_annotation_cmap=mpl.cm.viridis,
     scalex=0.05,
     scaley=0.05,
-    cwidth=0.4,
-    cheight=0.4,
+    cwidth=0.1,
+    cheight=0.1,
     dwidth=1.0,
     dheight=1.0,
     vmin=None,
     vmax=None,
     center=None,
     cmap=None,
-    norm=mpl.colors.PowerNorm(1.),
+    norm=mpl.colors.PowerNorm(1.0),
     xticklabels=0,
     yticklabels=0,
-    metric='correlation',
+    metric="correlation",
     cbar_pos=None,
     transpose=False,
 ):
-
-
     def _plot_func(
         world,
         matrix_func=matrix_func,
@@ -93,13 +99,16 @@ def plot_generic_clustermap_factory(
 
         if transpose:
             matrix_data = matrix_data.T
-            col_linkage_func, row_linkage_func = row_linkage_func, col_linkage_func
+            col_linkage_func, row_linkage_func = (
+                row_linkage_func,
+                col_linkage_func,
+            )
             col_colors_func, row_colors_func = row_colors_func, col_colors_func
             scalex, scaley = scaley, scalex
             cwidth, cheight = cheight, cwidth
             dwidth, dheight = dheight, dwidth
             xticklabels, yticklabels = yticklabels, xticklabels
-        
+
         if col_linkage_func is None:
             col_linkage = None
         else:
@@ -109,7 +118,7 @@ def plot_generic_clustermap_factory(
             row_linkage = None
         else:
             row_linkage = row_linkage_func(world)
-        
+
         if col_colors_func is None:
             col_colors = None
         else:
@@ -119,9 +128,10 @@ def plot_generic_clustermap_factory(
                 .to_dataframe()
                 .applymap(row_col_annotation_cmap)
             )
+            cwidth *= col_colors.shape[1]
 
         if row_colors_func is None:
-            row_colors = None    
+            row_colors = None
         else:
             row_colors = (
                 row_colors_func(world)
@@ -129,7 +139,8 @@ def plot_generic_clustermap_factory(
                 .to_dataframe()
                 .applymap(row_col_annotation_cmap)
             )
-            
+            cheight *= row_colors.shape[1]
+
         ny, nx = matrix_data.shape
         figsize, dendrogram_ratio, colors_ratio = _calculate_clustermap_sizes(
             nx,
@@ -141,8 +152,8 @@ def plot_generic_clustermap_factory(
             dwidth=dwidth,
             dheight=dheight,
         )
-    #     sf.logging_util.info(matrix_data.shape, applied_scale_kwargs, figsize, dendrogram_ratio, colors_ratio)
-    
+        #     sf.logging_util.info(matrix_data.shape, applied_scale_kwargs, figsize, dendrogram_ratio, colors_ratio)
+
         clustermap_kwargs = dict(
             vmin=vmin,
             vmax=vmax,
@@ -162,155 +173,189 @@ def plot_generic_clustermap_factory(
             cbar_pos=cbar_pos,
         )
         clustermap_kwargs.update(kwargs)
-        
-        grid = sns.clustermap(
-            matrix_data,
-            **clustermap_kwargs
-        )
+
+        grid = sns.clustermap(matrix_data, **clustermap_kwargs)
         return grid
+
     return _plot_func
-    
+
 
 plot_metagenotype = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.metagenotypes.alt_allele_fraction(pseudo=1.).to_pandas().T,
-    row_linkage_func=lambda w: w.metagenotypes.linkage(dim='position'),
-    col_linkage_func=lambda w: w.metagenotypes.linkage(dim='sample'),
+    matrix_func=lambda w: w.metagenotypes.alt_allele_fraction(pseudo=1.0).to_pandas().T,
+    row_linkage_func=lambda w: w.metagenotypes.linkage(dim="position"),
+    col_linkage_func=lambda w: w.metagenotypes.linkage(dim="sample"),
     scalex=0.15,
     scaley=0.01,
     vmin=0,
     vmax=1,
     center=0.5,
-    cmap=mpl.cm.coolwarm,
+    cmap="coolwarm",
     xticklabels=1,
     yticklabels=0,
     col_colors_func=(
         lambda w: (
-            w
-            .metagenotypes
-            .sum('allele')
-            .mean('position')
+            w.metagenotypes.sum("allele")
+            .mean("position")
             .pipe(np.sqrt)
-            .rename('mean_depth')
+            .rename("mean_depth")
+        )
+    ),
+)
+
+
+plot_expected_fractions = plot_generic_clustermap_factory(
+    matrix_func=lambda w: w.data["p"].to_pandas().T,
+    row_linkage_func=lambda w: w.metagenotypes.linkage(dim="position"),
+    col_linkage_func=lambda w: w.metagenotypes.linkage(dim="sample"),
+    scalex=0.15,
+    scaley=0.01,
+    vmin=0,
+    vmax=1,
+    center=0.5,
+    cmap="coolwarm",
+    xticklabels=1,
+    yticklabels=0,
+    col_colors_func=(
+        lambda w: (
+            w.metagenotypes.sum("allele")
+            .mean("position")
+            .pipe(np.sqrt)
+            .rename("mean_depth")
+        )
+    ),
+)
+
+plot_prediction_error = plot_generic_clustermap_factory(
+    matrix_func=lambda w: (
+        w.data["p"] - w.metagenotypes.frequencies().sel(allele="alt")
+    )
+    .fillna(0)
+    .to_pandas()
+    .T,
+    row_linkage_func=lambda w: w.metagenotypes.linkage(dim="position"),
+    col_linkage_func=lambda w: w.metagenotypes.linkage(dim="sample"),
+    scalex=0.15,
+    scaley=0.01,
+    vmin=-1,
+    vmax=1,
+    center=0,
+    cmap="coolwarm",
+    xticklabels=1,
+    yticklabels=0,
+)
+
+plot_dominance = plot_generic_clustermap_factory(
+    matrix_func=lambda w: w.metagenotypes.dominant_allele_fraction(pseudo=1.0)
+    .to_pandas()
+    .T,
+    col_linkage_func=lambda w: w.metagenotypes.linkage(dim="sample"),
+    metric="cosine",
+    scalex=0.15,
+    scaley=0.01,
+    vmin=0,
+    vmax=1,
+    xticklabels=1,
+    yticklabels=0,
+    col_colors_func=(
+        lambda w: (
+            w.metagenotypes.sum("allele")
+            .mean("position")
+            .pipe(np.sqrt)
+            .rename("mean_depth")
         )
     ),
 )
 
 plot_depth = plot_generic_clustermap_factory(
     matrix_func=lambda w: w.metagenotypes.sum("allele").to_pandas().T,
-    row_linkage_func=lambda w: w.metagenotypes.linkage(dim='position'),
-    col_linkage_func=lambda w: w.metagenotypes.linkage(dim='sample'),
+    row_linkage_func=lambda w: w.metagenotypes.linkage(dim="position"),
+    col_linkage_func=lambda w: w.metagenotypes.linkage(dim="sample"),
     scalex=0.15,
     scaley=0.01,
     vmin=0,
     vmax=1,
     center=0.5,
-    cmap=mpl.cm.gray,
+    cmap="gray",
     xticklabels=1,
     yticklabels=0,
     col_colors_func=(
         lambda w: (
-            w
-            .metagenotypes
-            .sum('allele')
-            .mean('position')
+            w.metagenotypes.sum("allele")
+            .mean("position")
             .pipe(np.sqrt)
-            .rename('mean_depth')
+            .rename("mean_depth")
         )
     ),
-    norm=mpl.colors.SymLogNorm(linthresh=1.),
+    norm=mpl.colors.SymLogNorm(linthresh=1.0),
 )
 
 plot_genotype = plot_generic_clustermap_factory(
     matrix_func=lambda w: w.genotypes.to_pandas(),
-    row_linkage_func=lambda w: w.genotypes.linkage(dim='strain'),
-    col_linkage_func=lambda w: w.genotypes.linkage(dim='position'),
-    scaley=0.15,
+    row_linkage_func=lambda w: w.genotypes.linkage(dim="strain"),
+    col_linkage_func=lambda w: w.genotypes.linkage(dim="position"),
+    scaley=0.20,
     scalex=0.01,
     vmin=0,
     center=0.5,
     vmax=1,
-    cmap=mpl.cm.coolwarm,
+    cmap="coolwarm",
     yticklabels=1,
     xticklabels=0,
-    row_colors_func=(
-        lambda w: (
-            w
-            .genotypes
-            .entropy()
-        )
-    ),
+    row_colors_func=(lambda w: (w.genotypes.entropy())),
 )
 
 plot_masked_genotype = plot_generic_clustermap_factory(
     matrix_func=lambda w: w.masked_genotypes.to_pandas(),
-    row_linkage_func=lambda w: w.masked_genotypes.linkage(dim='strain'),
-    col_linkage_func=lambda w: w.genotypes.linkage(dim='position'),
-    scaley=0.15,
+    row_linkage_func=lambda w: w.masked_genotypes.linkage(dim="strain"),
+    col_linkage_func=lambda w: w.genotypes.linkage(dim="position"),
+    scaley=0.20,
     scalex=0.01,
     vmin=0,
     vmax=1,
-    cmap=mpl.cm.coolwarm,
+    cmap="coolwarm",
     yticklabels=1,
     xticklabels=0,
-    row_colors_func=(
-        lambda w: (
-            w
-            .genotypes
-            .entropy()
-        )
-    ),
+    row_colors_func=(lambda w: (w.genotypes.entropy())),
 )
 
 plot_missing = plot_generic_clustermap_factory(
     matrix_func=lambda w: w.missingness.to_pandas(),
-    row_linkage_func=lambda w: w.genotypes.linkage(dim='strain'),
-    col_linkage_func=lambda w: w.genotypes.linkage(dim='position'),
-    metric='cosine',
-    scaley=0.15,
+    row_linkage_func=lambda w: w.genotypes.linkage(dim="strain"),
+    col_linkage_func=lambda w: w.genotypes.linkage(dim="position"),
+    metric="cosine",
+    scaley=0.20,
     scalex=0.01,
     vmin=0,
     vmax=1,
     cmap=None,
     yticklabels=1,
     xticklabels=0,
-    row_colors_func=(
-        lambda w: (
-            1 - w
-            .missingness
-            .mean('position')
-        )
-    ),
+    row_colors_func=(lambda w: (1 - w.missingness.mean("position"))),
 )
 
 plot_community = plot_generic_clustermap_factory(
     matrix_func=lambda w: w.communities.to_pandas().T,
-    row_linkage_func=lambda w: w.genotypes.linkage(dim='strain'),
-    col_linkage_func=lambda w: w.communities.linkage(dim='sample'),
-    row_colors_func=(
-        lambda w: (
-            w
-            .communities
-            .sum('sample')
-            .pipe(np.sqrt)
-        )
-    ),
-    metric='cosine',
-    scaley=0.15,
+    row_linkage_func=lambda w: w.genotypes.linkage(dim="strain"),
+    col_linkage_func=lambda w: w.communities.linkage(dim="sample"),
+    row_colors_func=(lambda w: (w.communities.sum("sample").pipe(np.sqrt))),
+    metric="cosine",
+    scaley=0.20,
     scalex=0.14,
     dwidth=1.0,
     vmin=0,
     vmax=1,
     cmap=None,
-    norm=mpl.colors.PowerNorm(1/2),
+    norm=mpl.colors.PowerNorm(1 / 2),
     xticklabels=1,
     yticklabels=1,
 )
+
 
 def plot_loss_history(trace):
     trace = np.array(trace)
     plt.plot((trace - trace.min()))
     plt.yscale("log")
-    
+
 
 def nmds_ordination(dmat):
     init = MDS(
@@ -334,7 +379,9 @@ def nmds_ordination(dmat):
     ordin = nmds.fit_transform(dmat, init=init)
 
     ordin = pd.DataFrame(
-        ordin, index=dmat.index, columns=[f"PC{i}" for i in np.arange(ordin.shape[1]) + 1]
+        ordin,
+        index=dmat.index,
+        columns=[f"PC{i}" for i in np.arange(ordin.shape[1]) + 1],
     )
     return ordin
 
@@ -349,8 +396,7 @@ def ordination_plot(
     ax=None,
     **kwargs,
 ):
-    """Plot nMDS ordination with markers colored/shaped by metadata features.
-    """
+    """Plot nMDS ordination with markers colored/shaped by metadata features."""
     x, y = xy
     dmat = dmat_func(world)
 
@@ -358,7 +404,7 @@ def ordination_plot(
         colors = None
     else:
         colors = colors_func(world)
-        
+
     if sizes_func is None:
         sizes = None
     else:
@@ -368,9 +414,9 @@ def ordination_plot(
 
     scatter_kwargs = dict(
         c=colors,
-        cmap=mpl.cm.viridis,
+        cmap="viridis",
         s=sizes,
-        edgecolor='k',
+        edgecolor="k",
         lw=0.2,
         alpha=0.8,
     )
@@ -382,52 +428,99 @@ def ordination_plot(
     ax.set_ylabel(f"{y}")
     return ax, ordin
 
+
 def plot_metagenotype_frequency_spectrum(
-    world, sample_list=None, show_dominant=False, axwidth=2, axheight=1.5, bins=None, axs=None, **kwargs,
+    world,
+    sample_list=None,
+    show_dominant=False,
+    axwidth=2,
+    axheight=1.5,
+    bins=None,
+    axs=None,
+    **kwargs,
 ):
     if sample_list is None:
         sample_list = world.sample.values
-        
-    hist_kwargs = dict(
-        color='black'
-    )
+
+    hist_kwargs = dict(color="black")
     hist_kwargs.update(kwargs)
-            
+
     n = len(sample_list)
     if not axs:
-        fig, axs = plt.subplots(n, n, figsize=(axwidth * n, axheight * n), sharex=True, sharey=True)
+        fig, axs = plt.subplots(
+            n, n, figsize=(axwidth * n, axheight * n), sharex=True, sharey=True
+        )
     axs = np.asarray(axs).reshape((n, n))
-    
+
     if bins is None:
         bins = np.linspace(0.5, 1.0, num=21)
-        
-    frequencies = world.metagenotypes.sel(sample=sample_list).frequencies()
+
+    frequencies = world.metagenotypes.mlift("sel", sample=sample_list).frequencies()
     for sample_i, row in zip(sample_list, axs):
         for sample_j, ax in zip(sample_list, row):
-            domfreq_ij = frequencies.sel(sample=[sample_i, sample_j]).mean('sample').max('allele')
+            domfreq_ij = (
+                frequencies.sel(sample=[sample_i, sample_j])
+                .mean("sample")
+                .max("allele")
+            )
             ax.hist(domfreq_ij, bins=bins, **hist_kwargs)
-            
+
     if show_dominant:
         max_frac = world.communities.sel(sample=sample_list).max("strain")
         max_frac_complement = 1 - max_frac
         for i, sample in enumerate(sample_list):
             ax = axs[i, i]
-            ax.axvline(max_frac.sel(sample=sample), linestyle='--', lw=1, color='darkblue')
-            ax.axvline(max_frac_complement.sel(sample=sample), linestyle='--', lw=1, color='darkred')
-            
+            ax.axvline(
+                max_frac.sel(sample=sample),
+                linestyle="--",
+                lw=1,
+                color="darkblue",
+            )
+            ax.axvline(
+                max_frac_complement.sel(sample=sample),
+                linestyle="--",
+                lw=1,
+                color="darkred",
+            )
+
     for i, sample in enumerate(sample_list):
         ax_left = axs[i, 0]
         ax_top = axs[0, i]
         ax_left.set_ylabel(sample)
         ax_top.set_title(sample)
-            
-    ax.set_xlim(0.5, 1) 
+
+    ax.set_xlim(0.5, 1)
+
+
+def plot_metagenotype_frequency_spectrum_comparison(
+    worlds, sample, alpha=0.5, bins=None, ax=None
+):
+    if bins is None:
+        bins = np.linspace(0.5, 1.0, num=21)
+    if ax is None:
+        ax = plt.gca()
+
+    plot_hist = lambda w, label: ax.hist(
+        w.metagenotypes.mlift("sel", sample=[sample])
+        .dominant_allele_fraction()
+        .values.squeeze(),
+        bins=bins,
+        alpha=alpha,
+        label=label,
+    )
+    for k, w in worlds.items():
+        plot_hist(w, k)
+    ax.set_title(sample)
+
+    return ax
 
 
 def plot_beta_diversity_comparison(
-    worldA, worldB, **kwargs,
+    worldA,
+    worldB,
+    **kwargs,
 ):
     cdmatA = squareform(worldA.communities.pdist(dim="sample"))
     cdmatB = squareform(worldB.communities.pdist(dim="sample"))
-    
-    return sns.jointplot('a', 'b', data=pd.DataFrame(dict(a=cdmatA, b=cdmatB)))
+
+    return sns.jointplot("a", "b", data=pd.DataFrame(dict(a=cdmatA, b=cdmatB)))

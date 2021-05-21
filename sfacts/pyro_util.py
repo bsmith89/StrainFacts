@@ -23,6 +23,7 @@ def shape_info(model, *args, **kwargs):
     _trace.compute_log_prob()
     info(_trace.format_shapes())
 
+
 def set_random_seed(seed, warn=True):
     if seed is not None:
         pyro.set_rng_seed(seed)

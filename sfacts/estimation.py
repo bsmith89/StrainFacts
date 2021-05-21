@@ -1,111 +1,84 @@
 import sfacts as sf
 from sklearn.cluster import AgglomerativeClustering
+from sklearn.decomposition import non_negative_factorization
+
+import xarray as xr
+
 # from sklearn.decomposition import non_negative_factorization
 # from sfacts.genotype import genotype_pdist, adjust_genotype_by_missing
 from sfacts.pyro_util import all_torch
 import pandas as pd
 import numpy as np
+
 # import scipy as sp
 # from scipy.spatial.distance import squareform
 import pyro
+
 # import pyro.distributions as dist
 import torch
 from tqdm import tqdm
 from sfacts.logging_util import info
-# from sfacts.model import condition_model
 
 
-# def cluster_genotypes(gamma, thresh, quiet=True, precomputed_pdist=None):
-# 
-#     if precomputed_pdist is None:
-#         compressed_dmat = genotype_pdist(gamma, quiet=quiet)
-#     else:
-#         compressed_dmat = precomputed_pdist
-# 
-#     clust = pd.Series(
-#         AgglomerativeClustering(
-#             n_clusters=None,
-#             affinity="precomputed",
-#             linkage="complete",
-#             distance_threshold=thresh,
-#         )
-#         .fit(squareform(compressed_dmat))
-#         .labels_
-#     )
-# 
-#     return clust, compressed_dmat
-# 
-# 
-# def initialize_parameters_by_clustering_samples(
-#     metagenotype,
-#     thresh=None,
-#     additional_strains_factor=0.5,
-#     quiet=True,
-#     precomputed_pdist=None,
-# ):
-#     n, g, a = metagenotype.shape
-# 
-#     sample_genotype = sf.genotype.metagenotype_to_genotype(metagenotype)
-#     clust, cdmat = cluster_genotypes(
-#         sample_genotype,
-#         thresh=thresh,
-#         quiet=quiet,
-#         precomputed_pdist=precomputed_pdist,
-#     )
-#     s_clust = len(clust.value_counts())
-#     
-#     # FIXME: This probably doesn't work using xarray.
-#     # How to use pandas style aggregation here?
-#     clust_metagenotype = metagenotype.groupby(sample=clust)
-#     s_additional_haplotypes = int(additional_strains_factor * s_clust)
-#     s_init = s_clust + s_additional_haplotypes
-# 
-#     # FIXME: This probably doesn't work using xarray.
-#     # The "additional_haplotypes" cells will need to be indexed.
-#     # Consider doing the matrix building in numpy space,
-#     # and then apply genotype.build_genotype(gamma).
-#     gamma_init = xr.concat(
-#         [
-#             clust_metagenotype,
-#             np.ones((s_additional_haplotypes, g)) * 0.5,
-#         ]
-#     ).values
-# 
-#     pi_init = np.ones((n, s_init))
-#     for i in range(n):
-#         pi_init[i, clust[i]] = s_init - 1
-#     pi_init /= pi_init.sum(1, keepdims=True)
-# 
-#     assert (~np.isnan(gamma_init)).all()
-# 
-#     return gamma_init, pi_init, cdmat
-# 
-# 
-# def initialize_parameters_by_nmf(
-#     y, m, s, quiet=True, solver="mu", alpha=100.0, l1_ratio=1.0, tol=1e-2, **kwargs
-# ):
-#     n, g = y.shape
-# 
-#     # Fit to counts of both reference and alternative alleles by stacking them.
-#     stacked_metagenotype = np.concatenate([y, m - y], axis=1)
-#     pi_unnorm, gamma_unnorm, _ = non_negative_factorization(
-#         stacked_metagenotype,
-#         n_components=s,
-#         solver=solver,
-#         verbose=int(not quiet),
-#         alpha=alpha,
-#         l1_ratio=l1_ratio,
-#         tol=tol,
-#         **kwargs,
-#     )
-# 
-#     # TODO: Find a more principled way to convert pi_unnorm into pi_init.
-#     pi_init = (pi_unnorm + 1) / (pi_unnorm + 1).sum(1, keepdims=True)
-#     gamma_init = (gamma_unnorm[:, :g] + 1) / (
-#         gamma_unnorm[:, :g] + gamma_unnorm[:, -g:] + 2
-#     )
-# 
-#     return gamma_init, pi_init, None
+def nmf_approximation(
+    world,
+    s,
+    regularization="both",
+    alpha=1.0,
+    l1_ratio=1.0,
+    tol=1e-4,
+    max_iter=int(1e4),
+    random_state=None,
+    init="random",
+    **kwargs,
+):
+    d = world.metagenotypes.to_series().unstack("sample")
+    columns = d.columns
+    index = d.index
+
+    gamma0, pi0, _ = non_negative_factorization(
+        d.values,
+        n_components=s,
+        alpha=alpha,
+        l1_ratio=l1_ratio,
+        tol=tol,
+        max_iter=max_iter,
+        random_state=random_state,
+        init=init,
+        **kwargs,
+    )
+    pi1 = (
+        pd.DataFrame(pi0, columns=columns)
+        .rename_axis(index="strain")
+        .stack()
+        .to_xarray()
+    )
+    gamma1 = (
+        pd.DataFrame(gamma0, index=index)
+        .rename_axis(columns="strain")
+        .stack()
+        .to_xarray()
+    )
+
+    # Rebalance estimates: mean strain genotype of 1
+    gamma1_strain_factor = gamma1.sum("allele").mean("position")
+    gamma2 = gamma1 / gamma1_strain_factor
+    pi2 = pi1 * gamma1_strain_factor
+
+    # Transform estimates: sum-to-1
+    gamma3 = (gamma2 / gamma2.sum("allele")).fillna(0.5)
+    pi3 = pi2 / pi2.sum("strain")
+
+    approx = sf.data.World(
+        xr.Dataset(
+            dict(
+                communities=pi3.transpose("sample", "strain"),
+                genotypes=gamma3.sel(allele="alt").transpose("strain", "position"),
+                metagenotypes=world.metagenotypes.data,
+            )
+        )
+    )
+    return approx
 
 
 def estimate_parameters(
@@ -122,7 +95,7 @@ def estimate_parameters(
 ):
     if initialize_params is None:
         initialize_params = {}
-        
+
     sf.pyro_util.set_random_seed(seed, warn=(not quiet))
 
     _guide = pyro.infer.autoguide.AutoLaplaceApproximation(
@@ -131,9 +104,7 @@ def estimate_parameters(
             values=all_torch(**initialize_params, dtype=dtype, device=device)
         ),
     )
-    svi = pyro.infer.SVI(
-        model, _guide, opt, loss=pyro.infer.JitTrace_ELBO()
-    )
+    svi = pyro.infer.SVI(model, _guide, opt, loss=pyro.infer.JitTrace_ELBO())
     pyro.clear_param_store()
 
     history = []
@@ -195,14 +166,27 @@ def estimate_parameters(
 def strain_cluster(world, thresh, linkage="complete", pdist_func=None):
     if pdist_func is None:
         pdist_func = lambda w: w.genotypes.pdist()
-    clust = pd.Series(AgglomerativeClustering(
-        n_clusters=None, distance_threshold=thresh, linkage='complete', affinity='precomputed'
-    ).fit(pdist_func(world)).labels_, index=world.strain)
+    clust = pd.Series(
+        AgglomerativeClustering(
+            n_clusters=None,
+            distance_threshold=thresh,
+            linkage="complete",
+            affinity="precomputed",
+        )
+        .fit(pdist_func(world))
+        .labels_,
+        index=world.strain,
+    )
     return clust
 
 
 def communities_aggregated_by_strain_cluster(world, thresh, **kwargs):
     clust = strain_cluster(world, thresh, **kwargs)
     return sf.data.Communities(
-        world.communities.to_pandas().groupby(clust, axis='columns').sum().rename_axis(columns='strain').stack().to_xarray()
+        world.communities.to_pandas()
+        .groupby(clust, axis="columns")
+        .sum()
+        .rename_axis(columns="strain")
+        .stack()
+        .to_xarray()
     )
