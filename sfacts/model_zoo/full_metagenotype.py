@@ -79,13 +79,10 @@ def full_metagenotype_model_structure(
                 ),
             )
             # Position presence/absence
-            _delta = pyro.sample("_delta", dist.Beta(1.0, 1.0))
-            delta = pyro.deterministic(
+            delta = pyro.sample(
                 "delta",
-                unit_interval_power_transformation(
-                    _delta,
-                    2 * (1 - delta_hyper_r) / delta_hyper_temp,
-                    2 * delta_hyper_r / delta_hyper_temp,
+                dist.RelaxedBernoulli(
+                    temperature=delta_hyper_temp, probs=delta_hyper_r
                 ),
             )
     pyro.deterministic("genotypes", gamma)
