@@ -533,3 +533,18 @@ class World:
         )
         out_data[dim] = new_coords
         return cls(out_data)
+
+
+def latent_metagenotypes_pdist(world):
+    return pdist(
+        Genotypes._convert_to_sign_representation(world.data.p).to_pandas(),
+        metric="cosine",
+    )
+
+
+def latent_metagenotypes_linkage(world, method="average", optimal_ordering=True):
+    return linkage(
+        latent_metagenotypes_pdist(world),
+        method=method,
+        optimal_ordering=optimal_ordering,
+    )

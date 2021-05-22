@@ -1,6 +1,7 @@
 import sfacts as sf
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.decomposition import non_negative_factorization
+from scipy.spatial.distance import squareform, pdist
 
 import xarray as xr
 
@@ -163,9 +164,10 @@ def estimate_parameters(
     return model.format_world(est), history
 
 
-def strain_cluster(world, thresh, linkage="complete", pdist_func=None):
-    if pdist_func is None:
-        pdist_func = lambda w: w.genotypes.pdist()
+def strain_cluster(world, thresh, linkage="complete"):
+    pdist_func = lambda w: squareform(
+        pdist(w.genotypes.values, metric="cityblock") / w.sizes["position"]
+    )
     clust = pd.Series(
         AgglomerativeClustering(
             n_clusters=None,
