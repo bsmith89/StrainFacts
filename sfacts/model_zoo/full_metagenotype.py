@@ -42,10 +42,10 @@ import pyro.distributions as dist
         delta_hyper_r=0.9,
         rho_hyper=5.0,
         pi_hyper=0.2,
-        epsilon_hyper_alpha=1.5,
-        epsilon_hyper_beta=1.5 / 0.01,
         mu_hyper_mean=1.0,
         mu_hyper_scale=10.0,
+        epsilon_hyper_mode=0.01,
+        epsilon_hyper_spread=1.5,
         alpha_hyper_hyper_mean=100.0,
         alpha_hyper_hyper_scale=1.0,
         alpha_hyper_scale=0.5,
@@ -64,10 +64,10 @@ def full_metagenotype_model_structure(
     alpha_hyper_hyper_mean,
     alpha_hyper_hyper_scale,
     alpha_hyper_scale,
-    epsilon_hyper_alpha,
-    epsilon_hyper_beta,
     mu_hyper_mean,
     mu_hyper_scale,
+    epsilon_hyper_mode,
+    epsilon_hyper_spread,
 ):
     with pyro.plate("position", g, dim=-1):
         with pyro.plate("strain", s, dim=-2):
@@ -115,7 +115,8 @@ def full_metagenotype_model_structure(
         pi = pyro.sample("pi", dist.Dirichlet(pi_hyper * rho, validate_args=False))
         # Sequencing error
         epsilon = pyro.sample(
-            "epsilon", dist.Beta(epsilon_hyper_alpha, epsilon_hyper_beta)
+            "epsilon",
+            dist.Beta(epsilon_hyper_spread, epsilon_hyper_spread / epsilon_hyper_mode),
         ).unsqueeze(-1)
         alpha = pyro.sample(
             "alpha",
