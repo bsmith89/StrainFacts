@@ -1,7 +1,6 @@
 import sfacts as sf
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.decomposition import non_negative_factorization
-from scipy.spatial.distance import squareform, pdist
 
 import xarray as xr
 
@@ -87,6 +86,7 @@ def estimate_parameters(
     dtype=torch.float32,
     device="cpu",
     initialize_params=None,
+    jit=True,
     maxiter=10000,
     lagA=20,
     lagB=100,
@@ -96,6 +96,11 @@ def estimate_parameters(
 ):
     if initialize_params is None:
         initialize_params = {}
+        
+    if jit:
+        loss = pyro.infer.JitTrace_ELBO()
+    else:
+        loss = pyro.infer.Trace_ELBO()
 
     sf.pyro_util.set_random_seed(seed, warn=(not quiet))
 
@@ -105,7 +110,7 @@ def estimate_parameters(
             values=all_torch(**initialize_params, dtype=dtype, device=device)
         ),
     )
-    svi = pyro.infer.SVI(model, _guide, opt, loss=pyro.infer.JitTrace_ELBO())
+    svi = pyro.infer.SVI(model, _guide, opt, loss=loss)
     pyro.clear_param_store()
 
     history = []
@@ -137,7 +142,7 @@ def estimate_parameters(
                     )
                     if (delta_lagA <= 0) and (delta_lagB <= 0):
                         pbar.close()
-                        info("Converged", quiet=quiet)
+#                         info("Converged", quiet=quiet)
                         break
     except KeyboardInterrupt:
         pbar.close()
@@ -164,10 +169,9 @@ def estimate_parameters(
     return model.format_world(est), history
 
 
-def strain_cluster(world, thresh, linkage="complete"):
-    pdist_func = lambda w: squareform(
-        pdist(w.genotypes.values, metric="cityblock") / w.sizes["position"]
-    )
+def strain_cluster(world, thresh, linkage="complete", pdist_func=None):
+    if pdist_func is None:
+        pdist_func = lambda w: w.genotypes.pdist()
     clust = pd.Series(
         AgglomerativeClustering(
             n_clusters=None,

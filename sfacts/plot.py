@@ -68,6 +68,7 @@ def plot_generic_clustermap_factory(
     metric="correlation",
     cbar_pos=None,
     transpose=False,
+    isel=None
 ):
     def _plot_func(
         world,
@@ -93,9 +94,15 @@ def plot_generic_clustermap_factory(
         metric=metric,
         cbar_pos=cbar_pos,
         transpose=transpose,
+        isel=isel,
         **kwargs,
     ):
         matrix_data = matrix_func(world)
+        
+        if isel is None:
+            isel={}
+            
+        matrix_data = matrix_data.isel(**isel).to_pandas()
 
         if transpose:
             matrix_data = matrix_data.T
@@ -181,7 +188,7 @@ def plot_generic_clustermap_factory(
 
 
 plot_metagenotype = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.metagenotypes.alt_allele_fraction(pseudo=1.0).to_pandas().T,
+    matrix_func=lambda w: w.metagenotypes.alt_allele_fraction(pseudo=1.0).T,
     row_linkage_func=lambda w: w.metagenotypes.linkage(dim="position"),
     col_linkage_func=lambda w: w.metagenotypes.linkage(dim="sample"),
     scalex=0.15,
@@ -204,7 +211,7 @@ plot_metagenotype = plot_generic_clustermap_factory(
 
 
 plot_expected_fractions = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.data["p"].to_pandas().T,
+    matrix_func=lambda w: w.data["p"].T,
     row_linkage_func=lambda w: w.metagenotypes.linkage(dim="position"),
     col_linkage_func=lambda w: w.metagenotypes.linkage(dim="sample"),
     scalex=0.15,
@@ -230,7 +237,6 @@ plot_prediction_error = plot_generic_clustermap_factory(
         w.data["p"] - w.metagenotypes.frequencies().sel(allele="alt")
     )
     .fillna(0)
-    .to_pandas()
     .T,
     row_linkage_func=lambda w: w.metagenotypes.linkage(dim="position"),
     col_linkage_func=lambda w: w.metagenotypes.linkage(dim="sample"),
@@ -246,7 +252,6 @@ plot_prediction_error = plot_generic_clustermap_factory(
 
 plot_dominance = plot_generic_clustermap_factory(
     matrix_func=lambda w: w.metagenotypes.dominant_allele_fraction(pseudo=1.0)
-    .to_pandas()
     .T,
     col_linkage_func=lambda w: w.metagenotypes.linkage(dim="sample"),
     metric="cosine",
@@ -267,7 +272,7 @@ plot_dominance = plot_generic_clustermap_factory(
 )
 
 plot_depth = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.metagenotypes.sum("allele").to_pandas().T,
+    matrix_func=lambda w: w.metagenotypes.sum("allele").T,
     row_linkage_func=lambda w: w.metagenotypes.linkage(dim="position"),
     col_linkage_func=lambda w: w.metagenotypes.linkage(dim="sample"),
     scalex=0.15,
@@ -290,7 +295,7 @@ plot_depth = plot_generic_clustermap_factory(
 )
 
 plot_genotype = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.genotypes.to_pandas(),
+    matrix_func=lambda w: w.genotypes,
     row_linkage_func=lambda w: w.genotypes.linkage(dim="strain"),
     col_linkage_func=lambda w: w.genotypes.linkage(dim="position"),
     scaley=0.20,
@@ -305,7 +310,7 @@ plot_genotype = plot_generic_clustermap_factory(
 )
 
 plot_masked_genotype = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.masked_genotypes.to_pandas(),
+    matrix_func=lambda w: w.masked_genotypes,
     row_linkage_func=lambda w: w.masked_genotypes.linkage(dim="strain"),
     col_linkage_func=lambda w: w.genotypes.linkage(dim="position"),
     scaley=0.20,
@@ -319,7 +324,7 @@ plot_masked_genotype = plot_generic_clustermap_factory(
 )
 
 plot_missing = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.missingness.to_pandas(),
+    matrix_func=lambda w: w.missingness,
     row_linkage_func=lambda w: w.genotypes.linkage(dim="strain"),
     col_linkage_func=lambda w: w.genotypes.linkage(dim="position"),
     metric="cosine",
@@ -334,7 +339,7 @@ plot_missing = plot_generic_clustermap_factory(
 )
 
 plot_community = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.communities.to_pandas().T,
+    matrix_func=lambda w: w.communities.data.T,
     row_linkage_func=lambda w: w.genotypes.linkage(dim="strain"),
     col_linkage_func=lambda w: w.communities.linkage(dim="sample"),
     row_colors_func=(lambda w: (w.communities.sum("sample").pipe(np.sqrt))),

@@ -51,7 +51,7 @@ import pyro.distributions as dist
         alpha_hyper_scale=0.5,
     ),
 )
-def full_metagenotype_model_structure(
+def full_metagenotype_dirichlet_rho_model_structure(
     n,
     g,
     s,
@@ -90,10 +90,7 @@ def full_metagenotype_model_structure(
     pyro.deterministic("missingness", delta)
 
     # Meta-community composition
-    rho_betas = pyro.sample(
-        "rho_betas", dist.Beta(1.0, rho_hyper).expand([s - 1]).to_event()
-    )
-    rho = pyro.deterministic("rho", stickbreaking_betas_to_probs(rho_betas))
+    rho = pyro.sample("rho", dist.Dirichlet(_unit.repeat(s) * rho_hyper))
     pyro.deterministic("metacommunity", rho)
 
     alpha_hyper_mean = pyro.sample(

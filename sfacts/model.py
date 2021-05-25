@@ -30,10 +30,10 @@ class Structure:
 
     #         info(f"New Structure({self.generative}, {self.default_hyperparameters})")
 
-    def __call__(self, shape, data, hyperparameters):
+    def __call__(self, shape, data, hyperparameters, unit):
         assert len(shape) == len(self.dims)
         conditioned_generative = pyro.condition(self.generative, data)
-        return conditioned_generative(*shape, **hyperparameters)
+        return conditioned_generative(*shape, **hyperparameters, _unit=unit)
 
     #     def condition(self, **data):
     #         new_data = self.data.copy()
@@ -133,6 +133,7 @@ class ParameterizedModel:
             hyperparameters=all_torch(
                 **self.hyperparameters, dtype=self.dtype, device=self.device
             ),
+            unit=torch.tensor(1.0, dtype=self.dtype, device=self.device),
         )
 
     @staticmethod

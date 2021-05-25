@@ -144,6 +144,14 @@ class WrappedDataArrayMixin:
 
     def to_world(self):
         return World(self.data.to_dataset())
+    
+    
+    def random_sample(self, n, dim, replace=False, keep_order=True):
+        dim_n = self.data.sizes[dim]
+        ii = np.random.choice(np.arange(dim_n), size=n, replace=replace)
+        if keep_order:
+            ii = sorted(ii)
+        return self.__class__(data=self.data.isel(**{dim: ii}))
 
 
 class Metagenotypes(WrappedDataArrayMixin):
@@ -180,11 +188,17 @@ class Metagenotypes(WrappedDataArrayMixin):
             path, encoding=dict(tally=dict(zlib=True, complevel=6))
         )
 
-    def select_variable_positions(self, incid_thresh, allele_thresh=0):
+    def select_variable_positions(self, thresh):
         # TODO: Consider using .lift() to do this.
-        x = self.data
-        minor_allele_incid = (x > allele_thresh).mean("sample").min("allele")
-        variable_positions = idxwhere(minor_allele_incid.to_series() > incid_thresh)
+        variable_positions = (
+            self.data
+            .argmin('allele', skipna=False)
+            .mean('sample')
+            .pipe(
+                lambda x: (x > thresh) &
+                (x < (1 - thresh))
+            )
+        )
         return self.mlift("sel", position=variable_positions)
 
     def select_samples_with_coverage(self, cvrg_thresh):
@@ -244,7 +258,7 @@ class Metagenotypes(WrappedDataArrayMixin):
     def cosine_pdist(self, dim="sample"):
         if dim != "sample":
             raise NotImplementedError("Only dim 'sample' has been implemented.")
-        d = self.to_dataframe().unstack(dim)
+        d = self.to_dataframe().unstack(dim).T
         return pd.DataFrame(
             squareform(pdist(d.values, metric="cosine")), index=d.index, columns=d.index
         )
@@ -476,7 +490,7 @@ class World:
                 wrapped_variable = getattr(self, name)
                 wrapped_variable.validate_constraints()
 
-    def random_sample(self, n, dim, replace=False, keep_order=True, seed=None):
+    def random_sample(self, n, dim, replace=False, keep_order=True):
         dim_n = self.data.sizes[dim]
         ii = np.random.choice(np.arange(dim_n), size=n, replace=replace)
         if keep_order:
@@ -512,7 +526,7 @@ class World:
             )
 
     @classmethod
-    def concat(cls, data, dim):
+    def concat(cls, data, dim, rename_coords=False):
         new_coords = []
         # Add source metadata and rename concatenation coordinates
         renamed_data = []
@@ -520,7 +534,10 @@ class World:
         for name in data:
             d = data[name].data.copy()
             d["_concat_from"] = xr.DataArray(name, dims=(dim,), coords={dim: d[dim]})
-            new_coords.extend([f"{name}_{i}" for i in d[dim].values])
+            if rename_coords:
+                new_coords.extend([f"{name}_{i}" for i in d[dim].values])
+            else:
+                new_coords.extend(d[dim].values)
             shared_variables &= set([str(v) for v in d.variables])
             renamed_data.append(d)
         # Drop unshared variables
@@ -535,16 +552,15 @@ class World:
         return cls(out_data)
 
 
-def latent_metagenotypes_pdist(world):
-    return pdist(
-        Genotypes._convert_to_sign_representation(world.data.p).to_pandas(),
-        metric="cosine",
-    )
+def latent_metagenotypes_pdist(world, dim='sample'):
+    if dim == 'sample':
+        dim = 'strain'
+    return Genotypes(world.data.p.rename({"sample": "strain"})).pdist(dim=dim)
 
 
-def latent_metagenotypes_linkage(world, method="average", optimal_ordering=True):
+def latent_metagenotypes_linkage(world, dim='sample', method="average", optimal_ordering=True):
     return linkage(
-        latent_metagenotypes_pdist(world),
+        squareform(latent_metagenotypes_pdist(world, dim=dim)),
         method=method,
         optimal_ordering=optimal_ordering,
     )
