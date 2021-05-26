@@ -485,6 +485,19 @@ class World:
                 wrapped_variable = getattr(self, name)
                 wrapped_variable.validate_constraints()
 
+    def dump(self, path, validate=True):
+        if validate:
+            self.validate_constraints()
+        self.data.to_netcdf(path)
+
+    @classmethod
+    def load(cls, path, validate=True):
+        data = xr.open_dataset(path)
+        world = cls(data)
+        if validate:
+            world.validate_constraints()
+        return world
+
     def random_sample(self, n, dim, replace=False, keep_order=True):
         dim_n = self.data.sizes[dim]
         ii = np.random.choice(np.arange(dim_n), size=n, replace=replace)
