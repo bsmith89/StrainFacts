@@ -50,7 +50,7 @@ def weighted_genotype_error(worldA, worldB):
     return float((error * total_coverage).sum() / total_coverage.sum())
 
 
-def community_error(worldA, worldB, reps=99):
+def community_error(worldA, worldB):
     piA = worldA.communities.to_pandas()
     piB = worldB.communities.to_pandas()
     bcA = 1 - pdist(piA, metric="braycurtis")
