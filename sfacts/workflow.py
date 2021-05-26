@@ -71,10 +71,9 @@ def fit_metagenotypes_then_refit_genotypes(
     _estimate_parameters = lambda model: sf.estimation.estimate_parameters(
         model, quiet=quiet, **estimation_kwargs
     )
+    _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
 
-    sf.logging_util.info(
-        f"START: Fitting data with shape {metagenotypes.sizes}.", quiet=quiet
-    )
+    _info(f"START: Fitting data with shape {metagenotypes.sizes}.")
     model = sf.model.ParameterizedModel(
         structure,
         coords=dict(
@@ -91,8 +90,8 @@ def fit_metagenotypes_then_refit_genotypes(
 
     start_time = time.time()
     est0, history0 = _estimate_parameters(model)
-    sf.logging_util.info("Finished initial fitting.")
-    sf.logging_util.info(f"Refitting missingness.", quiet=quiet)
+    _info("Finished initial fitting.")
+    _info(f"Refitting missingness.")
     est1, history1 = _estimate_parameters(
         model.condition(
             pi=est0.data.communities.values,
@@ -102,7 +101,7 @@ def fit_metagenotypes_then_refit_genotypes(
             m_hyper_r=est0.data.m_hyper_r.values,
         )
     )
-    sf.logging_util.info(f"Refitting genotypes.", quiet=quiet)
+    _info(f"Refitting genotypes.")
     est2, history2 = _estimate_parameters(
         model.condition(
             delta=est1.data.missingness.values,
@@ -115,7 +114,7 @@ def fit_metagenotypes_then_refit_genotypes(
     )
     end_time = time.time()
     delta_time = end_time - start_time
-    sf.logging_util.info(f"END: Fit in {delta_time} seconds.", quiet=quiet)
+    _info(f"END: Fit in {delta_time} seconds.")
     return (est0, est1), (history0, history1)
 
 
