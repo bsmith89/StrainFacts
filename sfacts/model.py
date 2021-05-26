@@ -94,6 +94,15 @@ class ParameterizedModel:
         if data is None:
             data = {}
 
+        # Special case of alleles because they are format in different
+        # ways for genotypes (0, 1) and metagenotypes (alt-count + total_count).
+        if "allele" in coords:
+            if "alt" in coords["allele"]:
+                if list(coords["allele"]).index("alt") > 0:
+                    warn(
+                        "Weird things can happen if binary (alt/ref) allele coordinates are passed as ['ref', 'alt']."
+                    )
+
         self.structure = structure
         self.coords = {k: self._coords_or_range(coords[k]) for k in self.structure.dims}
         self.dtype = dtype
