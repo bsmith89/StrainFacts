@@ -410,7 +410,7 @@ class Missingness(WrappedDataArrayMixin):
 
 class Communities(WrappedDataArrayMixin):
     dims = ("sample", "strain")
-    constraints = dict(strains_sum_to_1=lambda d: (d.sum("strain") == 1.0).all())
+    constraints = dict(strains_sum_to_1=lambda d: np.allclose(d.sum("strain"), 1.0, atol=1e-5))
     variable_name = "communities"
 
     def fuzzed(self, eps=1e-5):
@@ -480,9 +480,9 @@ class World:
 
     def validate_constraints(self):
         self.validate_fast()
-        for variable_name in _variable_wrapper_map:
+        for variable_name in self._variable_wrapper_map:
             if variable_name in self.data:
-                wrapped_variable = getattr(self, name)
+                wrapped_variable = getattr(self, variable_name)
                 wrapped_variable.validate_constraints()
 
     def dump(self, path, validate=True):
