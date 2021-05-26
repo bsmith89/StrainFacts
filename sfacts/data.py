@@ -144,8 +144,7 @@ class WrappedDataArrayMixin:
 
     def to_world(self):
         return World(self.data.to_dataset())
-    
-    
+
     def random_sample(self, n, dim, replace=False, keep_order=True):
         dim_n = self.data.sizes[dim]
         ii = np.random.choice(np.arange(dim_n), size=n, replace=replace)
@@ -191,13 +190,9 @@ class Metagenotypes(WrappedDataArrayMixin):
     def select_variable_positions(self, thresh):
         # TODO: Consider using .lift() to do this.
         variable_positions = (
-            self.data
-            .argmin('allele', skipna=False)
-            .mean('sample')
-            .pipe(
-                lambda x: (x > thresh) &
-                (x < (1 - thresh))
-            )
+            self.data.argmin("allele", skipna=False)
+            .mean("sample")
+            .pipe(lambda x: (x > thresh) & (x < (1 - thresh)))
         )
         return self.mlift("sel", position=variable_positions)
 
@@ -552,13 +547,15 @@ class World:
         return cls(out_data)
 
 
-def latent_metagenotypes_pdist(world, dim='sample'):
-    if dim == 'sample':
-        dim = 'strain'
+def latent_metagenotypes_pdist(world, dim="sample"):
+    if dim == "sample":
+        dim = "strain"
     return Genotypes(world.data.p.rename({"sample": "strain"})).pdist(dim=dim)
 
 
-def latent_metagenotypes_linkage(world, dim='sample', method="average", optimal_ordering=True):
+def latent_metagenotypes_linkage(
+    world, dim="sample", method="average", optimal_ordering=True
+):
     return linkage(
         squareform(latent_metagenotypes_pdist(world, dim=dim)),
         method=method,

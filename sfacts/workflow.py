@@ -17,14 +17,17 @@ def fit_metagenotypes_simple(
     nstrain,
     hyperparameters=None,
     condition_on=None,
-    device='cpu',
+    device="cpu",
     dtype=torch.float32,
     quiet=False,
     estimation_kwargs=None,
 ):
-    sf.logging_util.info(f"START: Fitting data with shape {metagenotypes.sizes}.", quiet=quiet)
     if estimation_kwargs is None:
         estimation_kwargs = {}
+
+    sf.logging_util.info(
+        f"START: Fitting data with shape {metagenotypes.sizes}.", quiet=quiet
+    )
     model = sf.model.ParameterizedModel(
         structure,
         coords=dict(
@@ -37,9 +40,7 @@ def fit_metagenotypes_simple(
         data=condition_on,
         device=device,
         dtype=dtype,
-    ).condition(
-        **metagenotypes.to_counts_and_totals()
-    )
+    ).condition(**metagenotypes.to_counts_and_totals())
     start_time = time.time()
     est, history = sf.estimation.estimate_parameters(
         model,
@@ -51,6 +52,7 @@ def fit_metagenotypes_simple(
     sf.logging_util.info(f"END: Fit in {delta_time} seconds.", quiet=quiet)
     return est, history
 
+
 def fit_metagenotypes_then_refit_genotypes(
     structure,
     metagenotypes,
@@ -58,19 +60,21 @@ def fit_metagenotypes_then_refit_genotypes(
     hyperparameters=None,
     stage2_hyperparameters=None,
     condition_on=None,
-    device='cpu',
+    device="cpu",
     dtype=torch.float32,
     quiet=False,
-    estimation_kwargs=None
+    estimation_kwargs=None,
 ):
     if stage2_hyperparameters is None:
         stage2_hyperparameters = {}
-        
+
     _estimate_parameters = lambda model: sf.estimation.estimate_parameters(
         model, quiet=quiet, **estimation_kwargs
     )
 
-    sf.logging_util.info(f"START: Fitting data with shape {metagenotypes.sizes}.", quiet=quiet)
+    sf.logging_util.info(
+        f"START: Fitting data with shape {metagenotypes.sizes}.", quiet=quiet
+    )
     model = sf.model.ParameterizedModel(
         structure,
         coords=dict(
@@ -90,8 +94,7 @@ def fit_metagenotypes_then_refit_genotypes(
     sf.logging_util.info("Finished initial fitting.")
     sf.logging_util.info(f"Refitting missingness.", quiet=quiet)
     est1, history1 = _estimate_parameters(
-        model
-        .condition(
+        model.condition(
             pi=est0.data.communities.values,
             mu=est0.data.mu.values,
             alpha=est0.data.alpha.values,
@@ -101,16 +104,14 @@ def fit_metagenotypes_then_refit_genotypes(
     )
     sf.logging_util.info(f"Refitting genotypes.", quiet=quiet)
     est2, history2 = _estimate_parameters(
-        model
-        .condition(
+        model.condition(
             delta=est1.data.missingness.values,
             pi=est1.data.communities.values,
             mu=est1.data.mu.values,
             alpha=est1.data.alpha.values,
             epsilon=est1.data.epsilon.values,
             m_hyper_r=est1.data.m_hyper_r.values,
-        )
-        .with_hyperparameters(**stage2_hyperparameters)
+        ).with_hyperparameters(**stage2_hyperparameters)
     )
     end_time = time.time()
     delta_time = end_time - start_time
@@ -127,22 +128,24 @@ def fit_metagenotype_subsample_collapse_then_iteratively_refit_full_genotypes(
     hyperparameters=None,
     stage2_hyperparameters=None,
     condition_on=None,
-    device='cpu',
+    device="cpu",
     dtype=torch.float32,
     quiet=False,
-    estimation_kwargs=None
+    estimation_kwargs=None,
 ):
     if stage2_hyperparameters is None:
         stage2_hyperparameters = {}
 
     _estimate_parameters = lambda model: sf.estimation.estimate_parameters(
-        model, quiet=quiet, **estimation_kwargs,
+        model,
+        quiet=quiet,
+        **estimation_kwargs,
     )
     _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
 
     _info(f"START: Fitting data with shape {metagenotypes.sizes}.")
     _info(f"Fitting strain compositions using {nposition} randomly sampled positions.")
-    metagenotypes_ss = metagenotypes.random_sample(nposition, 'position')
+    metagenotypes_ss = metagenotypes.random_sample(nposition, "position")
     model = sf.model.ParameterizedModel(
         structure,
         coords=dict(
@@ -159,14 +162,12 @@ def fit_metagenotype_subsample_collapse_then_iteratively_refit_full_genotypes(
 
     start_time = time.time()
     est_curr, _ = _estimate_parameters(
-        model
-        .condition(**metagenotypes_ss.to_counts_and_totals())
+        model.condition(**metagenotypes_ss.to_counts_and_totals())
     )
     _info(f"Finished initial fitting.")
     _info(f"Refitting genotypes with {stage2_hyperparameters}.")
     est_curr, _ = _estimate_parameters(
-        model
-        .with_hyperparameters(**stage2_hyperparameters)
+        model.with_hyperparameters(**stage2_hyperparameters)
         .condition(
             delta=est_curr.data.missingness.values,
             pi=est_curr.data.communities.values,
@@ -179,21 +180,24 @@ def fit_metagenotype_subsample_collapse_then_iteratively_refit_full_genotypes(
     )
     _info(f"Collapsing {nstrain} initial strains.")
     agg_communities = sf.estimation.communities_aggregated_by_strain_cluster(
-        est_curr, thresh=thresh, pdist_func=lambda w: w.genotypes.pdist(quiet=quiet),
+        est_curr,
+        thresh=thresh,
+        pdist_func=lambda w: w.genotypes.pdist(quiet=quiet),
     )
     _info(f"{agg_communities.sizes['strain']} strains after collapsing.")
-    
+
     _info(f"Iteratively refitting missingness/genotypes.")
     chunks = {}
     for position_start, position_end in _chunk_start_end_iterator(
-        metagenotypes.sizes['position'],
+        metagenotypes.sizes["position"],
         nposition,
     ):
-        _info(f"Fitting bin ({position_start}, {position_end}).")
-        metagenotypes_chunk = metagenotypes.mlift('isel', position=slice(position_start, position_end))
+        _info(f"Fitting bin [{position_start}, {position_end}).")
+        metagenotypes_chunk = metagenotypes.mlift(
+            "isel", position=slice(position_start, position_end)
+        )
         est_curr, _ = _estimate_parameters(
-            model
-            .with_amended_coords(
+            model.with_amended_coords(
                 position=metagenotypes_chunk.position.values,
                 strain=agg_communities.strain.values,
             )
@@ -207,8 +211,7 @@ def fit_metagenotype_subsample_collapse_then_iteratively_refit_full_genotypes(
             .condition(**metagenotypes_chunk.to_counts_and_totals()),
         )
         est_curr, _ = _estimate_parameters(
-            model
-            .with_amended_coords(
+            model.with_amended_coords(
                 position=metagenotypes_chunk.position.values,
                 strain=agg_communities.strain.values,
             )
@@ -224,7 +227,7 @@ def fit_metagenotype_subsample_collapse_then_iteratively_refit_full_genotypes(
             .condition(**metagenotypes_chunk.to_counts_and_totals()),
         )
         chunks[position_start] = est_curr
-    est_curr = sf.data.World.concat(chunks, dim='position', rename_coords=False)
+    est_curr = sf.data.World.concat(chunks, dim="position", rename_coords=False)
     end_time = time.time()
     delta_time = end_time - start_time
     _info(f"END: Fit in {delta_time} seconds.")

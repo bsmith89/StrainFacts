@@ -103,9 +103,11 @@ def full_metagenotype_model_structure(
             scale=alpha_hyper_hyper_scale,
         ),
     )
-    m_hyper_r_mean = pyro.sample("m_hyper_r_mean", dist.LogNormal(loc=_unit * 0.0, scale=_unit * 10.))
+    m_hyper_r_mean = pyro.sample(
+        "m_hyper_r_mean", dist.LogNormal(loc=_unit * 0.0, scale=_unit * 10.0)
+    )
     m_hyper_r_scale = pyro.sample(
-        "m_hyper_r_scale", dist.LogNormal(loc=_unit * 0.0, scale=_unit * 10.)
+        "m_hyper_r_scale", dist.LogNormal(loc=_unit * 0.0, scale=_unit * 10.0)
     )
 
     with pyro.plate("sample", n, dim=-1):

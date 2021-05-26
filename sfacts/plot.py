@@ -68,7 +68,7 @@ def plot_generic_clustermap_factory(
     metric="correlation",
     cbar_pos=None,
     transpose=False,
-    isel=None
+    isel=None,
 ):
     def _plot_func(
         world,
@@ -98,10 +98,10 @@ def plot_generic_clustermap_factory(
         **kwargs,
     ):
         matrix_data = matrix_func(world)
-        
+
         if isel is None:
-            isel={}
-            
+            isel = {}
+
         matrix_data = matrix_data.isel(**isel).to_pandas()
 
         if transpose:
@@ -251,8 +251,7 @@ plot_prediction_error = plot_generic_clustermap_factory(
 )
 
 plot_dominance = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.metagenotypes.dominant_allele_fraction(pseudo=1.0)
-    .T,
+    matrix_func=lambda w: w.metagenotypes.dominant_allele_fraction(pseudo=1.0).T,
     col_linkage_func=lambda w: w.metagenotypes.linkage(dim="sample"),
     metric="cosine",
     scalex=0.15,

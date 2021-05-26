@@ -96,7 +96,7 @@ def estimate_parameters(
 ):
     if initialize_params is None:
         initialize_params = {}
-        
+
     if jit:
         loss = pyro.infer.JitTrace_ELBO()
     else:
@@ -142,7 +142,7 @@ def estimate_parameters(
                     )
                     if (delta_lagA <= 0) and (delta_lagB <= 0):
                         pbar.close()
-#                         info("Converged", quiet=quiet)
+                        #                         info("Converged", quiet=quiet)
                         break
     except KeyboardInterrupt:
         pbar.close()
