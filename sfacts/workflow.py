@@ -23,6 +23,8 @@ def fit_metagenotypes_simple(
     estimation_kwargs=None,
 ):
     sf.logging_util.info(f"START: Fitting data with shape {metagenotypes.sizes}.", quiet=quiet)
+    if estimation_kwargs is None:
+        estimation_kwargs = {}
     model = sf.model.ParameterizedModel(
         structure,
         coords=dict(
