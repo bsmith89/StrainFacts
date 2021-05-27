@@ -143,7 +143,7 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     )
     _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
 
-    nposition = min(nposition, metagenotypes.sizes['position'])
+    nposition = min(nposition, metagenotypes.sizes["position"])
 
     _info(f"START: Fitting data with shape {metagenotypes.sizes}.")
     _info(f"Fitting strain compositions using {nposition} randomly sampled positions.")
@@ -163,26 +163,26 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     )
 
     start_time = time.time()
-    est0, _ = _estimate_parameters(
+    est_curr, _ = _estimate_parameters(
         model.condition(**metagenotypes_ss.to_counts_and_totals())
     )
     _info(f"Finished initial fitting.")
     _info(f"Refitting genotypes with {stage2_hyperparameters}.")
-    est0, _ = _estimate_parameters(
+    est_curr, _ = _estimate_parameters(
         model.with_hyperparameters(**stage2_hyperparameters)
         .condition(
-            delta=est0.data.missingness.values,
-            pi=est0.data.communities.values,
-            mu=est0.data.mu.values,
-            alpha=est0.data.alpha.values,
-            epsilon=est0.data.epsilon.values,
-            m_hyper_r=est0.data.m_hyper_r.values,
+            delta=est_curr.data.missingness.values,
+            pi=est_curr.data.communities.values,
+            mu=est_curr.data.mu.values,
+            alpha=est_curr.data.alpha.values,
+            epsilon=est_curr.data.epsilon.values,
+            m_hyper_r=est_curr.data.m_hyper_r.values,
         )
         .condition(**metagenotypes_ss.to_counts_and_totals()),
     )
     _info(f"Collapsing {nstrain} initial strains.")
     agg_communities = sf.estimation.communities_aggregated_by_strain_cluster(
-        est0,
+        est_curr,
         thresh=thresh,
         pdist_func=lambda w: w.genotypes.pdist(quiet=quiet),
     )
@@ -199,46 +199,45 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
         metagenotypes_chunk = metagenotypes.mlift(
             "isel", position=slice(position_start, position_end)
         )
-        est_chunk, _ = _estimate_parameters(
+        est_curr, _ = _estimate_parameters(
             model.with_amended_coords(
                 position=metagenotypes_chunk.position.values,
                 strain=agg_communities.strain.values,
             )
             .condition(
                 pi=agg_communities.values,
-                mu=est0.data.mu.values,
-                alpha=est0.data.alpha.values,
-                epsilon=est0.data.epsilon.values,
-                m_hyper_r=est0.data.m_hyper_r.values,
+                mu=est_curr.data.mu.values,
+                alpha=est_curr.data.alpha.values,
+                epsilon=est_curr.data.epsilon.values,
+                m_hyper_r=est_curr.data.m_hyper_r.values,
             )
             .condition(**metagenotypes_chunk.to_counts_and_totals()),
         )
-        est_chunk, _ = _estimate_parameters(
+        est_curr, _ = _estimate_parameters(
             model.with_amended_coords(
                 position=metagenotypes_chunk.position.values,
                 strain=agg_communities.strain.values,
             )
             .with_hyperparameters(**stage2_hyperparameters)
             .condition(
-                delta=est_chunk.data.missingness.values,
-                pi=est0.data.communities.values,
-                mu=est0.data.mu.values,
-                alpha=est0.data.alpha.values,
-                epsilon=est0.data.epsilon.values,
-                m_hyper_r=est0.data.m_hyper_r.values,
+                delta=est_curr.data.missingness.values,
+                pi=est_curr.data.communities.values,
+                mu=est_curr.data.mu.values,
+                alpha=est_curr.data.alpha.values,
+                epsilon=est_curr.data.epsilon.values,
+                m_hyper_r=est_curr.data.m_hyper_r.values,
             )
             .condition(**metagenotypes_chunk.to_counts_and_totals()),
         )
-        genotypes_chunks.append(est_chunk.genotypes.data)
-        missingness_chunks.append(est_chunk.missingness.data)
+        genotypes_chunks.append(est_curr.genotypes.data)
+        missingness_chunks.append(est_curr.missingness.data)
 
+    # est_curr.data['genotypes'] =
+    # est_curr.data['missingness'] =
     end_time = time.time()
     delta_time = end_time - start_time
     _info(f"END: Fit in {delta_time} seconds.")
-    return (
-        est0,
-        (
-            sf.data.Genotypes(xr.concat(genotypes_chunks, dim='position')),
-            sf.data.Missingness(xr.concat(missingness_chunks, dim='position')),
-        ),
+    return est_curr, (
+        xr.concat(genotypes_chunks, dim="position"),
+        xr.concat(missingness_chunks, dim="position"),
     )
