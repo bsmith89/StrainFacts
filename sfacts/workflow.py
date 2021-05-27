@@ -143,6 +143,8 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     )
     _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
 
+    nposition = min(nposition, metagenotypes.sizes['position'])
+
     _info(f"START: Fitting data with shape {metagenotypes.sizes}.")
     _info(f"Fitting strain compositions using {nposition} randomly sampled positions.")
     metagenotypes_ss = metagenotypes.random_sample(nposition, "position")
@@ -230,9 +232,9 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
         genotypes_chunks.append(est_curr.genotypes.data)
         missingness_chunks.append(est_curr.missingness.data)
 
-    est_curr.data['genotypes'] = xr.concat(genotypes_chunks, dim='position')
-    est_curr.data['missingness'] = xr.concat(missingness_chunks, dim='position')
+    # est_curr.data['genotypes'] = xr.concat(genotypes_chunks, dim='position')
+    # est_curr.data['missingness'] = xr.concat(missingness_chunks, dim='position')
     end_time = time.time()
     delta_time = end_time - start_time
     _info(f"END: Fit in {delta_time} seconds.")
-    return est_curr
+    return est_curr, (genotype_chunks, missingness_chunks)
