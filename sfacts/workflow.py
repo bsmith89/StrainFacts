@@ -230,10 +230,8 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
         genotypes_chunks.append(est_curr.genotypes.data)
         missingness_chunks.append(est_curr.missingness.data)
 
-    genotypes = xr.concat(genotypes_chunks, dim='position')
-    missingness = xr.concat(missingness_chunks, dim='position')
-    est_curr.data.genotypes = genotypes
-    est_curr.data.missingness = missingness
+    est_curr.data['genotypes'] = xr.concat(genotypes_chunks, dim='position')
+    est_curr.data['missingness'] = xr.concat(missingness_chunks, dim='position')
     end_time = time.time()
     delta_time = end_time - start_time
     _info(f"END: Fit in {delta_time} seconds.")
