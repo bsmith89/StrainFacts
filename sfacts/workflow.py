@@ -186,7 +186,8 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     _info(f"{agg_communities.sizes['strain']} strains after collapsing.")
 
     _info(f"Iteratively refitting missingness/genotypes.")
-    chunks = {}
+    genotypes_chunks = []
+    missingness_chunks = []
     for position_start, position_end in _chunk_start_end_iterator(
         metagenotypes.sizes["position"],
         nposition,
@@ -225,8 +226,13 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
             )
             .condition(**metagenotypes_chunk.to_counts_and_totals()),
         )
-        chunks[position_start] = est_curr
-    est_curr = sf.data.World.concat(chunks, dim="position", rename_coords=False)
+        genotypes_chunks.append(est_curr.genotypes)
+        missingness_chunks.append(est_curr.missingness)
+
+    genotypes = xr.concat(genotypes_chunks, dim='position')
+    missingness = xr.concat(missingness_chunks, dim='position')
+    est_curr.data.genotypes = genotypes
+    est_curr.data.missingness = missingness
     end_time = time.time()
     delta_time = end_time - start_time
     _info(f"END: Fit in {delta_time} seconds.")
