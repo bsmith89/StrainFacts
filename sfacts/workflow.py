@@ -237,4 +237,4 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     end_time = time.time()
     delta_time = end_time - start_time
     _info(f"END: Fit in {delta_time} seconds.")
-    return est_curr, (genotype_chunks, missingness_chunks)
+    return est_curr, (genotypes_chunks, missingness_chunks)
