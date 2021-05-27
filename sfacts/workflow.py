@@ -227,8 +227,8 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
             )
             .condition(**metagenotypes_chunk.to_counts_and_totals()),
         )
-        genotypes_chunks.append(est_curr.genotypes)
-        missingness_chunks.append(est_curr.missingness)
+        genotypes_chunks.append(est_curr.genotypes.data)
+        missingness_chunks.append(est_curr.missingness.data)
 
     genotypes = xr.concat(genotypes_chunks, dim='position')
     missingness = xr.concat(missingness_chunks, dim='position')
