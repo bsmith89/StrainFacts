@@ -2,6 +2,7 @@ import sfacts as sf
 import pyro
 import time
 import torch
+import xarray as xr
 
 
 def _chunk_start_end_iterator(total, per):
