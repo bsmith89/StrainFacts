@@ -269,7 +269,7 @@ class Metagenotypes(WrappedDataArrayMixin):
         self,
         dim="sample",
         method="complete",
-        optimal_ordering=True,
+        optimal_ordering=False,
         **kwargs,
     ):
         dmat = self.cosine_pdist(dim=dim)
@@ -364,7 +364,7 @@ class Genotypes(WrappedDataArrayMixin):
         pseudo=0.0,
         quiet=True,
         method="complete",
-        optimal_ordering=True,
+        optimal_ordering=False,
         **kwargs,
     ):
         dmat = self.pdist(dim=dim, pseudo=pseudo, quiet=quiet)
@@ -385,7 +385,7 @@ class Genotypes(WrappedDataArrayMixin):
         return pd.DataFrame(squareform(cdmat), index=index, columns=index)
 
     def cosine_linkage(
-        self, dim="strain", method="complete", optimal_ordering=True, **kwargs
+        self, dim="strain", method="complete", optimal_ordering=False, **kwargs
     ):
         cdmat = squareform(self.cosine_pdist(dim=dim))
         return linkage(
@@ -435,7 +435,7 @@ class Communities(WrappedDataArrayMixin):
         dim="strain",
         quiet=True,
         method="average",
-        optimal_ordering=True,
+        optimal_ordering=False,
         **kwargs,
     ):
         dmat = self.pdist(dim=dim, quiet=quiet)
@@ -567,7 +567,7 @@ def latent_metagenotypes_pdist(world, dim="sample"):
 
 
 def latent_metagenotypes_linkage(
-    world, dim="sample", method="average", optimal_ordering=True
+    world, dim="sample", method="average", optimal_ordering=False
 ):
     return linkage(
         squareform(latent_metagenotypes_pdist(world, dim=dim)),
