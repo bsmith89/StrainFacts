@@ -419,7 +419,9 @@ class Missingness(WrappedDataArrayMixin):
 
 class Communities(WrappedDataArrayMixin):
     dims = ("sample", "strain")
-    constraints = dict(strains_sum_to_1=lambda d: np.allclose(d.sum("strain"), 1.0, atol=1e-5))
+    constraints = dict(
+        strains_sum_to_1=lambda d: np.allclose(d.sum("strain"), 1.0, atol=1e-5)
+    )
     variable_name = "communities"
 
     def fuzzed(self, eps=1e-5):
