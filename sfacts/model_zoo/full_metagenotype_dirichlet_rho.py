@@ -75,9 +75,7 @@ def model_structure(
             _gamma = pyro.sample("_gamma", dist.Beta(_unit, _unit))
             gamma = pyro.deterministic(
                 "gamma",
-                unit_interval_power_transformation(
-                    _gamma, 1 / gamma_hyper, 1 / gamma_hyper
-                ),
+                unit_interval_power_transformation(_gamma, gamma_hyper, gamma_hyper),
             )
             # Position presence/absence
             delta = pyro.sample(

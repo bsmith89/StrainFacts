@@ -52,8 +52,8 @@ def NegativeBinomialReparam(mu, r):
 def unit_interval_power_transformation(p, alpha, beta):
     log_p = torch.log(p)
     log_q = torch.log1p(-p)
-    log_p_raised = log_p * alpha
-    log_q_raised = log_q * beta
+    log_p_raised = log_p / alpha
+    log_q_raised = log_q / beta
     return torch.exp(
         log_p_raised - torch.logsumexp(torch.stack([log_p_raised, log_q_raised]), dim=0)
     )
