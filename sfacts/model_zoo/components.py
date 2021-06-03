@@ -57,3 +57,11 @@ def unit_interval_power_transformation(p, alpha, beta):
     return torch.exp(
         log_p_raised - torch.logsumexp(torch.stack([log_p_raised, log_q_raised]), dim=0)
     )
+
+
+def k_simplex_power_transformation(p, alpha):
+    log_p = torch.log(p)
+    log_p_raised = log_p / alpha
+    return torch.exp(
+        log_p_raised - torch.logsumexp(log_p_raised, dim=-1, keepdims=True)
+    )
