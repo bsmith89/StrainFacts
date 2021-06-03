@@ -51,7 +51,7 @@ import pyro.distributions as dist
         alpha_hyper_scale=0.5,
     ),
 )
-def full_metagenotype_dirichlet_rho_model_structure(
+def model_structure(
     n,
     g,
     s,
