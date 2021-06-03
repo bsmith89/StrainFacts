@@ -325,7 +325,7 @@ class Genotypes(WrappedDataArrayMixin):
     def _genotype_sign_representation_dissimilarity(x, y, pseudo=0.0):
         "Dissimilarity between 1D genotypes, accounting for fuzzyness."
         dist = ((x - y) / 2) ** 2
-        weight = (x * y) ** 2
+        weight = np.abs(x * y)
         wmean_dist = ((weight * dist).mean()) / ((weight.mean() + pseudo))
         return wmean_dist
 
