@@ -145,12 +145,16 @@ class WrappedDataArrayMixin:
     def to_world(self):
         return World(self.data.to_dataset())
 
-    def random_sample(self, n, dim, replace=False, keep_order=True):
-        dim_n = self.data.sizes[dim]
-        ii = np.random.choice(np.arange(dim_n), size=n, replace=replace)
-        if keep_order:
-            ii = sorted(ii)
-        return self.__class__(data=self.data.isel(**{dim: ii}))
+    def random_sample(self, replace=False, keep_order=True, **kwargs):
+        isel = {}
+        for dim in kwargs:
+            n = kwargs[dim]
+            dim_n = self.data.sizes[dim]
+            ii = np.random.choice(np.arange(dim_n), size=n, replace=replace)
+            if keep_order:
+                ii = sorted(ii)
+            isel[dim] = ii
+        return self.__class__(data=self.data.isel(**isel))
 
 
 class Metagenotypes(WrappedDataArrayMixin):
@@ -187,14 +191,19 @@ class Metagenotypes(WrappedDataArrayMixin):
             path, encoding=dict(tally=dict(zlib=True, complevel=6))
         )
 
-    def select_variable_positions(self, thresh):
-        # TODO: Consider using .lift() to do this.
-        variable_positions = (
-            self.data.argmin("allele", skipna=False)
-            .mean("sample")
-            .pipe(lambda x: (x > thresh) & (x < (1 - thresh)))
+    def allele_incidence(self, thresh=1):
+        allele_presence = self.data >= thresh
+        return allele_presence.sum("sample") / allele_presence.any("allele").sum(
+            "sample"
         )
-        return self.mlift("sel", position=variable_positions)
+
+    def select_variable_positions(self, thresh, count_thresh=1):
+        return self.mlift(
+            "sel",
+            position=(
+                self.allele_incidence(thresh=count_thresh).min("allele") >= thresh
+            ),
+        )
 
     def select_samples_with_coverage(self, cvrg_thresh):
         # TODO: Consider using .lift() to do this.
@@ -498,12 +507,16 @@ class World:
             world.validate_constraints()
         return world
 
-    def random_sample(self, n, dim, replace=False, keep_order=True):
-        dim_n = self.data.sizes[dim]
-        ii = np.random.choice(np.arange(dim_n), size=n, replace=replace)
-        if keep_order:
-            ii = sorted(ii)
-        return self.__class__(data=self.data.isel(**{dim: ii}))
+    def random_sample(self, replace=False, keep_order=True, **kwargs):
+        isel = {}
+        for dim in kwargs:
+            n = kwargs[dim]
+            dim_n = self.data.sizes[dim]
+            ii = np.random.choice(np.arange(dim_n), size=n, replace=replace)
+            if keep_order:
+                ii = sorted(ii)
+            isel[dim] = ii
+        return self.__class__(data=self.data.isel(**isel))
 
     @property
     def masked_genotypes(self):
