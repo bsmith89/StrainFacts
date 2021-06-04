@@ -2,6 +2,7 @@ import sfacts.model
 from sfacts.model_zoo.components import (
     _mapping_subset,
     unit_interval_power_transformation,
+    stickbreaking_betas_to_log_probs,
     stickbreaking_betas_to_probs,
     NegativeBinomialReparam,
     SHARED_DESCRIPTIONS,
@@ -91,7 +92,10 @@ def model_structure(
     rho_betas = pyro.sample(
         "rho_betas", dist.Beta(1.0, rho_hyper).expand([s - 1]).to_event()
     )
+    # log_rho = pyro.deterministic("log_rho", stickbreaking_betas_to_log_probs(rho_betas))
+    # rho = pyro.deterministic("rho", torch.exp(log_rho))
     rho = pyro.deterministic("rho", stickbreaking_betas_to_probs(rho_betas))
+    log_rho = torch.log(rho)
     pyro.deterministic("metacommunity", rho)
 
     alpha_hyper_mean = pyro.sample(
@@ -110,6 +114,7 @@ def model_structure(
 
     with pyro.plate("sample", n, dim=-1):
         # Community composition
+        # pi = pyro.sample("pi", dist.Dirichlet(torch.exp(torch.log(pi_hyper) + log_rho), validate_args=False))
         pi = pyro.sample("pi", dist.Dirichlet(pi_hyper * rho, validate_args=False))
         # Sequencing error
         epsilon = pyro.sample(
