@@ -185,7 +185,7 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     agg_communities = sf.estimation.communities_aggregated_by_strain_cluster(
         est_curr,
         diss_thresh=diss_thresh,
-        pdist_func=lambda w: w.genotypes.cosine_pdist(),
+        pdist_func=lambda w: w.genotypes.pdist(quiet=quiet),
         coverage_thresh=coverage_thresh,
     )
     _info(f"{agg_communities.sizes['strain']} strains after collapsing.")
