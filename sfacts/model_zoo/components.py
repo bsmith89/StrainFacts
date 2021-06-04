@@ -3,6 +3,7 @@ import pyro
 import pyro.distributions as dist
 import torch
 from torch.nn.functional import pad as torch_pad
+from sfacts.pyro_util import log1mexp
 
 
 SHARED_DIMS = ("sample", "position", "strain", "allele")
@@ -37,6 +38,15 @@ def _mapping_subset(mapping, keys):
 def stickbreaking_betas_to_probs(beta):
     beta1m_cumprod = (1 - beta).cumprod(-1)
     return torch_pad(beta, (0, 1), value=1) * torch_pad(beta1m_cumprod, (1, 0), value=1)
+
+
+def stickbreaking_betas_to_log_probs(beta):
+    log_beta = torch.log(beta)
+    log_beta1m_cumprod = log1mexp(log_beta).cumsum(-1)
+    # log_beta1m_cumprod = torch.log((1 - beta)).cumsum(-1)
+    return torch_pad(log_beta, (0, 1), value=0) + torch_pad(
+        log_beta1m_cumprod, (1, 0), value=0
+    )
 
 
 def NegativeBinomialReparam(mu, r):

@@ -27,3 +27,12 @@ def shape_info(model, *args, **kwargs):
 def set_random_seed(seed, warn=True):
     if seed is not None:
         pyro.set_rng_seed(seed)
+
+
+def log1mexp(x):
+    x = torch.abs(x)
+    return torch.where(
+        x < torch.log(torch.tensor(2.0)),
+        torch.log(torch.expm1(-x)),
+        torch.log1p(-torch.exp(-x)),
+    )
