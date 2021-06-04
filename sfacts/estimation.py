@@ -1,6 +1,7 @@
 import sfacts as sf
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.decomposition import non_negative_factorization
+from sfacts.pandas_util import idxwhere
 
 import xarray as xr
 
@@ -172,6 +173,7 @@ def estimate_parameters(
 def strain_cluster(world, thresh, linkage="complete", pdist_func=None):
     if pdist_func is None:
         pdist_func = lambda w: w.genotypes.pdist()
+
     clust = pd.Series(
         AgglomerativeClustering(
             n_clusters=None,
@@ -186,13 +188,20 @@ def strain_cluster(world, thresh, linkage="complete", pdist_func=None):
     return clust
 
 
-def communities_aggregated_by_strain_cluster(world, thresh, **kwargs):
-    clust = strain_cluster(world, thresh, **kwargs)
-    return sf.data.Communities(
-        world.communities.to_pandas()
+# TODO: Separate coverage-thresholding from clustering.
+def communities_aggregated_by_strain_cluster(
+    world, diss_thresh, coverage_thresh=0.0, **kwargs
+):
+    clust = strain_cluster(world, thresh=diss_thresh, **kwargs)
+    comms = (
+        world
+        .communities
+        .to_pandas()
         .groupby(clust, axis="columns")
         .sum()
         .rename_axis(columns="strain")
-        .stack()
-        .to_xarray()
     )
+    low_max_coverage_strains = idxwhere(comms.max() < coverage_thresh)
+    comms[-1] = comms[low_max_coverage_strains].sum(1)
+    comms = comms.drop(columns=low_max_coverage_strains)
+    return sf.data.Communities(comms.stack().to_xarray())

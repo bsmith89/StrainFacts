@@ -124,7 +124,8 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     metagenotypes,
     nstrain,
     nposition,
-    thresh,
+    diss_thresh,
+    coverage_thresh=0.0,
     hyperparameters=None,
     stage2_hyperparameters=None,
     condition_on=None,
@@ -183,8 +184,9 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     _info(f"Collapsing {nstrain} initial strains.")
     agg_communities = sf.estimation.communities_aggregated_by_strain_cluster(
         est_curr,
-        thresh=thresh,
-        pdist_func=lambda w: w.genotypes.pdist(quiet=quiet),
+        diss_thresh=diss_thresh,
+        pdist_func=lambda w: w.genotypes.cosine_pdist(),
+        coverage_thresh=coverage_thresh,
     )
     _info(f"{agg_communities.sizes['strain']} strains after collapsing.")
 
