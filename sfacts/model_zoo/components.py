@@ -42,8 +42,8 @@ def stickbreaking_betas_to_probs(beta):
 
 def stickbreaking_betas_to_log_probs(beta):
     log_beta = torch.log(beta)
-    log_beta1m_cumprod = log1mexp(log_beta).cumsum(-1)
-    # log_beta1m_cumprod = torch.log((1 - beta)).cumsum(-1)
+    # log_beta1m_cumprod = log1mexp(log_beta).cumsum(-1)
+    log_beta1m_cumprod = torch.log((1 - beta)).cumsum(-1)
     return torch_pad(log_beta, (0, 1), value=0) + torch_pad(
         log_beta1m_cumprod, (1, 0), value=0
     )
