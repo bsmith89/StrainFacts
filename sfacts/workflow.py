@@ -188,9 +188,13 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
         pdist_func=lambda w: w.genotypes.pdist(quiet=quiet),
         coverage_thresh=coverage_thresh,
     )
-    _info(f"{agg_communities.sizes['strain']} strains after collapsing.")
+    _info(f"{agg_communities.sizes} after collapsing.")
+    total_frac = agg_communities.sum("strain")
+    min_frac = agg_communities.data.argmin("strain")
+    _info(f"{total_frac}")
+    _info(f"{min_frac}")
 
-    _info(f"Iteratively refitting missingness/genotypes.")
+    _info("Iteratively refitting missingness/genotypes.")
     genotypes_chunks = []
     missingness_chunks = []
     for position_start, position_end in _chunk_start_end_iterator(
