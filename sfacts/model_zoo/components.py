@@ -49,29 +49,39 @@ def stickbreaking_betas_to_log_probs(beta):
     )
 
 
-def NegativeBinomialReparam(mu, r):
+def NegativeBinomialReparam(mu, r, validate_args=True):
     p = 1.0 / ((r / mu) + 1.0)
     logits = torch.logit(p)
     #     p = torch.clamp(p, eps, 1 - eps)
     return dist.NegativeBinomial(
         total_count=r,
         logits=logits,
+        validate_args=validate_args,
     )
 
 
-def unit_interval_power_transformation(p, alpha, beta):
+def unit_interval_power_transformation(p, alpha, beta, eps=0.):
     log_p = torch.log(p)
     log_q = torch.log1p(-p)
     log_p_raised = log_p / alpha
     log_q_raised = log_q / beta
-    return torch.exp(
+    result = torch.exp(
         log_p_raised - torch.logsumexp(torch.stack([log_p_raised, log_q_raised]), dim=0)
     )
+    return (result + eps) / (1 + 2 * eps)
 
 
-def k_simplex_power_transformation(p, alpha):
+
+def k_simplex_power_transformation1(p, alpha, eps=0.):
+    p_raised = p ** (1 / alpha) + eps
+    return p_raised / p_raised.sum(dim=-1, keepdims=True)
+
+
+def k_simplex_power_transformation(p, alpha, eps=0.):
+    kp1 = p.shape[-1]
     log_p = torch.log(p)
     log_p_raised = log_p / alpha
-    return torch.exp(
+    result = torch.exp(
         log_p_raised - torch.logsumexp(log_p_raised, dim=-1, keepdims=True)
     )
+    return (result + eps) / (1 + kp1 * eps)

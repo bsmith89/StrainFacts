@@ -1,5 +1,3 @@
-from sfacts.logging_util import info
-from sfacts.pandas_util import idxwhere
 from sfacts.math import binary_entropy
 import xarray as xr
 import numpy as np
@@ -331,8 +329,8 @@ class Genotypes(WrappedDataArrayMixin):
 
     @staticmethod
     def _genotype_dissimilarity(x, y, pseudo=0.0):
-        return self._genotype_sign_representation_dissimilarity(
-            self._genotype_p_to_s(x), self._genotype_p_to_s(y)
+        return Genotypes._genotype_sign_representation_dissimilarity(
+            Genotypes._genotype_p_to_s(x), Genotypes._genotype_p_to_s(y)
         )
 
     @staticmethod

@@ -67,7 +67,7 @@ def community_error_test(worldA, worldB, reps=99):
     err = _rmse(bc_sim, bc_fit)
 
     null = []
-    n = len(bc_sim)
+    # n = len(bc_sim)
     for i in range(reps):
         bc_sim_permute = np.random.permutation(bc_sim)
         null.append(_rmse(bc_sim, bc_sim_permute))

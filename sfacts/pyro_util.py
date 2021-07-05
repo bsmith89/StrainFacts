@@ -1,8 +1,6 @@
 import pyro
-import pyro.distributions as dist
 import torch
 from sfacts.logging_util import info
-import warnings
 
 
 def as_torch(x, dtype=None, device=None):

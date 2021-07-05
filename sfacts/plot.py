@@ -4,9 +4,6 @@ import matplotlib as mpl
 from scipy.spatial.distance import squareform
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
-import sfacts as sf
-from functools import partial
 from sklearn.manifold import MDS
 
 
@@ -159,7 +156,6 @@ def plot_generic_clustermap_factory(
             dwidth=dwidth,
             dheight=dheight,
         )
-        #     sf.logging_util.info(matrix_data.shape, applied_scale_kwargs, figsize, dendrogram_ratio, colors_ratio)
 
         clustermap_kwargs = dict(
             vmin=vmin,

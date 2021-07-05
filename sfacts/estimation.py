@@ -1,7 +1,8 @@
-import sfacts as sf
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.decomposition import non_negative_factorization
 from sfacts.pandas_util import idxwhere
+from sfacts.data import World, Communities
+from sfacts.pyro_util import set_random_seed
 
 import xarray as xr
 
@@ -70,7 +71,7 @@ def nmf_approximation(
     gamma3 = (gamma2 / gamma2.sum("allele")).fillna(0.5)
     pi3 = pi2 / pi2.sum("strain")
 
-    approx = sf.data.World(
+    approx = World(
         xr.Dataset(
             dict(
                 communities=pi3.transpose("sample", "strain"),
@@ -103,7 +104,7 @@ def estimate_parameters(
     else:
         loss = pyro.infer.Trace_ELBO()
 
-    sf.pyro_util.set_random_seed(seed, warn=(not quiet))
+    set_random_seed(seed, warn=(not quiet))
 
     _guide = pyro.infer.autoguide.AutoLaplaceApproximation(
         model,
@@ -190,20 +191,19 @@ def strain_cluster(world, thresh, linkage="complete", pdist_func=None):
 
 # TODO: Separate coverage-thresholding from clustering.
 def communities_aggregated_by_strain_cluster(
-    world, diss_thresh, coverage_thresh=0.0, **kwargs
+    world, diss_thresh, frac_thresh=0.0, **kwargs
 ):
     clust = strain_cluster(world, thresh=diss_thresh, **kwargs)
     comms = (
-        world
-        .communities
-        .to_pandas()
+        world.communities.to_pandas()
         .groupby(clust, axis="columns")
         .sum()
         .rename_axis(columns="strain")
     )
-    low_max_coverage_strains = idxwhere(comms.max() < coverage_thresh)
-#     comms[-1] = comms[low_max_coverage_strains].sum(1)
-    comms = comms.drop(columns=low_max_coverage_strains)
+    low_max_frac_strains = idxwhere(comms.max() < frac_thresh)
+    if len(low_max_frac_strains) > 0:
+        comms[-1] = comms[low_max_frac_strains].sum(1)
+    comms = comms.drop(columns=low_max_frac_strains)
     comms = comms.stack().to_xarray()
     comms = comms / comms.sum("strain")
-    return sf.data.Communities(comms)
+    return Communities(comms)

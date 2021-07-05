@@ -1,12 +1,11 @@
 import pyro
-import pyro.distributions as dist
 import torch
 from functools import partial
-from torch.nn.functional import pad as torch_pad
 import xarray as xr
-import sfacts as sf
-from sfacts.pyro_util import all_torch
+from sfacts.pyro_util import all_torch, shape_info, set_random_seed
 from sfacts.logging_util import info
+from sfacts.data import World
+from warnings import warn
 
 
 class Structure:
@@ -55,7 +54,7 @@ class Structure:
         if shape is None:
             shape = self._dummy_shape
         info(dict(zip(self.dims, shape)))
-        sf.pyro_util.shape_info(self(shape, **self.default_hyperparameters))
+        shape_info(self(shape, **self.default_hyperparameters))
 
     def __repr__(self):
         return (
@@ -196,10 +195,10 @@ class ParameterizedModel:
                 dims=self.structure.description[k],
                 coords={dim: self.coords[dim] for dim in self.structure.description[k]},
             )
-        return sf.data.World(xr.Dataset(out))
+        return World(xr.Dataset(out))
 
     def simulate(self, n=1, seed=None):
-        sf.pyro_util.set_random_seed(seed)
+        set_random_seed(seed)
         obs = pyro.infer.Predictive(self, num_samples=n)()
         obs = {k: obs[k].detach().cpu().numpy().squeeze() for k in obs.keys()}
         return obs
