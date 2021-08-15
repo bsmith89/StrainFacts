@@ -1,0 +1,8 @@
+# Always ignore
+.DS_Store
+*.swp
+.ipynb_checkpoints/
+*.pyc
+__pycache__/
+.bash_history
+.parallel
