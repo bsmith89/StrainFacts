@@ -1,0 +1,11 @@
+xarray
+pytorch
+numpy
+tqdm
+pandas
+scipy
+scikit-learn
+pyro-ppl
+scipy
+matplotlib
+seaborn
