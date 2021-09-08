@@ -1,4 +1,4 @@
-from sfacts.math import binary_entropy
+from sfacts.math import binary_entropy, entropy
 import xarray as xr
 import numpy as np
 from tqdm import tqdm
@@ -452,6 +452,16 @@ class Communities(WrappedDataArrayMixin):
         return linkage(
             cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
         )
+
+    def entropy(self, dim="sample"):
+        if dim == "strain":
+            sum_over = "sample"
+        elif dim == "sample":
+            sum_over = "strain"
+        p = self.data
+        ent = entropy(p, axis=sum_over)
+        return ent.rename("entropy")
+
 
 
 class Overdispersion(WrappedDataArrayMixin):
