@@ -142,7 +142,7 @@ class WrappedDataArrayMixin:
         return cls(out_data)
 
     def to_world(self):
-        return World(self.data.to_dataset())
+        return World(self.data.to_dataset(name=self.variable_name))
 
     def random_sample(self, replace=False, keep_order=True, **kwargs):
         isel = {}
