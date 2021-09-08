@@ -235,8 +235,15 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
 
     genotypes = data.Genotypes(xr.concat(genotypes_chunks, dim="position"))
     missingness = data.Missingness(xr.concat(missingness_chunks, dim="position"))
-    # est_curr.data['missingness'] =
+    est_curr = data.World(
+        est_curr.data.drop_dims(['position', 'allele'])
+        .assign(
+            genotypes=genotypes.data,
+            missingness=missingness.data,
+            metagenotypes=metagenotypes.data
+        )
+    )
     end_time = time.time()
     delta_time = end_time - start_time
     _info(f"END: Fit in {delta_time} seconds.")
-    return est_curr, (genotypes, missingness)
+    return est_curr
