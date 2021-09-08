@@ -43,6 +43,7 @@ class WrappedDataArrayMixin:
         "to_series",
         "isel",
         "sel",
+        "reindex",
     ]
     # safe_lifted = []
     variable_name = None
