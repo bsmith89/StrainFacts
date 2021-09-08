@@ -157,6 +157,9 @@ class WrappedDataArrayMixin:
 
 
 class Metagenotypes(WrappedDataArrayMixin):
+    """Counts of alleles across samples and positions.
+
+    """
     dims = ("sample", "position", "allele")
     constraints = dict(positive_counts=_positive_counts)
     variable_name = "metagenotypes"
