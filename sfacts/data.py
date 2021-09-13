@@ -1,4 +1,4 @@
-from sfacts.math import binary_entropy, entropy
+from sfacts.math import binary_entropy, entropy, genotype_pdist, genotype_binary_to_sign
 import xarray as xr
 import numpy as np
 from tqdm import tqdm
@@ -319,54 +319,19 @@ class Genotypes(WrappedDataArrayMixin):
     def fuzzed(self, eps=1e-5):
         return self.lift(lambda x: (x + eps) / (1 + 2 * eps))
 
-    # TODO: Move distance metrics to a new module?
-    @staticmethod
-    def _convert_to_sign_representation(p):
-        "Alternative representation of binary genotype on a [-1, 1] interval."
-        return p * 2 - 1
-
-    @staticmethod
-    def _genotype_sign_representation_dissimilarity(x, y, pseudo=0.0):
-        "Dissimilarity between 1D genotypes, accounting for fuzzyness."
-        dist = ((x - y) / 2) ** 2
-        weight = np.abs(x * y)
-        wmean_dist = ((weight * dist).sum() + pseudo) / ((weight.sum() + pseudo))
-        return wmean_dist
-
-    @staticmethod
-    def _genotype_dissimilarity(x, y, pseudo=0.0):
-        return Genotypes._genotype_sign_representation_dissimilarity(
-            Genotypes._genotype_p_to_s(x), Genotypes._genotype_p_to_s(y)
-        )
-
-    @staticmethod
-    def _genotype_dissimilarity_cdmat(unwrapped_values, pseudo=0.0, quiet=True):
-        g_sign = Genotypes._convert_to_sign_representation(unwrapped_values)
-        s, _ = g_sign.shape
-        cdmat = np.empty((s * (s - 1)) // 2)
-        k = 0
-        with tqdm(total=len(cdmat), disable=quiet) as pbar:
-            for i in range(0, s - 1):
-                for j in range(i + 1, s):
-                    cdmat[k] = Genotypes._genotype_sign_representation_dissimilarity(
-                        g_sign[i], g_sign[j], pseudo=pseudo
-                    )
-                    k = k + 1
-                    pbar.update()
-        return cdmat
 
     def pdist(self, dim="strain", pseudo=0.0, quiet=True):
         index = getattr(self, dim)
         if dim == "strain":
             unwrapped_values = self.values
-            cdmat = self._genotype_dissimilarity_cdmat(
-                unwrapped_values, quiet=quiet, pseudo=pseudo
-            )
+            cdmat = genotype_pdist(unwrapped_values, pseudo=pseudo, quiet=quiet)
         elif dim == "position":
+            if pseudo != 0.0:
+                raise ValueError(
+                    "Position dissimilarity does not involve a 'pseudo' parameter."
+                )
             unwrapped_values = self.values.T
-            cdmat = pdist(
-                self._convert_to_sign_representation(self.values.T), metric="cosine"
-            )
+            cdmat = pdist(genotype_binary_to_sign(self.values.T), metric="cosine")
         # Reboxing
         dmat = pd.DataFrame(squareform(cdmat), index=index, columns=index)
         return dmat
@@ -393,7 +358,7 @@ class Genotypes(WrappedDataArrayMixin):
         elif dim == "position":
             d = self.values.T
             index = self.position
-        d = self._convert_to_sign_representation(d)
+        d = genotype_binary_to_sign(d)
         cdmat = pdist(d, metric="cosine")
         return pd.DataFrame(squareform(cdmat), index=index, columns=index)
 
