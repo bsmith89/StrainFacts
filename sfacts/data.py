@@ -44,6 +44,8 @@ class WrappedDataArrayMixin:
         "isel",
         "sel",
         "reindex",
+        "drop_sel",
+        "drop_isel",
     ]
     # safe_lifted = []
     variable_name = None
