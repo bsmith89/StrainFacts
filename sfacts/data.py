@@ -314,7 +314,6 @@ class Genotypes(WrappedDataArrayMixin):
     def fuzzed(self, eps=1e-5):
         return self.lift(lambda x: (x + eps) / (1 + 2 * eps))
 
-
     def pdist(self, dim="strain", pseudo=0.0, quiet=True):
         index = getattr(self, dim)
         if dim == "strain":
