@@ -241,3 +241,107 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     delta_time = end_time - start_time
     _info(f"END: Fit in {delta_time} seconds.")
     return est_curr
+
+
+def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_genotypes_no_missing(
+    structure,
+    metagenotypes,
+    nstrain,
+    nposition,
+    diss_thresh,
+    frac_thresh=0.0,
+    hyperparameters=None,
+    stage2_hyperparameters=None,
+    condition_on=None,
+    device="cpu",
+    dtype=torch.float32,
+    quiet=False,
+    estimation_kwargs=None,
+):
+    if stage2_hyperparameters is None:
+        stage2_hyperparameters = {}
+
+    _estimate_parameters = lambda pmodel: estimation.estimate_parameters(
+        pmodel, quiet=quiet, **estimation_kwargs,
+    )
+    _info = lambda *args, **kwargs: logging_util.info(*args, quiet=quiet, **kwargs)
+
+    nposition = min(nposition, metagenotypes.sizes["position"])
+
+    _info(f"START: Fitting data with shape {metagenotypes.sizes}.")
+    _info(f"Fitting strain compositions using {nposition} randomly sampled positions.")
+    metagenotypes_ss = metagenotypes.random_sample(nposition, "position")
+    pmodel = model.ParameterizedModel(
+        structure,
+        coords=dict(
+            sample=metagenotypes.sample.values,
+            position=metagenotypes_ss.position.values,
+            allele=metagenotypes.allele.values,
+            strain=range(nstrain),
+        ),
+        hyperparameters=hyperparameters,
+        data=condition_on,
+        device=device,
+        dtype=dtype,
+    )
+
+    start_time = time.time()
+    est_curr, _ = _estimate_parameters(
+        pmodel.condition(**metagenotypes_ss.to_counts_and_totals())
+    )
+    _info("Finished initial fitting.")
+    _info(f"Refitting genotypes with {stage2_hyperparameters}.")
+    est_curr, _ = _estimate_parameters(
+        pmodel.with_hyperparameters(**stage2_hyperparameters)
+        .condition(
+            pi=est_curr.data.communities.values,
+            alpha=est_curr.data.alpha.values,
+            epsilon=est_curr.data.epsilon.values,
+        )
+        .condition(**metagenotypes_ss.to_counts_and_totals()),
+    )
+    _info(f"Collapsing {nstrain} initial strains.")
+    agg_communities = estimation.communities_aggregated_by_strain_cluster(
+        est_curr,
+        diss_thresh=diss_thresh,
+        pdist_func=lambda w: w.genotypes.pdist(quiet=quiet),
+        frac_thresh=frac_thresh,
+    )
+    _info(f"{agg_communities.sizes['strain']} strains after collapsing.")
+
+    _info(f"Iteratively refitting genotypes. {stage2_hyperparameters}")
+    genotypes_chunks = []
+    for position_start, position_end in _chunk_start_end_iterator(
+        metagenotypes.sizes["position"], nposition,
+    ):
+        _info(f"Fitting bin [{position_start}, {position_end}).")
+        metagenotypes_chunk = metagenotypes.mlift(
+            "isel", position=slice(position_start, position_end)
+        )
+        est_curr, _ = _estimate_parameters(
+            pmodel.with_amended_coords(
+                position=metagenotypes_chunk.position.values,
+                strain=agg_communities.strain.values,
+            )
+            .with_hyperparameters(**stage2_hyperparameters)
+            .condition(
+                pi=agg_communities.values,
+                mu=est_curr.data.mu.values,
+                alpha=est_curr.data.alpha.values,
+                epsilon=est_curr.data.epsilon.values,
+                m_hyper_r=est_curr.data.m_hyper_r.values,
+            )
+            .condition(**metagenotypes_chunk.to_counts_and_totals()),
+        )
+        genotypes_chunks.append(est_curr.genotypes.data)
+
+    genotypes = data.Genotypes(xr.concat(genotypes_chunks, dim="position"))
+    est_curr = data.World(
+        est_curr.data.drop_dims(["position", "allele"]).assign(
+            genotypes=genotypes.data, metagenotypes=metagenotypes.data,
+        )
+    )
+    end_time = time.time()
+    delta_time = end_time - start_time
+    _info(f"END: Fit in {delta_time} seconds.")
+    return est_curr
