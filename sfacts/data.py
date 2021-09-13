@@ -263,7 +263,7 @@ class Metagenotypes(WrappedDataArrayMixin):
     def cosine_pdist(self, dim="sample"):
         if dim != "sample":
             raise NotImplementedError("Only dim 'sample' has been implemented.")
-        d = self.to_dataframe().unstack(dim).T
+        d = self.to_series().unstack(dim).T
         return pd.DataFrame(
             squareform(pdist(d.values, metric="cosine")), index=d.index, columns=d.index
         )
