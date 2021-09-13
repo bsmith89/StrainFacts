@@ -41,6 +41,11 @@ def nmf_approximation(
     gamma0, pi0, _ = non_negative_factorization(
         d.values,
         n_components=s,
+        regularization={
+            "community": "components",
+            "genotype": "transformation",
+            "both": "both",
+        }[regularization],
         alpha=alpha,
         l1_ratio=l1_ratio,
         tol=tol,
