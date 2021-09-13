@@ -115,9 +115,7 @@ with the following dimensions:
 
     # Output
     p.add_argument(
-        "--outpath",
-        metavar="PATH",
-        help=("Path for genotype fraction output."),
+        "--outpath", metavar="PATH", help=("Path for genotype fraction output."),
     )
 
     args = p.parse_args(argv)

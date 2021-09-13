@@ -58,11 +58,7 @@ class WrappedDataArrayMixin:
         for k in coords:
             if coords[k] is None:
                 coords[k] = range(shapes[k])
-        data = xr.DataArray(
-            x,
-            dims=cls.dims,
-            coords=coords,
-        )
+        data = xr.DataArray(x, dims=cls.dims, coords=coords,)
         return cls(data)
 
     @classmethod
@@ -162,6 +158,7 @@ class Metagenotypes(WrappedDataArrayMixin):
     """Counts of alleles across samples and positions.
 
     """
+
     dims = ("sample", "position", "allele")
     constraints = dict(positive_counts=_positive_counts)
     variable_name = "metagenotypes"
@@ -281,11 +278,7 @@ class Metagenotypes(WrappedDataArrayMixin):
         )
 
     def cosine_linkage(
-        self,
-        dim="sample",
-        method="complete",
-        optimal_ordering=False,
-        **kwargs,
+        self, dim="sample", method="complete", optimal_ordering=False, **kwargs,
     ):
         dmat = self.cosine_pdist(dim=dim)
         cdmat = squareform(dmat)
@@ -434,7 +427,6 @@ class Communities(WrappedDataArrayMixin):
         p = self.data
         ent = entropy(p, axis=sum_over)
         return ent.rename("entropy")
-
 
 
 class Overdispersion(WrappedDataArrayMixin):

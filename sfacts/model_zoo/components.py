@@ -54,13 +54,11 @@ def NegativeBinomialReparam(mu, r, validate_args=True):
     logits = torch.logit(p)
     #     p = torch.clamp(p, eps, 1 - eps)
     return dist.NegativeBinomial(
-        total_count=r,
-        logits=logits,
-        validate_args=validate_args,
+        total_count=r, logits=logits, validate_args=validate_args,
     )
 
 
-def unit_interval_power_transformation(p, alpha, beta, eps=0.):
+def unit_interval_power_transformation(p, alpha, beta, eps=0.0):
     log_p = torch.log(p)
     log_q = torch.log1p(-p)
     log_p_raised = log_p / alpha
@@ -71,13 +69,12 @@ def unit_interval_power_transformation(p, alpha, beta, eps=0.):
     return (result + eps) / (1 + 2 * eps)
 
 
-
-def k_simplex_power_transformation1(p, alpha, eps=0.):
+def k_simplex_power_transformation1(p, alpha, eps=0.0):
     p_raised = p ** (1 / alpha) + eps
     return p_raised / p_raised.sum(dim=-1, keepdims=True)
 
 
-def k_simplex_power_transformation(p, alpha, eps=0.):
+def k_simplex_power_transformation(p, alpha, eps=0.0):
     kp1 = p.shape[-1]
     log_p = torch.log(p)
     log_p_raised = log_p / alpha

@@ -9,7 +9,16 @@ import warnings
 
 
 def _calculate_clustermap_sizes(
-    nx, ny, scalex=0.15, scaley=0.02, cwidth=0, cheight=0, dwidth=0.2, dheight=1.0, pad_width=0., pad_height=0.
+    nx,
+    ny,
+    scalex=0.15,
+    scaley=0.02,
+    cwidth=0,
+    cheight=0,
+    dwidth=0.2,
+    dheight=1.0,
+    pad_width=0.0,
+    pad_height=0.0,
 ):
     # TODO: Incorporate colors.
     mwidth = nx * scalex
@@ -433,12 +442,7 @@ def ordination_plot(
     ordin = ordin_func(dmat)
 
     scatter_kwargs = dict(
-        c=colors,
-        cmap="viridis",
-        s=sizes,
-        edgecolor="k",
-        lw=0.2,
-        alpha=0.8,
+        c=colors, cmap="viridis", s=sizes, edgecolor="k", lw=0.2, alpha=0.8,
     )
     scatter_kwargs.update(kwargs)
     if ax is None:
@@ -491,10 +495,7 @@ def plot_metagenotype_frequency_spectrum(
         for i, sample in enumerate(sample_list):
             ax = axs[i, i]
             ax.axvline(
-                max_frac.sel(sample=sample),
-                linestyle="--",
-                lw=1,
-                color="darkblue",
+                max_frac.sel(sample=sample), linestyle="--", lw=1, color="darkblue",
             )
             ax.axvline(
                 max_frac_complement.sel(sample=sample),
@@ -536,9 +537,7 @@ def plot_metagenotype_frequency_spectrum_comparison(
 
 
 def plot_beta_diversity_comparison(
-    worldA,
-    worldB,
-    **kwargs,
+    worldA, worldB, **kwargs,
 ):
     cdmatA = squareform(worldA.communities.pdist(dim="sample"))
     cdmatB = squareform(worldB.communities.pdist(dim="sample"))

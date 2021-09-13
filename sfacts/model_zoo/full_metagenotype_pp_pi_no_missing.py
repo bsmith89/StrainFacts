@@ -86,8 +86,7 @@ def model_structure(
     alpha_hyper_mean = pyro.sample(
         "alpha_hyper_mean",
         dist.LogNormal(
-            loc=torch.log(alpha_hyper_hyper_mean),
-            scale=alpha_hyper_hyper_scale,
+            loc=torch.log(alpha_hyper_hyper_mean), scale=alpha_hyper_hyper_scale,
         ),
     )
     m_hyper_r_mean = pyro.sample(
@@ -116,8 +115,7 @@ def model_structure(
         ).unsqueeze(-1)
         # Sample coverage
         mu = pyro.sample(
-            "mu",
-            dist.LogNormal(loc=torch.log(mu_hyper_mean), scale=mu_hyper_scale),
+            "mu", dist.LogNormal(loc=torch.log(mu_hyper_mean), scale=mu_hyper_scale),
         )
     pyro.deterministic("communities", pi)
 
@@ -125,8 +123,7 @@ def model_structure(
     nu = pyro.deterministic("nu", pi @ delta)
     # TODO: Consider using pyro.distributions.GammaPoisson parameterization?
     m = pyro.sample(
-        "m",
-        NegativeBinomialReparam(nu * mu.reshape((-1, 1)), m_hyper_r).to_event(),
+        "m", NegativeBinomialReparam(nu * mu.reshape((-1, 1)), m_hyper_r).to_event(),
     )
 
     # Expected fractions of each allele at each position
@@ -139,9 +136,7 @@ def model_structure(
     y = pyro.sample(
         "y",
         dist.BetaBinomial(
-            concentration1=alpha * p,
-            concentration0=alpha * (1 - p),
-            total_count=m,
+            concentration1=alpha * p, concentration0=alpha * (1 - p), total_count=m,
         ).to_event(),
     )
     metagenotypes = pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
