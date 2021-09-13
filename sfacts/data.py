@@ -250,14 +250,14 @@ class Metagenotypes(WrappedDataArrayMixin):
             m=self.total_counts().values,
         )
 
-    def pdist(self, dim="sample", pseudo=1.0, **kwargs):
+    def pdist(self, dim="sample", gpseudo=1.0, pseudo=0.0, **kwargs):
         if dim == "sample":
             _dim = "strain"
         else:
             _dim = dim
         return (
-            self.to_estimated_genotypes(pseudo=pseudo)
-            .pdist(dim=_dim, **kwargs)
+            self.to_estimated_genotypes(pseudo=gpseudo)
+            .pdist(dim=_dim, pseudo=pseudo, **kwargs)
             .rename_axis(columns=dim, index=dim)
         )
 
@@ -269,12 +269,14 @@ class Metagenotypes(WrappedDataArrayMixin):
             squareform(pdist(d.values, metric="cosine")), index=d.index, columns=d.index
         )
 
-    def linkage(self, dim="sample", pseudo=1.0, **kwargs):
+    def linkage(self, dim="sample", gpseudo=1.0, pseudo=0.0, **kwargs):
         if dim == "sample":
             _dim = "strain"
         else:
             _dim = dim
-        return self.to_estimated_genotypes(pseudo=pseudo).linkage(dim=_dim, **kwargs)
+        return self.to_estimated_genotypes(pseudo=gpseudo).linkage(
+            dim=_dim, pseudo=pseudo, **kwargs
+        )
 
     def cosine_linkage(
         self,
@@ -328,7 +330,7 @@ class Genotypes(WrappedDataArrayMixin):
         "Dissimilarity between 1D genotypes, accounting for fuzzyness."
         dist = ((x - y) / 2) ** 2
         weight = np.abs(x * y)
-        wmean_dist = ((weight * dist).mean()) / ((weight.mean() + pseudo))
+        wmean_dist = ((weight * dist).sum() + pseudo) / ((weight.sum() + pseudo))
         return wmean_dist
 
     @staticmethod
