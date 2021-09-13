@@ -40,6 +40,8 @@ def plot_generic_clustermap_factory(
     matrix_func,
     col_colors_func=None,
     row_colors_func=None,
+    col_cluster=True,
+    row_cluster=True,
     col_linkage_func=None,
     row_linkage_func=None,
     row_col_annotation_cmap=mpl.cm.viridis,
@@ -66,6 +68,8 @@ def plot_generic_clustermap_factory(
     def _plot_func(
         world,
         matrix_func=matrix_func,
+        col_cluster=col_cluster,
+        row_cluster=row_cluster,
         col_linkage_func=col_linkage_func,
         row_linkage_func=row_linkage_func,
         col_colors_func=col_colors_func,
@@ -113,13 +117,27 @@ def plot_generic_clustermap_factory(
 
         if col_linkage_func is None:
             col_linkage = None
+        elif col_cluster:
+            try:
+                col_linkage = col_linkage_func(world)
+            except ValueError as err:
+                warnings.warn(f"col_linkage calculation failed: {err}")
+                col_linkage = None
+                col_cluster = False
         else:
-            col_linkage = col_linkage_func(world)
+            col_linkage = None
 
         if row_linkage_func is None:
             row_linkage = None
+        elif row_cluster:
+            try:
+                row_linkage = row_linkage_func(world)
+            except ValueError as err:
+                warnings.warn(f"row_linkage calculation failed: {err}")
+                row_linkage = None
+                row_cluster = False
         else:
-            row_linkage = row_linkage_func(world)
+            row_linkage = None
 
         if col_colors_func is None:
             col_colors = None
@@ -165,6 +183,8 @@ def plot_generic_clustermap_factory(
             cmap=cmap,
             xticklabels=xticklabels,
             yticklabels=yticklabels,
+            col_cluster=col_cluster,
+            row_cluster=row_cluster,
             col_linkage=col_linkage,
             row_linkage=row_linkage,
             row_colors=row_colors,
