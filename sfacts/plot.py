@@ -5,23 +5,17 @@ from scipy.spatial.distance import squareform
 import pandas as pd
 import numpy as np
 from sklearn.manifold import MDS
+import warnings
 
 
 def _calculate_clustermap_sizes(
-    nx,
-    ny,
-    scalex=0.15,
-    scaley=0.02,
-    cwidth=0,
-    cheight=0,
-    dwidth=0.2,
-    dheight=1.0,
+    nx, ny, scalex=0.15, scaley=0.02, cwidth=0, cheight=0, dwidth=0.2, dheight=1.0, pad_width=0., pad_height=0.
 ):
     # TODO: Incorporate colors.
     mwidth = nx * scalex
     mheight = ny * scaley
-    fwidth = mwidth + cwidth + dwidth
-    fheight = mheight + cheight + dheight
+    fwidth = mwidth + cwidth + dwidth + pad_width
+    fheight = mheight + cheight + dheight + pad_height
     dendrogram_ratio = (dwidth / fwidth, dheight / fheight)
     colors_ratio = (cwidth / fwidth, cheight / fheight)
     return (fwidth, fheight), dendrogram_ratio, colors_ratio
@@ -52,9 +46,11 @@ def plot_generic_clustermap_factory(
     scalex=0.05,
     scaley=0.05,
     cwidth=0.1,
-    cheight=0.1,
+    cheight=0.2,
     dwidth=1.0,
     dheight=1.0,
+    pad_width=0.5,
+    pad_height=0.5,
     vmin=None,
     vmax=None,
     center=None,
@@ -92,6 +88,8 @@ def plot_generic_clustermap_factory(
         cbar_pos=cbar_pos,
         transpose=transpose,
         isel=isel,
+        pad_width=pad_width,
+        pad_height=pad_height,
         **kwargs,
     ):
         matrix_data = matrix_func(world)
@@ -155,6 +153,8 @@ def plot_generic_clustermap_factory(
             cheight=cheight,
             dwidth=dwidth,
             dheight=dheight,
+            pad_width=pad_width,
+            pad_height=pad_height,
         )
 
         clustermap_kwargs = dict(
