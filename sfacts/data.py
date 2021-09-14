@@ -227,7 +227,9 @@ class Metagenotypes(WrappedDataArrayMixin):
 
     def to_estimated_genotypes(self, pseudo=1.0):
         return Genotypes(
-            self.alt_allele_fraction(pseudo=pseudo).rename({"sample": "strain"})
+            self.alt_allele_fraction(pseudo=pseudo)
+            .rename({"sample": "strain"})
+            .reset_coords(drop=True)
         )
 
     def total_counts(self):
