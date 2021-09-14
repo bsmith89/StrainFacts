@@ -16,15 +16,22 @@ def genotype_binary_to_sign(p):
     return 2 * p - 1
 
 
-def genotype_dissimilarity(x, y, pseudo=0.0):
+def genotype_dissimilarity(x, y):
     "Dissimilarity between 1D genotypes, accounting for fuzzyness."
     x = genotype_binary_to_sign(x)
     y = genotype_binary_to_sign(y)
 
     dist = ((x - y) / 2) ** 2
     weight = np.abs(x * y)
-    wmean_dist = ((weight * dist).sum() + pseudo) / ((weight.sum() + pseudo))
-    return wmean_dist
+    wmean_dist = ((weight * dist).sum()) / ((weight.sum()))
+
+    # While the basic function is undefined where weight.sum() == 0
+    # (and this is only true when one of x or y is always exactly 0.5 at every
+    # index),
+    # the limit approaches the same value from both directions.
+    # We therefore redefine the dissimilarity as a piecewise function,
+    # but one that is nonetheless everywhere smooth and defined.
+    return np.where(np.isnan(wmean_dist), dist.mean(), wmean_dist)
 
 
 def genotype_cdist(xx, yy, pseudo=0.0):
