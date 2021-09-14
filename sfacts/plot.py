@@ -73,6 +73,7 @@ def plot_generic_clustermap_factory(
     cbar_pos=None,
     transpose=False,
     isel=None,
+    background_color='darkgrey',
 ):
     def _plot_func(
         world,
@@ -103,6 +104,7 @@ def plot_generic_clustermap_factory(
         isel=isel,
         pad_width=pad_width,
         pad_height=pad_height,
+        background_color=background_color,
         **kwargs,
     ):
         matrix_data = matrix_func(world)
@@ -207,6 +209,7 @@ def plot_generic_clustermap_factory(
         clustermap_kwargs.update(kwargs)
 
         grid = sns.clustermap(matrix_data, **clustermap_kwargs)
+        g.ax_heatmap.set_facecolor(background_color)
         return grid
 
     return _plot_func
