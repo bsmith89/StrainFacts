@@ -209,7 +209,7 @@ def plot_generic_clustermap_factory(
         clustermap_kwargs.update(kwargs)
 
         grid = sns.clustermap(matrix_data, **clustermap_kwargs)
-        g.ax_heatmap.set_facecolor(background_color)
+        grid.ax_heatmap.set_facecolor(background_color)
         return grid
 
     return _plot_func
