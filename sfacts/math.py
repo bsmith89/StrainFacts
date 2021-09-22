@@ -34,11 +34,11 @@ def genotype_dissimilarity(x, y):
     return np.where(np.isnan(wmean_dist), dist.mean(), wmean_dist)
 
 
-def genotype_cdist(xx, yy, pseudo=0.0):
-    return cdist(xx, yy, genotype_dissimilarity, pseudo=pseudo)
+def genotype_cdist(xx, yy):
+    return cdist(xx, yy, genotype_dissimilarity)
 
 
-def genotype_pdist(xx, pseudo=0.0, quiet=True):
+def genotype_pdist(xx, quiet=True):
     if not quiet:
         warnings.warn("Progress bar not implemented for genotype_pdist.")
-    return pdist(xx, genotype_dissimilarity, pseudo=pseudo)
+    return pdist(xx, genotype_dissimilarity)

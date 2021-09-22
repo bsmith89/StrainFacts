@@ -251,14 +251,14 @@ class Metagenotypes(WrappedDataArrayMixin):
             m=self.total_counts().values,
         )
 
-    def pdist(self, dim="sample", gpseudo=1.0, pseudo=0.0, **kwargs):
+    def pdist(self, dim="sample", pseudo=1.0, **kwargs):
         if dim == "sample":
             _dim = "strain"
         else:
             _dim = dim
         return (
-            self.to_estimated_genotypes(pseudo=gpseudo)
-            .pdist(dim=_dim, pseudo=pseudo, **kwargs)
+            self.to_estimated_genotypes(pseudo=pseudo)
+            .pdist(dim=_dim, **kwargs)
             .rename_axis(columns=dim, index=dim)
         )
 
@@ -270,13 +270,13 @@ class Metagenotypes(WrappedDataArrayMixin):
             squareform(pdist(d.values, metric="cosine")), index=d.index, columns=d.index
         )
 
-    def linkage(self, dim="sample", gpseudo=1.0, pseudo=0.0, **kwargs):
+    def linkage(self, dim="sample", pseudo=1.0, **kwargs):
         if dim == "sample":
             _dim = "strain"
         else:
             _dim = dim
-        return self.to_estimated_genotypes(pseudo=gpseudo).linkage(
-            dim=_dim, pseudo=pseudo, **kwargs
+        return self.to_estimated_genotypes(pseudo=pseudo).linkage(
+            dim=_dim, **kwargs
         )
 
     def cosine_linkage(
@@ -316,16 +316,12 @@ class Genotypes(WrappedDataArrayMixin):
     def fuzzed(self, eps=1e-5):
         return self.lift(lambda x: (x + eps) / (1 + 2 * eps))
 
-    def pdist(self, dim="strain", pseudo=0.0, quiet=True):
+    def pdist(self, dim="strain", quiet=True):
         index = getattr(self, dim)
         if dim == "strain":
             unwrapped_values = self.values
-            cdmat = genotype_pdist(unwrapped_values, pseudo=pseudo, quiet=quiet)
+            cdmat = genotype_pdist(unwrapped_values, quiet=quiet)
         elif dim == "position":
-            if pseudo != 0.0:
-                raise ValueError(
-                    "Position dissimilarity does not involve a 'pseudo' parameter."
-                )
             unwrapped_values = self.values.T
             cdmat = pdist(genotype_binary_to_sign(self.values.T), metric="cosine")
         # Reboxing
@@ -335,13 +331,12 @@ class Genotypes(WrappedDataArrayMixin):
     def linkage(
         self,
         dim="strain",
-        pseudo=0.0,
         quiet=True,
         method="complete",
         optimal_ordering=False,
         **kwargs,
     ):
-        dmat = self.pdist(dim=dim, pseudo=pseudo, quiet=quiet)
+        dmat = self.pdist(dim=dim, quiet=quiet)
         cdmat = squareform(dmat)
         return linkage(
             cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
