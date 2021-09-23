@@ -1,6 +1,6 @@
 import pyro
 import torch
-from sfacts.logging_util import info
+import sfacts as sf
 
 
 def as_torch(x, dtype=None, device=None):
@@ -19,7 +19,7 @@ def all_torch(dtype=None, device=None, **kwargs):
 def shape_info(model, *args, **kwargs):
     _trace = pyro.poutine.trace(model).get_trace(*args, **kwargs)
     _trace.compute_log_prob()
-    info(_trace.format_shapes())
+    sf.logging_util.info(_trace.format_shapes())
 
 
 def set_random_seed(seed, warn=True):

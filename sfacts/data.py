@@ -1,7 +1,6 @@
-from sfacts.math import binary_entropy, entropy, genotype_pdist, genotype_binary_to_sign
+import sfacts as sf
 import xarray as xr
 import numpy as np
-from tqdm import tqdm
 import pandas as pd
 from scipy.spatial.distance import pdist, squareform
 from scipy.cluster.hierarchy import linkage
@@ -278,9 +277,7 @@ class Metagenotypes(WrappedDataArrayMixin):
             _dim = "strain"
         else:
             _dim = dim
-        return self.to_estimated_genotypes(pseudo=pseudo).linkage(
-            dim=_dim, **kwargs
-        )
+        return self.to_estimated_genotypes(pseudo=pseudo).linkage(dim=_dim, **kwargs)
 
     def cosine_linkage(
         self, dim="sample", method="complete", optimal_ordering=False, **kwargs,
@@ -297,7 +294,7 @@ class Metagenotypes(WrappedDataArrayMixin):
         elif dim == "position":
             over = "sample"
         p = self.dominant_allele_fraction()
-        ent = binary_entropy(p)
+        ent = sf.math.binary_entropy(p)
         return ent.sum(over).rename("entropy")
 
 
@@ -323,10 +320,10 @@ class Genotypes(WrappedDataArrayMixin):
         index = getattr(self, dim)
         if dim == "strain":
             unwrapped_values = self.values
-            cdmat = genotype_pdist(unwrapped_values, quiet=quiet)
+            cdmat = sf.math.genotype_pdist(unwrapped_values, quiet=quiet)
         elif dim == "position":
             unwrapped_values = self.values.T
-            cdmat = pdist(genotype_binary_to_sign(self.values.T), metric="cosine")
+            cdmat = pdist(sf.math.genotype_binary_to_sign(self.values.T), metric="cosine")
         # Reboxing
         dmat = pd.DataFrame(squareform(cdmat), index=index, columns=index)
         return dmat
@@ -352,7 +349,7 @@ class Genotypes(WrappedDataArrayMixin):
         elif dim == "position":
             d = self.values.T
             index = self.position
-        d = genotype_binary_to_sign(d)
+        d = sf.math.genotype_binary_to_sign(d)
         cdmat = pdist(d, metric="cosine")
         return pd.DataFrame(squareform(cdmat), index=index, columns=index)
 
@@ -370,7 +367,7 @@ class Genotypes(WrappedDataArrayMixin):
         elif dim == "position":
             sum_over = "strain"
         p = self.data
-        ent = binary_entropy(p)
+        ent = sf.math.binary_entropy(p)
         return ent.sum(sum_over).rename("entropy")
 
 
@@ -424,7 +421,7 @@ class Communities(WrappedDataArrayMixin):
         elif dim == "sample":
             sum_over = "strain"
         p = self.data
-        ent = entropy(p, axis=sum_over)
+        ent = sf.math.entropy(p, axis=sum_over)
         return ent.rename("entropy")
 
 

@@ -5,7 +5,7 @@ import argparse
 import warnings
 import xarray as xr
 import torch
-from sfacts.logging_util import info
+import sfacts as sf
 import numpy as np
 
 

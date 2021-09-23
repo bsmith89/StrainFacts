@@ -1,4 +1,4 @@
-from sfacts import logging_util, model, estimation, data
+import sfacts as sf
 import time
 import torch
 import xarray as xr
@@ -57,10 +57,10 @@ def fit_metagenotypes_simple(
     if estimation_kwargs is None:
         estimation_kwargs = {}
 
-    logging_util.info(
+    sf.logging_util.info(
         f"START: Fitting data with shape {metagenotypes.sizes}.", quiet=quiet
     )
-    pmodel = model.ParameterizedModel(
+    pmodel = sf.model.ParameterizedModel(
         structure,
         coords=dict(
             sample=metagenotypes.sample.values,
@@ -74,12 +74,12 @@ def fit_metagenotypes_simple(
         dtype=dtype,
     ).condition(**metagenotypes.to_counts_and_totals())
     start_time = time.time()
-    est, history = estimation.estimate_parameters(
+    est, history = sf.estimation.estimate_parameters(
         pmodel, quiet=quiet, **estimation_kwargs,
     )
     end_time = time.time()
     delta_time = end_time - start_time
-    logging_util.info(f"END: Fit in {delta_time} seconds.", quiet=quiet)
+    sf.logging_util.info(f"END: Fit in {delta_time} seconds.", quiet=quiet)
     return est, history
 
 
@@ -98,13 +98,13 @@ def fit_metagenotypes_then_refit_genotypes(
     if stage2_hyperparameters is None:
         stage2_hyperparameters = {}
 
-    _estimate_parameters = lambda pmodel: estimation.estimate_parameters(
+    _estimate_parameters = lambda pmodel: sf.estimation.estimate_parameters(
         pmodel, quiet=quiet, **estimation_kwargs
     )
-    _info = lambda *args, **kwargs: logging_util.info(*args, quiet=quiet, **kwargs)
+    _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
 
     _info(f"START: Fitting data with shape {metagenotypes.sizes}.")
-    pmodel = model.ParameterizedModel(
+    pmodel = sf.model.ParameterizedModel(
         structure,
         coords=dict(
             sample=metagenotypes.sample.values,
@@ -166,17 +166,17 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     if stage2_hyperparameters is None:
         stage2_hyperparameters = {}
 
-    _estimate_parameters = lambda pmodel: estimation.estimate_parameters(
+    _estimate_parameters = lambda pmodel: sf.estimation.estimate_parameters(
         pmodel, quiet=quiet, **estimation_kwargs,
     )
-    _info = lambda *args, **kwargs: logging_util.info(*args, quiet=quiet, **kwargs)
+    _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
 
     nposition = min(nposition, metagenotypes.sizes["position"])
 
     _info(f"START: Fitting data with shape {metagenotypes.sizes}.")
     _info(f"Fitting strain compositions using {nposition} randomly sampled positions.")
     metagenotypes_ss = metagenotypes.random_sample(nposition, "position")
-    pmodel = model.ParameterizedModel(
+    pmodel = sf.model.ParameterizedModel(
         structure,
         coords=dict(
             sample=metagenotypes.sample.values,
@@ -209,7 +209,7 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
         .condition(**metagenotypes_ss.to_counts_and_totals()),
     )
     _info(f"Collapsing {nstrain} initial strains.")
-    agg_communities = estimation.communities_aggregated_by_strain_cluster(
+    agg_communities = sf.estimation.communities_aggregated_by_strain_cluster(
         est_curr,
         diss_thresh=diss_thresh,
         pdist_func=lambda w: w.genotypes.pdist(quiet=quiet),
@@ -260,9 +260,9 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
         genotypes_chunks.append(est_curr.genotypes.data)
         missingness_chunks.append(est_curr.missingness.data)
 
-    genotypes = data.Genotypes(xr.concat(genotypes_chunks, dim="position"))
-    missingness = data.Missingness(xr.concat(missingness_chunks, dim="position"))
-    est_curr = data.World(
+    genotypes = sf.data.Genotypes(xr.concat(genotypes_chunks, dim="position"))
+    missingness = sf.data.Missingness(xr.concat(missingness_chunks, dim="position"))
+    est_curr = sf.data.World(
         est_curr.data.drop_dims(["position", "allele"]).assign(
             genotypes=genotypes.data,
             missingness=missingness.data,
@@ -293,17 +293,17 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     if stage2_hyperparameters is None:
         stage2_hyperparameters = {}
 
-    _estimate_parameters = lambda pmodel: estimation.estimate_parameters(
+    _estimate_parameters = lambda pmodel: sf.estimation.estimate_parameters(
         pmodel, quiet=quiet, **estimation_kwargs,
     )
-    _info = lambda *args, **kwargs: logging_util.info(*args, quiet=quiet, **kwargs)
+    _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
 
     nposition = min(nposition, metagenotypes.sizes["position"])
 
     _info(f"START: Fitting data with shape {metagenotypes.sizes}.")
     _info(f"Fitting strain compositions using {nposition} randomly sampled positions.")
     metagenotypes_ss = metagenotypes.random_sample(nposition, "position")
-    pmodel = model.ParameterizedModel(
+    pmodel = sf.model.ParameterizedModel(
         structure,
         coords=dict(
             sample=metagenotypes.sample.values,
@@ -333,7 +333,7 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
         .condition(**metagenotypes_ss.to_counts_and_totals()),
     )
     _info(f"Collapsing {nstrain} initial strains.")
-    agg_communities = estimation.communities_aggregated_by_strain_cluster(
+    agg_communities = sf.estimation.communities_aggregated_by_strain_cluster(
         est_curr,
         diss_thresh=diss_thresh,
         pdist_func=lambda w: w.genotypes.pdist(quiet=quiet),
@@ -367,8 +367,8 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
         )
         genotypes_chunks.append(est_curr.genotypes.data)
 
-    genotypes = data.Genotypes(xr.concat(genotypes_chunks, dim="position"))
-    est_curr = data.World(
+    genotypes = sf.data.Genotypes(xr.concat(genotypes_chunks, dim="position"))
+    est_curr = sf.data.World(
         est_curr.data.drop_dims(["position", "allele"]).assign(
             genotypes=genotypes.data, metagenotypes=metagenotypes.data,
         )

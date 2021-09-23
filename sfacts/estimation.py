@@ -1,8 +1,8 @@
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.decomposition import non_negative_factorization
+
+import sfacts as sf
 from sfacts.pandas_util import idxwhere
-from sfacts.data import World, Communities
-from sfacts.pyro_util import set_random_seed
 
 import xarray as xr
 
@@ -76,7 +76,7 @@ def nmf_approximation(
     gamma3 = (gamma2 / gamma2.sum("allele")).fillna(0.5)
     pi3 = pi2 / pi2.sum("strain")
 
-    approx = World(
+    approx = sf.data.World(
         xr.Dataset(
             dict(
                 communities=pi3.transpose("sample", "strain"),
@@ -109,7 +109,7 @@ def estimate_parameters(
     else:
         loss = pyro.infer.Trace_ELBO()
 
-    set_random_seed(seed, warn=(not quiet))
+    sf.pyro_util.set_random_seed(seed, warn=(not quiet))
 
     _guide = pyro.infer.autoguide.AutoLaplaceApproximation(
         model,
@@ -211,4 +211,4 @@ def communities_aggregated_by_strain_cluster(
     comms = comms.drop(columns=low_max_frac_strains)
     comms = comms.stack().to_xarray()
     comms = comms / comms.sum("strain")
-    return Communities(comms)
+    return sf.data.Communities(comms)
