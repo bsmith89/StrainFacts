@@ -11,6 +11,38 @@ def _chunk_start_end_iterator(total, per):
         yield (i + 1) * per, total
 
 
+def simulate_and_save(
+    outpath,
+    structure,
+    sizes,
+    hyperparameters,
+    seed=None,
+    data=None,
+    dtype=torch.float32,
+    device="cpu",
+):
+    if data is None:
+        data = {}
+
+    model = sf.model.ParameterizedModel(
+        structure=structure,
+        coords=dict(
+            strain=sizes["strain"],
+            sample=sizes["sample"],
+            position=sizes["position"],
+            allele=["alt", "ref"],
+        ),
+        hyperparameters=hyperparameters,
+        dtype=dtype,
+        device=device,
+        data=data,
+    )
+    world = model.simulate_world(seed=seed)
+    world.dump(outpath)
+
+    return model, world
+
+
 def fit_metagenotypes_simple(
     structure,
     metagenotypes,

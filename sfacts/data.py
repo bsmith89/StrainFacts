@@ -192,6 +192,9 @@ class Metagenotypes(WrappedDataArrayMixin):
             path, encoding=dict(tally=dict(zlib=True, complevel=6))
         )
 
+    def to_csv(self, *args, **kwargs):
+        self.data.to_series().to_csv(*args, **kwargs)
+
     def allele_incidence(self, thresh=1):
         allele_presence = self.data >= thresh
         return allele_presence.sum("sample") / allele_presence.any("allele").sum(
