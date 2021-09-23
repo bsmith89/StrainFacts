@@ -154,9 +154,7 @@ class WrappedDataArrayMixin:
 
 
 class Metagenotypes(WrappedDataArrayMixin):
-    """Counts of alleles across samples and positions.
-
-    """
+    """Counts of alleles across samples and positions."""
 
     dims = ("sample", "position", "allele")
     constraints = dict(positive_counts=_positive_counts)
@@ -323,7 +321,9 @@ class Genotypes(WrappedDataArrayMixin):
             cdmat = sf.math.genotype_pdist(unwrapped_values, quiet=quiet)
         elif dim == "position":
             unwrapped_values = self.values.T
-            cdmat = pdist(sf.math.genotype_binary_to_sign(self.values.T), metric="cosine")
+            cdmat = pdist(
+                sf.math.genotype_binary_to_sign(self.values.T), metric="cosine"
+            )
         # Reboxing
         dmat = pd.DataFrame(squareform(cdmat), index=index, columns=index)
         return dmat

@@ -73,7 +73,7 @@ def plot_generic_clustermap_factory(
     cbar_pos=None,
     transpose=False,
     isel=None,
-    background_color='darkgrey',
+    background_color="darkgrey",
 ):
     def _plot_func(
         world,

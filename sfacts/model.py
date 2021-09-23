@@ -58,22 +58,38 @@ class Structure:
 
     def __repr__(self):
         return (
-            self.__class__.__name__ + "("
-            + "generative=" + repr(self.generative.__qualname__)
-            + ", " + "dims=" + repr(self.dims)
-            + ", " + "description=" + repr(self.description)
-            + ", " + "default_hyperparameters=" + repr(self.default_hyperparameters)
+            self.__class__.__name__
+            + "("
+            + ("generative=" + repr(self.generative.__qualname__) + ", ")
+            + ("dims=" + repr(self.dims) + ", ")
+            + ("description=" + repr(self.description) + ", ")
+            + ("default_hyperparameters=" + repr(self.default_hyperparameters) + ", ")
             + ")"
         )
 
     def pformat(self, indent=1):
         return (
-            self.__class__.__name__ + "("
-            + "\n" + " " * indent + " generative=" + self.generative.__qualname__
-            + ",\n" + " " * indent + " dims=" + pformat(self.dims, indent=indent + 1)
-            + ",\n" + " " * indent + " description=" + pformat(self.description, indent=indent + 1)
-            + ",\n" + " " * indent + " default_hyperparameters=" + pformat(self.default_hyperparameters, indent=indent + 1)
-            + "\n" + " " * (indent - 1) + ")"
+            self.__class__.__name__
+            + "("
+            + "\n"
+            + " " * indent
+            + " generative="
+            + self.generative.__qualname__
+            + ",\n"
+            + " " * indent
+            + " dims="
+            + pformat(self.dims, indent=indent + 1)
+            + ",\n"
+            + " " * indent
+            + " description="
+            + pformat(self.description, indent=indent + 1)
+            + ",\n"
+            + " " * indent
+            + " default_hyperparameters="
+            + pformat(self.default_hyperparameters, indent=indent + 1)
+            + "\n"
+            + " " * (indent - 1)
+            + ")"
         )
 
 
@@ -130,26 +146,48 @@ class ParameterizedModel:
 
     def __repr__(self):
         return (
-            self.__class__.__name__ + "("
-            + "structure=" + repr(self.structure)
-            + ", " + "coords=" + repr(self.coords)
-            + ", " + "dtype=" + repr(self.dtype)
-            + ", " + "device=" + repr(self.device)
-            + ", " + "hyperparameters=" + repr(self.hyperparameters)
-            + ", " + "data=" + repr(self.data)
+            self.__class__.__name__
+            + "("
+            + ("structure=" + repr(self.structure) + ", ")
+            + ("coords=" + repr(self.coords) + ", ")
+            + ("dtype=" + repr(self.dtype) + ", ")
+            + ("device=" + repr(self.device) + ", ")
+            + ("hyperparameters=" + repr(self.hyperparameters) + ", ")
+            + ("data=" + repr(self.data) + ", ")
             + ")"
         )
 
     def pformat(self, indent=1):
         return (
-            self.__class__.__name__ + "("
-            + "\n" + " " * indent + "structure=" + self.structure.pformat(indent=indent + 1)
-            + ",\n" + " " * indent + "coords=" + pformat(self.coords, indent=indent + 1)
-            + ",\n" + " " * indent + "dtype=" + pformat(self.dtype, indent=indent + 1)
-            + ",\n" + " " * indent + "device=" + pformat(self.dtype, indent=indent + 1)
-            + ",\n" + " " * indent + "hyperparameters=" + pformat(self.hyperparameters, indent=indent + 1)
-            + ",\n" + " " * indent + "data=" + pformat(self.data, indent=indent + 1)
-            + "\n" + " " * (indent - 1) + ")"
+            self.__class__.__name__
+            + "("
+            + "\n"
+            + " " * indent
+            + "structure="
+            + self.structure.pformat(indent=indent + 1)
+            + ",\n"
+            + " " * indent
+            + "coords="
+            + pformat(self.coords, indent=indent + 1)
+            + ",\n"
+            + " " * indent
+            + "dtype="
+            + pformat(self.dtype, indent=indent + 1)
+            + ",\n"
+            + " " * indent
+            + "device="
+            + pformat(self.dtype, indent=indent + 1)
+            + ",\n"
+            + " " * indent
+            + "hyperparameters="
+            + pformat(self.hyperparameters, indent=indent + 1)
+            + ",\n"
+            + " " * indent
+            + "data="
+            + pformat(self.data, indent=indent + 1)
+            + "\n"
+            + " " * (indent - 1)
+            + ")"
         )
 
     def __call__(self):
