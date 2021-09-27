@@ -265,4 +265,4 @@ class ParameterizedModel:
         return obs
 
     def simulate_world(self, seed=None):
-        return self.format_world(self.simulate(n=1))
+        return self.format_world(self.simulate(n=1, seed=seed))
