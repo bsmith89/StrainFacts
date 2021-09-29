@@ -319,7 +319,7 @@ plot_depth = plot_generic_clustermap_factory(
             .rename("mean_depth")
         )
     ),
-    norm=mpl.colors.SymLogNorm(linthresh=1.0),
+    norm=mpl.colors.SymLogNorm(linthresh=1.0, base=10),
 )
 
 plot_genotype = plot_generic_clustermap_factory(
