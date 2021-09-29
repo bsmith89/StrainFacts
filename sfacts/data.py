@@ -50,6 +50,19 @@ class WrappedDataArrayMixin:
     variable_name = None
 
     @classmethod
+    def _post_load(cls, data, validate=True):
+        result = cls(data)
+        if validate:
+            result.validate_constraints()
+        return result
+
+    @classmethod
+    def load_from_tsv(cls, path, validate=True):
+        data = pd.read_table(path, index_col=cls.dims).squeeze().to_xarray()
+        data.name = cls.variable_name
+        return cls._post_load(data)
+
+    @classmethod
     def from_ndarray(cls, x, coords=None):
         if coords is None:
             coords = {k: None for k in cls.dims}
@@ -167,11 +180,7 @@ class Metagenotypes(WrappedDataArrayMixin):
             .rename({"library_id": "sample"})
             .squeeze(drop=True)
         )
-        data.name = "metagenotypes"
-        result = cls(data)
-        if validate:
-            result.validate_constraints()
-        return result
+        return cls._post_load(data)
 
     @classmethod
     def from_counts_and_totals(cls, y, m, coords=None):
@@ -300,6 +309,17 @@ class Genotypes(WrappedDataArrayMixin):
     dims = ("strain", "position")
     constraints = dict(on_2_simplex=_on_2_simplex)
     variable_name = "genotypes"
+
+    @classmethod
+    def load_from_tsv(cls, path, validate=True):
+        data = (
+            pd.read_table(path, index_col=["strain", "position", "allele"])
+            .xs("alt", level="allele")
+            .squeeze()
+            .to_xarray()
+        )
+        data.name = cls.variable_name
+        return cls._post_load(data)
 
     def softmask_missing(self, missingness, eps=1e-10):
         clip = partial(np.clip, a_min=eps, a_max=(1 - eps))
@@ -452,6 +472,10 @@ class World:
     #     def _align_dims(cls, data):
     #         missing_dims = [k for k in cls.dims if k not in data.dims]
     #         return data.expand_dims(missing_dims).transpose(*cls.dims)
+
+    @classmethod
+    def from_combined(cls, *args):
+        return cls(xr.Dataset({v.variable_name: v.data for v in args}))
 
     def validate_fast(self):
         assert not (
