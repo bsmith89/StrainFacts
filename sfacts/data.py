@@ -176,7 +176,7 @@ class Metagenotypes(WrappedDataArrayMixin):
     @classmethod
     def load(cls, filename_or_obj, validate=True):
         data = (
-            xr.open_dataarray(filename_or_obj)
+            xr.load_dataarray(filename_or_obj)
             .rename({"library_id": "sample"})
             .squeeze(drop=True)
         )
@@ -496,7 +496,7 @@ class World:
 
     @classmethod
     def load(cls, path, validate=True):
-        data = xr.open_dataset(path)
+        data = xr.load_dataset(path)
         world = cls(data)
         if validate:
             world.validate_constraints()
