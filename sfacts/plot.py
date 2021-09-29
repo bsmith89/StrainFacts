@@ -273,6 +273,7 @@ plot_prediction_error = plot_generic_clustermap_factory(
     vmin=-1,
     vmax=1,
     center=0,
+    norm=mpl.colors.PowerNorm(1),
     cmap="coolwarm",
     xticklabels=1,
     yticklabels=0,
