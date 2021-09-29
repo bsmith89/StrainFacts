@@ -102,13 +102,14 @@ def estimate_parameters(
     lagB=100,
     opt=None,
     quiet=False,
+    ignore_jit_warnings=False,
     seed=None,
 ):
     if initialize_params is None:
         initialize_params = {}
 
     if jit:
-        loss = pyro.infer.JitTrace_ELBO()
+        loss = pyro.infer.JitTrace_ELBO(ignore_jit_warnings=ignore_jit_warnings)
     else:
         loss = pyro.infer.Trace_ELBO()
 
