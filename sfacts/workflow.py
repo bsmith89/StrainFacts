@@ -74,7 +74,9 @@ def fit_metagenotypes_simple(
     ).condition(**metagenotypes.to_counts_and_totals())
     start_time = time.time()
     est, history = sf.estimation.estimate_parameters(
-        pmodel, quiet=quiet, **estimation_kwargs,
+        pmodel,
+        quiet=quiet,
+        **estimation_kwargs,
     )
     end_time = time.time()
     delta_time = end_time - start_time
@@ -166,7 +168,9 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
         stage2_hyperparameters = {}
 
     _estimate_parameters = lambda pmodel: sf.estimation.estimate_parameters(
-        pmodel, quiet=quiet, **estimation_kwargs,
+        pmodel,
+        quiet=quiet,
+        **estimation_kwargs,
     )
     _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
 
@@ -220,7 +224,8 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     genotypes_chunks = []
     missingness_chunks = []
     for position_start, position_end in _chunk_start_end_iterator(
-        metagenotypes.sizes["position"], nposition,
+        metagenotypes.sizes["position"],
+        nposition,
     ):
         _info(f"Fitting bin [{position_start}, {position_end}).")
         metagenotypes_chunk = metagenotypes.mlift(
@@ -293,7 +298,9 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
         stage2_hyperparameters = {}
 
     _estimate_parameters = lambda pmodel: sf.estimation.estimate_parameters(
-        pmodel, quiet=quiet, **estimation_kwargs,
+        pmodel,
+        quiet=quiet,
+        **estimation_kwargs,
     )
     _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
 
@@ -343,7 +350,8 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     _info(f"Iteratively refitting genotypes. {stage2_hyperparameters}")
     genotypes_chunks = []
     for position_start, position_end in _chunk_start_end_iterator(
-        metagenotypes.sizes["position"], nposition,
+        metagenotypes.sizes["position"],
+        nposition,
     ):
         _info(f"Fitting bin [{position_start}, {position_end}).")
         metagenotypes_chunk = metagenotypes.mlift(
@@ -369,7 +377,8 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     genotypes = sf.data.Genotypes(xr.concat(genotypes_chunks, dim="position"))
     est_curr = sf.data.World(
         est_curr.data.drop_dims(["position", "allele"]).assign(
-            genotypes=genotypes.data, metagenotypes=metagenotypes.data,
+            genotypes=genotypes.data,
+            metagenotypes=metagenotypes.data,
         )
     )
     end_time = time.time()

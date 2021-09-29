@@ -147,9 +147,8 @@ class Fit(AppInterface):
         )
         parser.add_argument("--inpath", "-i", required=True)
         parser.add_argument("--outpath", "-o", required=True)
-        parser.add_argument("--verbose", "-v", action='store_true', default=False)
-        parser.add_argument("--device", default='cpu')
-
+        parser.add_argument("--verbose", "-v", action="store_true", default=False)
+        parser.add_argument("--device", default="cpu")
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
