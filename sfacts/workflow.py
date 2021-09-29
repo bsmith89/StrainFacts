@@ -11,8 +11,7 @@ def _chunk_start_end_iterator(total, per):
         yield (i + 1) * per, total
 
 
-def simulate_and_save(
-    outpath,
+def simulate_world(
     structure,
     sizes,
     hyperparameters,
@@ -24,6 +23,7 @@ def simulate_and_save(
     if data is None:
         data = {}
 
+    assert len(sizes) == 3, "Sizes should only be for strain, sample, and position."
     model = sf.model.ParameterizedModel(
         structure=structure,
         coords=dict(
@@ -38,7 +38,6 @@ def simulate_and_save(
         data=data,
     )
     world = model.simulate_world(seed=seed)
-    world.dump(outpath)
 
     return model, world
 
