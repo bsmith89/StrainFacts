@@ -1,8 +1,8 @@
-import sfacts.model
+import sfacts as sf
 from sfacts.model_zoo.components import (
     _mapping_subset,
     unit_interval_power_transformation,
-    stickbreaking_betas_to_probs,
+    k_simplex_power_transformation,
     NegativeBinomialReparam,
     SHARED_DESCRIPTIONS,
     SHARED_DIMS,
@@ -12,15 +12,13 @@ import pyro
 import pyro.distributions as dist
 
 
-@sfacts.model.structure(
+@sf.model.structure(
     dims=SHARED_DIMS,
     description=_mapping_subset(
         SHARED_DESCRIPTIONS,
         [
             "rho",
             "epsilon",
-            "m_hyper_r_mean",
-            "m_hyper_r_scale",
             "m_hyper_r",
             "mu",
             "nu",
@@ -28,7 +26,6 @@ import pyro.distributions as dist
             "p",
             "m",
             "y",
-            "alpha_hyper_mean",
             "alpha",
             "genotypes",
             "missingness",
@@ -46,12 +43,13 @@ import pyro.distributions as dist
         mu_hyper_scale=10.0,
         epsilon_hyper_mode=0.01,
         epsilon_hyper_spread=1.5,
-        alpha_hyper_hyper_mean=100.0,
-        alpha_hyper_hyper_scale=1.0,
+        m_hyper_r_mean=1.0,
+        m_hyper_r_scale=1.0,
+        alpha_hyper_mean=100.0,
         alpha_hyper_scale=0.5,
     ),
 )
-def model_structure(
+def pp_pi_metagenotype(
     n,
     g,
     s,
@@ -61,9 +59,10 @@ def model_structure(
     delta_hyper_temp,
     rho_hyper,
     pi_hyper,
-    alpha_hyper_hyper_mean,
-    alpha_hyper_hyper_scale,
+    alpha_hyper_mean,
     alpha_hyper_scale,
+    m_hyper_r_mean,
+    m_hyper_r_scale,
     mu_hyper_mean,
     mu_hyper_scale,
     epsilon_hyper_mode,
@@ -91,22 +90,10 @@ def model_structure(
     rho = pyro.sample("rho", dist.Dirichlet(_unit.repeat(s) * rho_hyper))
     pyro.deterministic("metacommunity", rho)
 
-    alpha_hyper_mean = pyro.sample(
-        "alpha_hyper_mean",
-        dist.LogNormal(
-            loc=torch.log(alpha_hyper_hyper_mean), scale=alpha_hyper_hyper_scale,
-        ),
-    )
-    m_hyper_r_mean = pyro.sample(
-        "m_hyper_r_mean", dist.LogNormal(loc=_unit * 0.0, scale=_unit * 10.0)
-    )
-    m_hyper_r_scale = pyro.sample(
-        "m_hyper_r_scale", dist.LogNormal(loc=_unit * 0.0, scale=_unit * 10.0)
-    )
-
     with pyro.plate("sample", n, dim=-1):
         # Community composition
-        pi = pyro.sample("pi", dist.Dirichlet(pi_hyper * rho, validate_args=False))
+        _pi = pyro.sample("_pi", dist.Dirichlet(rho))
+        pi = pyro.deterministic("pi", k_simplex_power_transformation(_pi, pi_hyper))
         # Sequencing error
         epsilon = pyro.sample(
             "epsilon",
