@@ -22,6 +22,9 @@ from tqdm import tqdm
 from sfacts.logging_util import info
 
 
+DEFAULT_OPT = pyro.optim.Adamax({"lr": 1e-2}, {"clip_norm": 100})
+
+
 def nmf_approximation(
     world,
     s,
@@ -97,7 +100,7 @@ def estimate_parameters(
     maxiter=10000,
     lagA=20,
     lagB=100,
-    opt=pyro.optim.Adamax({"lr": 1e-2}, {"clip_norm": 100}),
+    opt=None,
     quiet=False,
     seed=None,
 ):
@@ -108,6 +111,9 @@ def estimate_parameters(
         loss = pyro.infer.JitTrace_ELBO()
     else:
         loss = pyro.infer.Trace_ELBO()
+
+    if opt is None:
+        opt = DEFAULT_OPT
 
     sf.pyro_util.set_random_seed(seed, warn=(not quiet))
 
