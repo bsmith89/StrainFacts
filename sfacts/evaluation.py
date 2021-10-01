@@ -1,4 +1,6 @@
 from scipy.spatial.distance import cdist, pdist
+from scipy.stats import pearsonr
+from sfacts.math import genotype_cdist, adjusted_community_dissimilarity
 import pandas as pd
 import numpy as np
 import xarray as xr
@@ -16,13 +18,18 @@ def _mae(x, y):
     return np.abs(x - y).mean()
 
 
-def match_genotypes(reference, estimate):
+def match_genotypes(reference, estimate, flip=False, cdist=None):
+    if cdist is None:
+        cdist = genotype_cdist
+
     gammaA = reference.genotypes.data.to_pandas()
     gammaB = estimate.genotypes.data.to_pandas()
+    if flip:
+        gammaA, gammaB = gammaB, gammaA
 
     g = gammaA.shape[1]
-    dist = pd.DataFrame(cdist(gammaA, gammaB, metric="cityblock"))
-    return dist.idxmin(axis=1), dist.min(axis=1) / g
+    dist = pd.DataFrame(cdist(gammaA, gammaB))
+    return dist.idxmin(axis=1), dist.min(axis=1)
 
 
 def weighted_genotype_error(reference, estimate):
@@ -40,6 +47,32 @@ def community_error(reference, estimate):
     bcA = 1 - pdist(piA, metric="braycurtis")
     bcB = 1 - pdist(piB, metric="braycurtis")
     return _mae(bcA, bcB)
+
+
+def integrated_community_error(reference, estimate):
+    reference_pdist = pdist(
+        reference.communities.values,
+        adjusted_community_dissimilarity,
+        gdiss=reference.genotypes.pdist(),
+    )
+    estimate_pdist = pdist(
+        estimate.communities.values,
+        adjusted_community_dissimilarity,
+        gdiss=estimate.genotypes.pdist(),
+    )
+    return 1 - pearsonr(reference_pdist, estimate_pdist)[0]
+
+
+def matched_strain_total_abundance_error(reference, estimate):
+    best_match, _ = match_genotypes(reference, estimate, flip=True)
+    out = np.empty_like(reference.communities.values)
+    for i, _ in enumerate(reference.sample):
+        for j, _ in enumerate(reference.strain):
+            ref_abund = reference.communities.values[i, j]
+            est_abund = estimate.communities.values[i, best_match == j]
+            out[i, j] = np.abs(ref_abund - est_abund.sum())
+    out = pd.DataFrame(out, index=reference.sample, columns=reference.strain)
+    return out, out.sum(1), out.sum(1).mean()
 
 
 def community_error_test(reference, estimate, reps=99):

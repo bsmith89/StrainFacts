@@ -42,3 +42,10 @@ def genotype_pdist(xx, quiet=True):
     if not quiet:
         warnings.warn("Progress bar not implemented for genotype_pdist.")
     return pdist(xx, genotype_dissimilarity)
+
+
+def adjusted_community_dissimilarity(x, y, gdiss):
+    gdiss = np.asarray(gdiss)
+    outer = np.einsum("a,b->ab", x, y)
+    expect = outer * gdiss
+    return expect.sum()
