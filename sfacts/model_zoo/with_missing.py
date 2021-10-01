@@ -50,7 +50,7 @@ import pyro.distributions as dist
         alpha_hyper_scale=0.5,
     ),
 )
-def full_metagenotype_with_missing(
+def structure(
     n,
     g,
     s,

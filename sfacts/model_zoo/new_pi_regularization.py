@@ -48,7 +48,7 @@ import pyro.distributions as dist
         alpha_hyper_scale=0.5,
     ),
 )
-def pp_pi_metagenotype(
+def structure(
     n,
     g,
     s,
