@@ -157,18 +157,19 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     _info("Iteratively refitting genotypes.")
     genotypes_chunks = []
     for position_start, position_end in _chunk_start_end_iterator(
-        metagenotypes.sizes["position"], nposition,
+        metagenotypes.sizes["position"],
+        nposition,
     ):
         _info(f"Fitting bin [{position_start}, {position_end}).")
         metagenotypes_chunk = metagenotypes.mlift(
             "isel", position=slice(position_start, position_end)
         )
         est_curr, _ = _estimate_parameters(
-            pmodel.with_amended_coords(
+            pmodel.with_hyperparameters(**stage2_hyperparameters)
+            .with_amended_coords(
                 position=metagenotypes_chunk.position.values,
                 strain=agg_communities.strain.values,
             )
-            .with_hyperparameters(**stage2_hyperparameters)
             .condition(
                 pi=agg_communities.values,
                 mu=est_curr.data.mu.values,
@@ -183,7 +184,8 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
     genotypes = sf.data.Genotypes(xr.concat(genotypes_chunks, dim="position"))
     est_curr = sf.data.World(
         est_curr.data.drop_dims(["position", "allele"]).assign(
-            genotypes=genotypes.data, metagenotypes=metagenotypes.data,
+            genotypes=genotypes.data,
+            metagenotypes=metagenotypes.data,
         )
     )
     end_time = time.time()
