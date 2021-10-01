@@ -36,6 +36,8 @@ import pyro.distributions as dist
     ),
     default_hyperparameters=dict(
         gamma_hyper=0.01,
+        delta_hyper_temp=0.01,
+        delta_hyper_r=0.9,
         rho_hyper=5.0,
         pi_hyper=0.2,
         mu_hyper_mean=1.0,
@@ -48,12 +50,14 @@ import pyro.distributions as dist
         alpha_hyper_scale=0.5,
     ),
 )
-def full_metagenotype(
+def full_metagenotype_with_missing(
     n,
     g,
     s,
     a,
     gamma_hyper,
+    delta_hyper_r,
+    delta_hyper_temp,
     rho_hyper,
     pi_hyper,
     alpha_hyper_mean,
@@ -73,14 +77,13 @@ def full_metagenotype(
                 "gamma",
                 unit_interval_power_transformation(_gamma, gamma_hyper, gamma_hyper),
             )
-            # # Position presence/absence
-            # delta = pyro.sample(
-            #     "delta",
-            #     dist.RelaxedBernoulli(
-            #         temperature=delta_hyper_temp, probs=delta_hyper_r
-            #     ),
-            # )
-    delta = pyro.deterministic("delta", torch.ones_like(gamma) * _unit)
+            # Position presence/absence
+            delta = pyro.sample(
+                "delta",
+                dist.RelaxedBernoulli(
+                    temperature=delta_hyper_temp, probs=delta_hyper_r
+                ),
+            )
     pyro.deterministic("genotypes", gamma)
     pyro.deterministic("missingness", delta)
 

@@ -2,6 +2,7 @@ import sfacts as sf
 from sfacts.model_zoo.components import (
     _mapping_subset,
     unit_interval_power_transformation,
+    stickbreaking_betas_to_probs,
     k_simplex_power_transformation,
     NegativeBinomialReparam,
     SHARED_DESCRIPTIONS,
@@ -35,8 +36,6 @@ import pyro.distributions as dist
     ),
     default_hyperparameters=dict(
         gamma_hyper=0.01,
-        delta_hyper_temp=0.01,
-        delta_hyper_r=0.9,
         rho_hyper=5.0,
         pi_hyper=0.2,
         mu_hyper_mean=1.0,
@@ -55,8 +54,6 @@ def pp_pi_metagenotype(
     s,
     a,
     gamma_hyper,
-    delta_hyper_r,
-    delta_hyper_temp,
     rho_hyper,
     pi_hyper,
     alpha_hyper_mean,
@@ -76,24 +73,35 @@ def pp_pi_metagenotype(
                 "gamma",
                 unit_interval_power_transformation(_gamma, gamma_hyper, gamma_hyper),
             )
-            # Position presence/absence
-            delta = pyro.sample(
-                "delta",
-                dist.RelaxedBernoulli(
-                    temperature=delta_hyper_temp, probs=delta_hyper_r
-                ),
-            )
+            # # Position presence/absence
+            # delta = pyro.sample(
+            #     "delta",
+            #     dist.RelaxedBernoulli(
+            #         temperature=delta_hyper_temp, probs=delta_hyper_r
+            #     ),
+            # )
+    delta = pyro.deterministic("delta", torch.ones_like(gamma) * _unit)
     pyro.deterministic("genotypes", gamma)
     pyro.deterministic("missingness", delta)
 
     # Meta-community composition
-    rho = pyro.sample("rho", dist.Dirichlet(_unit.repeat(s) * rho_hyper))
+
+    _rho = pyro.sample("_rho", dist.Dirichlet(_unit.repeat(s)))
+    rho = pyro.deterministic("rho", k_simplex_power_transformation(_rho, rho_hyper))
+
+    # _rho = pyro.sample("_rho", dist.Dirichlet(_unit.repeat(s) * rho_hyper))
+    # rho = pyro.deterministic("rho", _rho)
+
+    # rho_betas = pyro.sample(
+    #     "rho_betas", dist.Beta(1.0, rho_hyper).expand([s - 1]).to_event()
+    # )
+    # rho = pyro.deterministic("rho", stickbreaking_betas_to_probs(rho_betas))
     pyro.deterministic("metacommunity", rho)
 
     with pyro.plate("sample", n, dim=-1):
         # Community composition
-        _pi = pyro.sample("_pi", dist.Dirichlet(rho))
-        pi = pyro.deterministic("pi", k_simplex_power_transformation(_pi, pi_hyper))
+        _pi = pyro.sample("_pi", dist.Dirichlet(_unit.repeat(s)))
+        pi = pyro.deterministic("pi", k_simplex_power_transformation(_pi * rho, pi_hyper))
         # Sequencing error
         epsilon = pyro.sample(
             "epsilon",
@@ -109,17 +117,14 @@ def pp_pi_metagenotype(
         ).unsqueeze(-1)
         # Sample coverage
         mu = pyro.sample(
-            "mu",
-            dist.LogNormal(loc=torch.log(mu_hyper_mean), scale=mu_hyper_scale),
+            "mu", dist.LogNormal(loc=torch.log(mu_hyper_mean), scale=mu_hyper_scale),
         )
     pyro.deterministic("communities", pi)
 
     # Depth at each position
     nu = pyro.deterministic("nu", pi @ delta)
-    # TODO: Consider using pyro.distributions.GammaPoisson parameterization?
     m = pyro.sample(
-        "m",
-        NegativeBinomialReparam(nu * mu.reshape((-1, 1)), m_hyper_r).to_event(),
+        "m", NegativeBinomialReparam(nu * mu.reshape((-1, 1)), m_hyper_r).to_event(),
     )
 
     # Expected fractions of each allele at each position
@@ -132,9 +137,7 @@ def pp_pi_metagenotype(
     y = pyro.sample(
         "y",
         dist.BetaBinomial(
-            concentration1=alpha * p,
-            concentration0=alpha * (1 - p),
-            total_count=m,
+            concentration1=alpha * p, concentration0=alpha * (1 - p), total_count=m,
         ).to_event(),
     )
     metagenotypes = pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
