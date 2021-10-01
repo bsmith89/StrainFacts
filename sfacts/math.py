@@ -4,11 +4,13 @@ import warnings
 
 
 def binary_entropy(p):
+    p = np.clip(p, np.nextafter(0, 1), np.nextafter(1, 0))
     q = 1 - p
     return -(p * np.log2(p) + q * np.log2(q))
 
 
 def entropy(p, axis=-1):
+    p = np.clip(p, np.nextafter(0, 1), np.nextafter(1, 0))
     return -(p * np.log2(p)).sum(axis)
 
 
