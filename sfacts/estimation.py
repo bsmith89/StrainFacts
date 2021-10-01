@@ -22,7 +22,7 @@ from tqdm import tqdm
 from sfacts.logging_util import info
 
 
-DEFAULT_OPT = pyro.optim.Adamax({"lr": 1e-2}, {"clip_norm": 100})
+DEFAULT_OPT = pyro.optim.Adamax({"lr": 1e-1}, {"clip_norm": 100})
 
 
 def nmf_approximation(
