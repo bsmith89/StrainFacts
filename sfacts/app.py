@@ -21,6 +21,17 @@ def parse_hyperparameter_strings(list_of_lists_of_pairs):
     return hyperparameters
 
 
+def add_optimization_arguments(parser):
+    parser.add_argument(
+        "--precision",
+        type=int,
+        default=32,
+        choices=sf.pyro_util.PRECISION_MAP.keys(),
+        help="Float precision.",
+    )
+    parser.add_argument("--device", default="cpu")
+
+
 class AppInterface:
     app_name = "TODO"
     description = "TODO"
@@ -120,7 +131,7 @@ class Simulate(AppInterface):
         world.dump(args.outpath)
 
 
-class Fit(AppInterface):
+class FitSimple(AppInterface):
     app_name = "simple_fit"
     description = "Simply estimate parameters of a metagenotype model given data."
 
@@ -138,17 +149,10 @@ class Fit(AppInterface):
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
         parser.add_argument("--random-seed", "--seed", "-r", type=int)
-        parser.add_argument(
-            "--precision",
-            type=int,
-            default=32,
-            choices=sf.pyro_util.PRECISION_MAP.keys(),
-            help="Float precision.",
-        )
+        add_optimization_arguments(parser)
         parser.add_argument("--inpath", "-i", required=True)
         parser.add_argument("--outpath", "-o", required=True)
         parser.add_argument("--verbose", "-v", action="store_true", default=False)
-        parser.add_argument("--device", default="cpu")
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
@@ -172,6 +176,67 @@ class Fit(AppInterface):
         est.dump(args.outpath)
 
 
+class FitComplex(AppInterface):
+    app_name = "complex_fit"
+    description = "Fit data using some tricky tactics."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "--model-structure",
+            "-m",
+            default="full_metagenotype",
+            help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
+            choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
+        )
+        parser.add_argument("--num_strains", "-s", type=int, required=True)
+        parser.add_argument(
+            "--hyperparameters", "-p", nargs="+", action="append", default=[]
+        )
+        parser.add_argument("--random-seed", "--seed", "-r", type=int)
+        parser.add_argument("--inpath", "-i", required=True)
+        parser.add_argument("--outpath", "-o", required=True)
+        parser.add_argument("--verbose", "-v", action="store_true", default=False)
+        add_optimization_arguments(parser)
+        parser.add_argument(
+            "--collapse",
+            default=0.0,
+            type=float,
+            help="Dissimilarity threshold to collapse highly similar strains.",
+        )
+        parser.add_argument(
+            "--cull",
+            default=0.0,
+            type=float,
+            help="Minimum single-sample abundance to keep a strain.",
+        )
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
+        args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
+        return args
+
+    @classmethod
+    def run(cls, args):
+        metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+        est = sf.workflow.fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_genotypes(
+            structure=args.model_structure,
+            metagenotypes=metagenotypes,
+            nstrain=args.num_strains,
+            nposition=len(metagenotypes.position),
+            diss_thresh=args.collapse,
+            frac_thresh=args.cull,
+            hyperparameters=args.hyperparameters,
+            stage2_hyperparameters=dict(gamma_hyper=1.0),
+            device=args.device,
+            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            quiet=(not args.verbose),
+            estimation_kwargs=dict(seed=args.random_seed, ignore_jit_warnings=True),
+        )
+        est.dump(args.outpath)
+
+
 def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -179,7 +244,7 @@ def main():
     )
 
     app_subparsers = parser.add_subparsers()
-    for subcommand in [NoOp, Simulate, Fit]:
+    for subcommand in [NoOp, Simulate, FitSimple, FitComplex]:
         subcommand._add_app_subparser(app_subparsers)
 
     args = parser.parse_args()
