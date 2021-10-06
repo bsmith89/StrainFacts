@@ -50,25 +50,10 @@ class Structure:
         self.description = description
         self.default_hyperparameters = default_hyperparameters
 
-    #         _ = self(self._dummy_shape, **all_torch(**self.default_hyperparameters))
-
-    #         info(f"New Structure({self.generative}, {self.default_hyperparameters})")
-
     def __call__(self, shape, data, hyperparameters, unit):
         assert len(shape) == len(self.dims)
         conditioned_generative = pyro.condition(self.generative, data)
         return conditioned_generative(*shape, **hyperparameters, _unit=unit)
-
-    #     def condition(self, **data):
-    #         new_data = self.data.copy()
-    #         new_data.update(data)
-    #         return self.__class__(
-    #             generative=self.generative,
-    #             dims=self.dims,
-    #             description=self.description,
-    #             default_hyperparameters=self.default_hyperparameters,
-    #             data=new_data,
-    #         )
 
     @property
     def _dummy_shape(self):
