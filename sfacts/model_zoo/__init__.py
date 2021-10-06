@@ -5,7 +5,7 @@ from sfacts.model_zoo import (
 )
 
 NAMED_STRUCTURES = dict(
-    default=base.structure,
-    new_regularization=new_pi_regularization.structure,
-    missing=with_missing.structure,
+    default=base.model,
+    new_regularization=new_pi_regularization.model,
+    missing=with_missing.model,
 )
