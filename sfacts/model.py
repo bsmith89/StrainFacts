@@ -150,7 +150,7 @@ class ParameterizedModel:
             if "alt" in coords["allele"]:
                 if list(coords["allele"]).index("alt") > 0:
                     warn(
-                        "Weird things can happen if binary (alt/ref) allele coordinates are passed as ['ref', 'alt']."
+                        "Weird things can happen if binary (alt/ref) allele coordinates are passed as ['ref', 'alt'] (instead of ['alt', 'ref'])."
                     )
 
         self.structure = structure
