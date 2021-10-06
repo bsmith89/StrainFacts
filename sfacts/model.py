@@ -6,10 +6,38 @@ import sfacts as sf
 from sfacts.pyro_util import all_torch
 from warnings import warn
 from pprint import pformat
+from collections import UserDict
+
+
+class Hyperparameters(UserDict):
+    """Static list of hyperparameter names and their mutable values."""
+
+    def __init__(self, **kwargs):
+        self.static_keys = list(kwargs.keys())
+        super(Hyperparameters, self).__init__(**kwargs)
+
+    def in_keys(self, key):
+        return key in self.static_keys
+
+    def __iter__(self):
+        return iter(self.static_keys)
+
+    def __setitem__(self, key, item):
+        if self.in_keys(key):
+            self.data[key] = item
+        else:
+            warn(f"Hyperparameter '{key}' not in existing keys. Value ignored.")
+
+    def update(self, other):
+        for k in other:
+            self[k] = other[k]
+
+    def pformat(self):
+        return self.__class__.__name__ + "(**" + pformat(self.data) + ")"
 
 
 class Structure:
-    def __init__(self, generative, dims, description, default_hyperparameters=None):
+    def __init__(self, generative, dims, description, default_hyperparameters):
         """
 
         *generative* :: Pyro generative model function(shape_dim_0, shape_dim_1, shape_dim_2, ..., **hyper_parameters)
@@ -17,9 +45,6 @@ class Structure:
         *description* :: Mapping from model variable to its dims.
         *default_hyperparameters* :: Values to use for hyperparameters when not explicitly set.
         """
-        if default_hyperparameters is None:
-            default_hyperparameters = {}
-
         self.generative = generative
         self.dims = dims
         self.description = description
@@ -86,7 +111,7 @@ class Structure:
             + ",\n"
             + " " * indent
             + " default_hyperparameters="
-            + pformat(self.default_hyperparameters, indent=indent + 1)
+            + self.default_hyperparameters.pformat(indent=indent + 1)
             + "\n"
             + " " * (indent - 1)
             + ")"
@@ -94,12 +119,12 @@ class Structure:
 
 
 # For decorator use.
-def structure(dims, description, default_hyperparameters=None):
+def structure(dims, description, default_hyperparameters):
     return partial(
         Structure,
         dims=dims,
         description=description,
-        default_hyperparameters=default_hyperparameters,
+        default_hyperparameters=Hyperparameters(**default_hyperparameters),
     )
 
 
@@ -180,7 +205,7 @@ class ParameterizedModel:
             + ",\n"
             + " " * indent
             + "hyperparameters="
-            + pformat(self.hyperparameters, indent=indent + 1)
+            + self.hyperparameters.pformat(indent=indent + 1)
             + ",\n"
             + " " * indent
             + "data="
