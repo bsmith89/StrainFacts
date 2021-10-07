@@ -189,7 +189,13 @@ class FitComplex(AppInterface):
             help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
             choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
         )
-        parser.add_argument("--num_strains", "-s", type=int, required=True)
+        parser.add_argument(
+            "--strains_per_sample",
+            "-s",
+            type=float,
+            required=True,
+            help="Dynamically set strain number as a fraction of sample number.",
+        )
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
@@ -220,10 +226,11 @@ class FitComplex(AppInterface):
     @classmethod
     def run(cls, args):
         metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+        num_strains = metagenotypes.sizes["sample"] * args.strains_per_sample
         est = sf.workflow.fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_genotypes(
             structure=args.model_structure,
             metagenotypes=metagenotypes,
-            nstrain=args.num_strains,
+            nstrain=num_strains,
             nposition=len(metagenotypes.position),
             diss_thresh=args.collapse,
             frac_thresh=args.cull,
