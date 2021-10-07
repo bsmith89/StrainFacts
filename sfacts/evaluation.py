@@ -1,4 +1,4 @@
-from scipy.spatial.distance import cdist, pdist
+from scipy.spatial.distance import cdist, pdist, squareform
 from scipy.stats import pearsonr
 from sfacts.math import genotype_cdist, adjusted_community_dissimilarity
 import pandas as pd
@@ -50,17 +50,27 @@ def community_error(reference, estimate):
 
 
 def integrated_community_error(reference, estimate):
-    reference_pdist = pdist(
-        reference.communities.values,
-        adjusted_community_dissimilarity,
-        gdiss=reference.genotypes.pdist(),
+    reference_pdist = squareform(
+        pdist(
+            reference.communities.values,
+            adjusted_community_dissimilarity,
+            gdiss=reference.genotypes.pdist(),
+        )
     )
-    estimate_pdist = pdist(
-        estimate.communities.values,
-        adjusted_community_dissimilarity,
-        gdiss=estimate.genotypes.pdist(),
+    estimate_pdist = squareform(
+        pdist(
+            estimate.communities.values,
+            adjusted_community_dissimilarity,
+            gdiss=estimate.genotypes.pdist(),
+        )
     )
-    return 1 - pearsonr(reference_pdist, estimate_pdist)[0]
+    out = []
+    for i in range(len(reference_pdist)):
+        out.append(_mae(reference_pdist[:, i], estimate_pdist[:, i]))
+
+    return np.mean(out), pd.Series(out, index=reference.sample).rename_axis(
+        index="sample"
+    )
 
 
 def matched_strain_total_abundance_error(reference, estimate):
