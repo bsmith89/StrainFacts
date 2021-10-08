@@ -18,34 +18,52 @@ def _mae(x, y):
     return np.abs(x - y).mean()
 
 
-def match_genotypes(reference, estimate, flip=False, cdist=None):
+def match_genotypes(reference, estimate, cdist=None):
     if cdist is None:
         cdist = genotype_cdist
 
     gammaA = reference.genotypes.data.to_pandas()
     gammaB = estimate.genotypes.data.to_pandas()
-    if flip:
-        gammaA, gammaB = gammaB, gammaA
 
     g = gammaA.shape[1]
     dist = pd.DataFrame(cdist(gammaA, gammaB))
-    return dist.idxmin(axis=1), dist.min(axis=1)
-
-
-def weighted_genotype_error(reference, estimate):
-    _, accuracy = match_genotypes(reference, estimate)
-    error = xr.DataArray(
-        accuracy, dims=("strain",), coords=dict(strain=reference.strain)
+    return (
+        pd.Series(dist.idxmin(axis=1), index=reference.strain).rename_axis(
+            index="strain"
+        ),
+        pd.Series(dist.min(axis=1), index=reference.strain).rename_axis(index="strain"),
     )
-    total_coverage = (reference.data.mu * reference.data.communities).sum("sample")
-    return float((error * total_coverage).sum() / total_coverage.sum())
+
+
+def genotype_error(reference, estimate, **kwargs):
+    _, error = match_genotypes(reference, estimate, **kwargs)
+    return error.mean(), error
+
+
+def weighted_genotype_error(reference, estimate, weight_func=None, **kwargs):
+    if weight_func is None:
+        weight_func = lambda w: (w.data.mu * w.data.communities).sum("sample")
+
+    weight = weight_func(reference)
+
+    _, error = genotype_error(reference, estimate, **kwargs)
+    return float((weight * error).sum() / weight.sum())
 
 
 def community_error(reference, estimate):
     piA = reference.communities.to_pandas()
     piB = estimate.communities.to_pandas()
-    bcA = 1 - pdist(piA, metric="braycurtis")
-    bcB = 1 - pdist(piB, metric="braycurtis")
+    bcA = squareform(pdist(piA, metric="braycurtis"))
+    bcB = squareform(pdist(piB, metric="braycurtis"))
+
+    out = []
+    for i in range(len(bcA)):
+        out.append(_mae(bcA[:, i], bcB[:, i]))
+
+    return np.mean(out), pd.Series(out, index=reference.sample).rename_axis(
+        index="sample"
+    )
+
     return _mae(bcA, bcB)
 
 
