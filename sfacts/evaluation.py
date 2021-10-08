@@ -121,11 +121,8 @@ def community_error_test(reference, estimate, reps=99):
     return err, null, err / np.mean(null), (np.sort(null) < err).mean()
 
 
-def naive_prediction_error(reference, estimate):
-    depth = reference.metagenotypes.data.sum("allele")
-    estimate_count_prediction = (
-        estimate.communities.data @ estimate.genotypes.data
-    ) * depth
-    delta = estimate_count_prediction - reference.metagenotypes.data.sel(allele="alt")
-    total_absolute_error = np.abs(delta).sum()
-    return float(total_absolute_error / depth.sum())
+def metagenotype_error(reference, estimate):
+    estimated_metagenotypes = estimate.data.p * reference.data.m
+    err = estimated_metagenotypes - reference.metagenotypes.sel(allele='alt')
+    mean_sample_error = err.mean("position") / reference.data.mu
+    return float(mean_sample_error.mean()), mean_sample_error.to_series()
