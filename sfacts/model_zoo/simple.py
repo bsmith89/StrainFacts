@@ -23,6 +23,7 @@ import pyro.distributions as dist
             "genotypes",
             "communities",
             "metagenotypes",
+            "mu",
         ],
     ),
     default_hyperparameters=dict(
@@ -95,3 +96,4 @@ def model(
         ).to_event(),
     )
     pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
+    pyro.deterministic("mu", m.mean(axis=1))

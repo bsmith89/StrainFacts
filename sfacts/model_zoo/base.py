@@ -136,4 +136,4 @@ def model(
             total_count=m,
         ).to_event(),
     )
-    metagenotypes = pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
+    pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
