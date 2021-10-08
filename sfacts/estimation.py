@@ -117,8 +117,8 @@ def estimate_parameters(
 
     if optimizer is None:
         optimizer = DEFAULT_OPT
-    if optimizer_args is None:
-        optimizer_args = DEFAULT_OPT_KWARGS
+    if optimizer_kwargs is None:
+        optimizer_kwargs = DEFAULT_OPT_KWARGS
     opt = optimizer(**optimizer_kwargs)
 
     sf.pyro_util.set_random_seed(seed, warn=(not quiet))
