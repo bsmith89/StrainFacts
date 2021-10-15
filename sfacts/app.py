@@ -30,6 +30,9 @@ def add_optimization_arguments(parser):
         help="Float precision.",
     )
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--max-iter", default=int(1e5), type=int)
+    parser.add_argument("--optimizer-learning-rate", default=1e-1, type=float)
+    parser.add_argument("--optimizer-clip", default=1e2, type=float)
 
 
 class AppInterface:
@@ -171,7 +174,15 @@ class FitSimple(AppInterface):
             device=args.device,
             dtype=sf.pyro_util.PRECISION_MAP[args.precision],
             quiet=(not args.verbose),
-            estimation_kwargs=dict(seed=args.random_seed, ignore_jit_warnings=True),
+            estimation_kwargs=dict(
+                seed=args.random_seed,
+                ignore_jit_warnings=True,
+                maxiter=args.max_iter,
+                optimizer_kwargs=dict(
+                    optim_args={"lr": args.optimizer_learning_rate},
+                    clip_args={"clip_norm": args.optimizer_clip},
+                ),
+            ),
         )
         est.dump(args.outpath)
 
@@ -239,7 +250,15 @@ class FitComplex(AppInterface):
             device=args.device,
             dtype=sf.pyro_util.PRECISION_MAP[args.precision],
             quiet=(not args.verbose),
-            estimation_kwargs=dict(seed=args.random_seed, ignore_jit_warnings=True),
+            estimation_kwargs=dict(
+                seed=args.random_seed,
+                ignore_jit_warnings=True,
+                maxiter=args.max_iter,
+                optimizer_kwargs=dict(
+                    optim_args={"lr": args.optimizer_learning_rate},
+                    clip_args={"clip_norm": args.optimizer_clip},
+                ),
+            ),
         )
         est.dump(args.outpath)
 
