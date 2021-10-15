@@ -1,5 +1,5 @@
 from scipy.spatial.distance import cdist, pdist, squareform
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, hmean
 from sfacts.math import genotype_cdist, adjusted_community_dissimilarity
 import pandas as pd
 import numpy as np
@@ -16,6 +16,10 @@ def _rss(x, y):
 
 def _mae(x, y):
     return np.abs(x - y).mean()
+
+
+def _hmae(x, y):
+    return hmean(np.abs(x - y))
 
 
 def match_genotypes(reference, estimate, cdist=None):
@@ -58,13 +62,19 @@ def community_error(reference, estimate):
 
     out = []
     for i in range(len(bcA)):
-        out.append(_mae(bcA[:, i], bcB[:, i]))
+        bcA_i, bcB_i = bcA[:, i], bcB[:, i]
+        out.append(_hmae(np.delete(bcA_i, i), np.delete(bcB_i, i)))
 
     return np.mean(out), pd.Series(out, index=reference.sample).rename_axis(
         index="sample"
     )
 
-    return _mae(bcA, bcB)
+
+def max_strain_abundance_error(reference, estimate):
+    sample_err = np.abs(
+        reference.communities.max("strain") - estimate.communities.max("strain")
+    )
+    return float(sample_err.mean()), sample_err
 
 
 def integrated_community_error(reference, estimate):
@@ -123,6 +133,6 @@ def community_error_test(reference, estimate, reps=99):
 
 def metagenotype_error(reference, estimate):
     estimated_metagenotypes = estimate.data.p * reference.data.m
-    err = estimated_metagenotypes - reference.metagenotypes.sel(allele='alt')
+    err = np.abs(estimated_metagenotypes - reference.metagenotypes.sel(allele="alt"))
     mean_sample_error = err.mean("position") / reference.data.mu
     return float(mean_sample_error.mean()), mean_sample_error.to_series()
