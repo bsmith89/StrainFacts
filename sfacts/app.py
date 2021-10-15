@@ -104,9 +104,9 @@ class Simulate(AppInterface):
             help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
             choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
         )
-        parser.add_argument("--num_strains", "-s", type=int, required=True)
-        parser.add_argument("--num_samples", "-n", type=int, required=True)
-        parser.add_argument("--num_positions", "-g", type=int, required=True)
+        parser.add_argument("--num-strains", "-s", type=int, required=True)
+        parser.add_argument("--num-samples", "-n", type=int, required=True)
+        parser.add_argument("--num-positions", "-g", type=int, required=True)
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
@@ -147,7 +147,8 @@ class FitSimple(AppInterface):
             help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
             choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
         )
-        parser.add_argument("--num_strains", "-s", type=int, required=True)
+        parser.add_argument("--num-strains", "-s", type=int, required=True)
+        parser.add_argument("--num-positions", "-g", type=int)
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
@@ -166,6 +167,8 @@ class FitSimple(AppInterface):
     @classmethod
     def run(cls, args):
         metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+        if args.num_positions:
+            metagenotypes = metagenotypes.random_sample(args.num_positions, "position")
         est, history = sf.workflow.fit_metagenotypes_simple(
             structure=args.model_structure,
             metagenotypes=metagenotypes,
@@ -207,6 +210,7 @@ class FitComplex(AppInterface):
             required=True,
             help="Dynamically set strain number as a fraction of sample number.",
         )
+        parser.add_argument("--num-positions", "-g", type=int)
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
@@ -237,12 +241,15 @@ class FitComplex(AppInterface):
     @classmethod
     def run(cls, args):
         metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
-        num_strains = metagenotypes.sizes["sample"] * args.strains_per_sample
+        if args.num_positions is not None:
+            metagenotypes = metagenotypes.random_sample(position=args.num_positions)
+        num_strains = int(
+            np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
+        )
         est = sf.workflow.fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_genotypes(
             structure=args.model_structure,
             metagenotypes=metagenotypes,
             nstrain=num_strains,
-            nposition=len(metagenotypes.position),
             diss_thresh=args.collapse,
             frac_thresh=args.cull,
             hyperparameters=args.hyperparameters,
