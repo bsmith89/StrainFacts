@@ -11,6 +11,8 @@ import warnings
 def _calculate_clustermap_sizes(
     nx,
     ny,
+    n_row_colors=0,
+    n_col_colors=0,
     scalex=0.15,
     scaley=0.02,
     cwidth=0,
@@ -24,7 +26,7 @@ def _calculate_clustermap_sizes(
     mwidth = nx * scalex
     mheight = ny * scaley
     fwidth = mwidth + cwidth + dwidth + pad_width
-    fheight = mheight + cheight + dheight + pad_height
+    fheight = mheight + cheight * n_col_colors + dheight * n_row_colors + pad_height
     dendrogram_ratio = (dwidth / fwidth, dheight / fheight)
     colors_ratio = (cwidth / fwidth, cheight / fheight)
     return (fwidth, fheight), dendrogram_ratio, colors_ratio
@@ -56,7 +58,7 @@ def plot_generic_clustermap_factory(
     row_col_annotation_cmap=mpl.cm.viridis,
     scalex=0.05,
     scaley=0.05,
-    cwidth=0.1,
+    cwidth=0.2,
     cheight=0.2,
     dwidth=1.0,
     dheight=1.0,
@@ -152,6 +154,7 @@ def plot_generic_clustermap_factory(
 
         if col_colors_func is None:
             col_colors = None
+            n_col_colors = 0
         else:
             col_colors = (
                 col_colors_func(world)
@@ -159,10 +162,11 @@ def plot_generic_clustermap_factory(
                 .to_dataframe()
                 .applymap(row_col_annotation_cmap)
             )
-            cwidth *= col_colors.shape[1]
+            n_col_colors = col_colors.shape[1]
 
         if row_colors_func is None:
             row_colors = None
+            n_row_colors = 0
         else:
             row_colors = (
                 row_colors_func(world)
@@ -170,12 +174,14 @@ def plot_generic_clustermap_factory(
                 .to_dataframe()
                 .applymap(row_col_annotation_cmap)
             )
-            cheight *= row_colors.shape[1]
+            n_row_colors = row_colors.shape[1]
 
         ny, nx = matrix_data.shape
         figsize, dendrogram_ratio, colors_ratio = _calculate_clustermap_sizes(
             nx,
             ny,
+            n_row_colors=n_row_colors,
+            n_col_colors=n_col_colors,
             scalex=scalex,
             scaley=scaley,
             cwidth=cwidth,
