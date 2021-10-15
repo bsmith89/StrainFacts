@@ -40,6 +40,7 @@ def estimate_parameters(
     quiet=False,
     ignore_jit_warnings=False,
     seed=None,
+    catch_keyboard_interrupt=False,
 ):
     if initialize_params is None:
         initialize_params = {}
@@ -67,7 +68,7 @@ def estimate_parameters(
     pyro.clear_param_store()
 
     history = []
-    pbar = tqdm(range(maxiter), disable=quiet)
+    pbar = tqdm(range(maxiter), disable=quiet, mininterval=1.0)
     try:
         for i in pbar:
             elbo = svi.step()
@@ -97,10 +98,13 @@ def estimate_parameters(
                         pbar.close()
                         #                         info("Converged", quiet=quiet)
                         break
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as err:
         pbar.close()
         info("Interrupted", quiet=quiet)
-        pass
+        if catch_keyboard_interrupt:
+            pass
+        else:
+            raise err
     est = pyro.infer.Predictive(model, guide=_guide, num_samples=1)()
     est = {k: est[k].detach().cpu().numpy().mean(0).squeeze() for k in est.keys()}
 
