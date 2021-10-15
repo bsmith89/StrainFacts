@@ -3,6 +3,7 @@ from sfacts.model_zoo import (
     new_pi_regularization,
     with_missing,
     simple,
+    simple_with_error,
     simple_dirichlet,
 )
 
@@ -12,4 +13,5 @@ NAMED_STRUCTURES = dict(
     missing=with_missing.model,
     simple=simple.model,
     simple_dirichlet=simple_dirichlet.model,
+    simple_error=simple_with_error.model,
 )
