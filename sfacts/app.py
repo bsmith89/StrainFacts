@@ -110,6 +110,9 @@ class Simulate(AppInterface):
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
+        parser.add_argument("--template", "-w")
+        parser.add_argument("--fix-from-template", default="")
+
         parser.add_argument("--random-seed", "--seed", "-r", type=int)
         parser.add_argument("--outpath", "-o", required=True)
 
@@ -117,10 +120,17 @@ class Simulate(AppInterface):
     def transform_app_parameter_inputs(cls, args):
         args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
         args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
+        args.fix_from_template = args.fix_from_template.split(",")
         return args
 
     @classmethod
     def run(cls, args):
+        if args.template:
+            template = sf.data.World.load(args.template)
+            data = {k: template[k] for k in args.fix_from_template}
+        else:
+            data = None
+
         model, world = sf.workflow.simulate_world(
             structure=args.model_structure,
             sizes=dict(
@@ -129,6 +139,7 @@ class Simulate(AppInterface):
                 position=args.num_positions,
             ),
             hyperparameters=args.hyperparameters,
+            data=data,
             seed=args.random_seed,
         )
         world.dump(args.outpath)
