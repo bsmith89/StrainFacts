@@ -246,7 +246,7 @@ class FitComplex(AppInterface):
         num_strains = int(
             np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
         )
-        est = sf.workflow.fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_genotypes(
+        est = sf.workflow.fit_subsampled_metagenotype_collapse_strains_then_refit(
             structure=args.model_structure,
             metagenotypes=metagenotypes,
             nstrain=num_strains,
