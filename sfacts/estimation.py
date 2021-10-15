@@ -26,72 +26,6 @@ DEFAULT_OPT = pyro.optim.Adamax
 DEFAULT_OPT_KWARGS = dict(optim_args={"lr": 1e-1}, clip_args={"clip_norm": 100})
 
 
-def nmf_approximation(
-    world,
-    s,
-    regularization="both",
-    alpha=1.0,
-    l1_ratio=1.0,
-    tol=1e-4,
-    max_iter=int(1e4),
-    random_state=None,
-    init="random",
-    **kwargs,
-):
-    d = world.metagenotypes.to_series().unstack("sample")
-    columns = d.columns
-    index = d.index
-
-    gamma0, pi0, _ = non_negative_factorization(
-        d.values,
-        n_components=s,
-        regularization={
-            "community": "components",
-            "genotype": "transformation",
-            "both": "both",
-        }[regularization],
-        alpha=alpha,
-        l1_ratio=l1_ratio,
-        tol=tol,
-        max_iter=max_iter,
-        random_state=random_state,
-        init=init,
-        **kwargs,
-    )
-    pi1 = (
-        pd.DataFrame(pi0, columns=columns)
-        .rename_axis(index="strain")
-        .stack()
-        .to_xarray()
-    )
-    gamma1 = (
-        pd.DataFrame(gamma0, index=index)
-        .rename_axis(columns="strain")
-        .stack()
-        .to_xarray()
-    )
-
-    # Rebalance estimates: mean strain genotype of 1
-    gamma1_strain_factor = gamma1.sum("allele").mean("position")
-    gamma2 = gamma1 / gamma1_strain_factor
-    pi2 = pi1 * gamma1_strain_factor
-
-    # Transform estimates: sum-to-1
-    gamma3 = (gamma2 / gamma2.sum("allele")).fillna(0.5)
-    pi3 = pi2 / pi2.sum("strain")
-
-    approx = sf.data.World(
-        xr.Dataset(
-            dict(
-                communities=pi3.transpose("sample", "strain"),
-                genotypes=gamma3.sel(allele="alt").transpose("strain", "position"),
-                metagenotypes=world.metagenotypes.data,
-            )
-        )
-    )
-    return approx
-
-
 def estimate_parameters(
     model,
     dtype=torch.float32,
@@ -224,3 +158,69 @@ def communities_aggregated_by_strain_cluster(
     comms = comms.stack().to_xarray()
     comms = comms / comms.sum("strain")
     return sf.data.Communities(comms)
+
+
+def nmf_approximation(
+    world,
+    s,
+    regularization="both",
+    alpha=1.0,
+    l1_ratio=1.0,
+    tol=1e-4,
+    max_iter=int(1e4),
+    random_state=None,
+    init="random",
+    **kwargs,
+):
+    d = world.metagenotypes.to_series().unstack("sample")
+    columns = d.columns
+    index = d.index
+
+    gamma0, pi0, _ = non_negative_factorization(
+        d.values,
+        n_components=s,
+        regularization={
+            "community": "components",
+            "genotype": "transformation",
+            "both": "both",
+        }[regularization],
+        alpha=alpha,
+        l1_ratio=l1_ratio,
+        tol=tol,
+        max_iter=max_iter,
+        random_state=random_state,
+        init=init,
+        **kwargs,
+    )
+    pi1 = (
+        pd.DataFrame(pi0, columns=columns)
+        .rename_axis(index="strain")
+        .stack()
+        .to_xarray()
+    )
+    gamma1 = (
+        pd.DataFrame(gamma0, index=index)
+        .rename_axis(columns="strain")
+        .stack()
+        .to_xarray()
+    )
+
+    # Rebalance estimates: mean strain genotype of 1
+    gamma1_strain_factor = gamma1.sum("allele").mean("position")
+    gamma2 = gamma1 / gamma1_strain_factor
+    pi2 = pi1 * gamma1_strain_factor
+
+    # Transform estimates: sum-to-1
+    gamma3 = (gamma2 / gamma2.sum("allele")).fillna(0.5)
+    pi3 = pi2 / pi2.sum("strain")
+
+    approx = sf.data.World(
+        xr.Dataset(
+            dict(
+                communities=pi3.transpose("sample", "strain"),
+                genotypes=gamma3.sel(allele="alt").transpose("strain", "position"),
+                metagenotypes=world.metagenotypes.data,
+            )
+        )
+    )
+    return approx
