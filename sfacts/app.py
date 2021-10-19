@@ -215,8 +215,7 @@ class FitComplex(AppInterface):
             choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
         )
         parser.add_argument(
-            "--strains_per_sample",
-            "-s",
+            "--strains-per-sample",
             type=float,
             required=True,
             help="Dynamically set strain number as a fraction of sample number.",
