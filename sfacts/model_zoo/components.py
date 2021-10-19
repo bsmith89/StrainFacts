@@ -84,3 +84,21 @@ def k_simplex_power_transformation(p, alpha, eps=0.0):
         log_p_raised - torch.logsumexp(log_p_raised, dim=-1, keepdims=True)
     )
     return (result + eps) / (1 + kp1 * eps)
+
+
+def powerperturb_transformation(p, power, perturb):
+    log_p = torch.log(p)
+    log_perturb = torch.log(perturb)
+    log_y_unnorm = (power * log_p) + log_perturb
+    return torch.exp(log_y_unnorm - torch.logsumexp(log_y_unnorm, -1, keepdim=True))
+
+
+def powerperturb_transformation_inverse(p, power, perturb):
+    power_rev = 1 / power
+    perturb_rev = 1 / powerperturb_transformation(perturb, power=power_rev, perturb=torch.tensor(1))
+    return powerperturb_transformation(p, power=power_rev, perturb=power_rev)
+
+
+def powerperturb_transformation_unit_interval(p, power, perturb):
+    p = torch.stack([p, 1 - p], dim=-1)
+    return powerperturb_transformation(p, power, perturb)[..., 0]
