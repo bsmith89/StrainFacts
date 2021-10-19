@@ -4,14 +4,12 @@ import warnings
 
 
 def binary_entropy(p):
-    p = np.clip(p, np.nextafter(0, 1), np.nextafter(1, 0))
     q = 1 - p
-    return -(p * np.log2(p) + q * np.log2(q))
+    return np.nan_to_num(-(p * np.log2(p) + q * np.log2(q)))
 
 
 def entropy(p, axis=-1):
-    p = np.clip(p, np.nextafter(0, 1), np.nextafter(1, 0))
-    return -(p * np.log2(p)).sum(axis)
+    return np.nan_to_num(-(p * np.log2(p)).sum(axis))
 
 
 def genotype_binary_to_sign(p):

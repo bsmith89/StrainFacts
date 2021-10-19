@@ -63,7 +63,7 @@ def community_error(reference, estimate):
     out = []
     for i in range(len(bcA)):
         bcA_i, bcB_i = bcA[:, i], bcB[:, i]
-        out.append(_hmae(np.delete(bcA_i, i), np.delete(bcB_i, i)))
+        out.append(_mae(np.delete(bcA_i, i), np.delete(bcB_i, i)))
 
     return np.mean(out), pd.Series(out, index=reference.sample).rename_axis(
         index="sample"
@@ -78,25 +78,23 @@ def max_strain_abundance_error(reference, estimate):
 
 
 def integrated_community_error(reference, estimate):
-    reference_pdist = squareform(
-        pdist(
-            reference.communities.values,
-            adjusted_community_dissimilarity,
-            gdiss=reference.genotypes.pdist(),
-        )
+    trans_genotypes_cdist = genotype_cdist(
+        reference.genotypes.values, estimate.genotypes.values
     )
-    estimate_pdist = squareform(
-        pdist(
-            estimate.communities.values,
-            adjusted_community_dissimilarity,
-            gdiss=estimate.genotypes.pdist(),
-        )
+    cis_genotypes_cdist = genotype_cdist(
+        reference.genotypes.values, reference.genotypes.values
     )
-    out = []
-    for i in range(len(reference_pdist)):
-        out.append(_mae(reference_pdist[:, i], estimate_pdist[:, i]))
+    trans_outer = np.einsum(
+        "ab,ac->abc", reference.communities.values, estimate.communities.values
+    )
+    cis_outer = np.einsum(
+        "ab,ac->abc", reference.communities.values, reference.communities.values
+    )
+    trans_expect = (trans_outer * trans_genotypes_cdist).sum(axis=(1, 2))
+    cis_expect = (cis_outer * cis_genotypes_cdist).sum(axis=(1, 2))
 
-    return np.mean(out), pd.Series(out, index=reference.sample).rename_axis(
+    err = np.abs(trans_expect - cis_expect)
+    return np.mean(err), pd.Series(err, index=reference.sample).rename_axis(
         index="sample"
     )
 
@@ -136,3 +134,28 @@ def metagenotype_error(reference, estimate):
     err = np.abs(estimated_metagenotypes - reference.metagenotypes.sel(allele="alt"))
     mean_sample_error = err.mean("position") / reference.data.mu
     return float(mean_sample_error.mean()), mean_sample_error.to_series()
+
+
+def rank_abundance_error(reference, estimate):
+    reference_num_strains = len(reference.strain)
+    estimate_num_strains = len(estimate.strain)
+    num_strains = max(reference_num_strains, estimate_num_strains)
+    reference_padded = np.pad(
+        reference.communities.values, (0, num_strains - reference_num_strains)
+    )
+    estimate_padded = np.pad(
+        estimate.communities.values, (0, num_strains - estimate_num_strains)
+    )
+
+    err = []
+    for i in range(len(reference.sample)):
+        err.append(
+            _mae(
+                np.sort(reference_padded[i]),
+                np.sort(estimate_padded[i]),
+            )
+        )
+
+    return np.mean(err), pd.Series(err, index=reference.sample).rename_axis(
+        index="sample"
+    )
