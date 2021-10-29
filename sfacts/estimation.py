@@ -107,11 +107,11 @@ def estimate_parameters(
                     )
                     if (delta_lagA <= 0) and (delta_lagB <= 0):
                         pbar.close()
-                        #                         info("Converged", quiet=quiet)
+                        info(f"Converged: ELBO={elbo:.5e}", quiet=quiet)
                         break
     except KeyboardInterrupt as err:
         pbar.close()
-        info("Interrupted", quiet=quiet)
+        info(f"Interrupted: ELBO={elbo:.5e}", quiet=quiet)
         if catch_keyboard_interrupt:
             pass
         else:

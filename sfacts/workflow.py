@@ -57,7 +57,8 @@ def fit_metagenotypes_simple(
         estimation_kwargs = {}
 
     sf.logging_util.info(
-        f"START: Fitting data with shape {metagenotypes.sizes}.", quiet=quiet
+        f"START: Fitting {nstrain} strains with data shape {metagenotypes.sizes}.",
+        quiet=quiet,
     )
     pmodel = sf.model.ParameterizedModel(
         structure,
@@ -108,8 +109,7 @@ def fit_subsampled_metagenotype_collapse_strains_then_refit(
     )
     _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
 
-    _info(f"START: Fitting data with shape {metagenotypes.sizes}.")
-    _info(f"Fitting compositions of {nstrain} strains.")
+    _info(f"START: Fitting {nstrain} strains with data shape {metagenotypes.sizes}.")
     pmodel = sf.model.ParameterizedModel(
         structure,
         coords=dict(
@@ -191,7 +191,7 @@ def fit_subsampled_metagenotype_collapse_strains_then_iteratively_refit_full_gen
 
     nposition = min(nposition, metagenotypes.sizes["position"])
 
-    _info(f"START: Fitting data with shape {metagenotypes.sizes}.")
+    _info(f"START: Fitting data shape {metagenotypes.sizes}.")
     _info(
         f"Fitting compositions of {nstrain} strains using {nposition} randomly sampled positions."
     )
