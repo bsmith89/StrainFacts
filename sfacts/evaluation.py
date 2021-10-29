@@ -1,9 +1,20 @@
 from scipy.spatial.distance import cdist, pdist, squareform
 from scipy.stats import pearsonr, hmean
 from sfacts.math import genotype_cdist, adjusted_community_dissimilarity
+from sfacts.data import Genotypes
 import pandas as pd
 import numpy as np
 import xarray as xr
+
+
+def neighbor_joining(dm):
+    from skbio.tree import nj as _neighbor_joining
+    tree = _neighbor_joining(dm)
+    if pd.Series(dm.ids).astype(str).str.contains('_').any():
+        unrenamed_ids = pd.Series(dm.ids, index=[name.replace('_', ' ') for name in dm.ids])
+        for node in tree.tips():
+            node.name = unrenamed_ids[node.name]
+    return tree
 
 
 def _rmse(x, y):
@@ -54,7 +65,7 @@ def weighted_genotype_error(reference, estimate, weight_func=None, **kwargs):
     return float((weight * error).sum() / weight.sum())
 
 
-def community_error(reference, estimate):
+def braycurtis_error(reference, estimate):
     piA = reference.communities.to_pandas()
     piB = estimate.communities.to_pandas()
     bcA = squareform(pdist(piA, metric="braycurtis"))
@@ -78,22 +89,22 @@ def max_strain_abundance_error(reference, estimate):
 
 
 def integrated_community_error(reference, estimate):
-    trans_genotypes_cdist = genotype_cdist(
-        reference.genotypes.values, estimate.genotypes.values
+    est_genotypes_cdist = genotype_cdist(
+        estimate.genotypes.values, estimate.genotypes.values
     )
-    cis_genotypes_cdist = genotype_cdist(
+    ref_genotypes_cdist = genotype_cdist(
         reference.genotypes.values, reference.genotypes.values
     )
-    trans_outer = np.einsum(
-        "ab,ac->abc", reference.communities.values, estimate.communities.values
+    est_outer = np.einsum(
+        "ab,ac->abc", estimate.communities.values, estimate.communities.values
     )
-    cis_outer = np.einsum(
+    ref_outer = np.einsum(
         "ab,ac->abc", reference.communities.values, reference.communities.values
     )
-    trans_expect = (trans_outer * trans_genotypes_cdist).sum(axis=(1, 2))
-    cis_expect = (cis_outer * cis_genotypes_cdist).sum(axis=(1, 2))
+    est_expect = (est_outer * est_genotypes_cdist).sum(axis=(1, 2))
+    ref_expect = (ref_outer * ref_genotypes_cdist).sum(axis=(1, 2))
 
-    err = np.abs(trans_expect - cis_expect)
+    err = np.abs(est_expect - ref_expect)
     return np.mean(err), pd.Series(err, index=reference.sample).rename_axis(
         index="sample"
     )
@@ -111,22 +122,6 @@ def matched_strain_total_abundance_error(reference, estimate):
     return out, out.sum(1), out.sum(1).mean()
 
 
-def community_error_test(reference, estimate, reps=99):
-    pi_sim = reference.communities.to_pandas()
-    pi_fit = estimate.communities.to_pandas()
-
-    bc_sim = 1 - pdist(pi_sim, metric="braycurtis")
-    bc_fit = 1 - pdist(pi_fit, metric="braycurtis")
-    err = _mae(bc_sim, bc_fit)
-
-    null = []
-    # n = len(bc_sim)
-    for i in range(reps):
-        bc_sim_permute = np.random.permutation(bc_sim)
-        null.append(_mae(bc_sim, bc_sim_permute))
-    null = np.array(null)
-
-    return err, null, err / np.mean(null), (np.sort(null) < err).mean()
 
 
 def metagenotype_error(reference, estimate):
@@ -136,7 +131,7 @@ def metagenotype_error(reference, estimate):
     return float(mean_sample_error.mean()), mean_sample_error.to_series()
 
 
-def rank_abundance_error(reference, estimate):
+def rank_abundance_error(reference, estimate, p=1):
     reference_num_strains = len(reference.strain)
     estimate_num_strains = len(estimate.strain)
     num_strains = max(reference_num_strains, estimate_num_strains)
@@ -151,11 +146,74 @@ def rank_abundance_error(reference, estimate):
     for i in range(len(reference.sample)):
         err.append(
             _mae(
-                np.sort(reference_padded[i]),
-                np.sort(estimate_padded[i]),
-            )
+                np.sort(reference_padded[i] ** p),
+                np.sort(estimate_padded[i] ** p)
+            ) ** (1 / p)
         )
 
     return np.mean(err), pd.Series(err, index=reference.sample).rename_axis(
+        index="sample"
+    )
+
+
+def unifrac_error(reference, estimate, coef=1e6):
+    from skbio import DistanceMatrix
+    from skbio.diversity.beta import weighted_unifrac
+
+    concat_genotypes = Genotypes.concat(
+        {"ref": reference.genotypes, "est": estimate.genotypes}, dim="strain"
+    )
+    dm = concat_genotypes.pdist()
+    dm = DistanceMatrix(dm, dm.index.astype(str))
+    tree = neighbor_joining(dm).root_at_midpoint()
+
+    ref_com_stack = np.pad(
+        reference.communities.values, pad_width=((0, 0), (0, estimate.sizes["strain"]))
+    )
+    est_com_stack = np.pad(
+        estimate.communities.values, pad_width=((0, 0), (reference.sizes["strain"], 0))
+    )
+    diss = []
+    for i in range(reference.sizes["sample"]):
+        diss.append(
+            weighted_unifrac(
+                ref_com_stack[i] * coef,
+                est_com_stack[i] * coef,
+                otu_ids=concat_genotypes.strain.astype(str).values,
+                tree=tree,
+                validate=False,
+            )
+        )
+    return np.mean(diss), pd.Series(diss, index=reference.sample).rename_axis(
+        index="sample"
+    )
+
+
+def unifrac_pdist(world, coef=1e6):
+    from skbio import DistanceMatrix
+    from skbio.diversity.beta import weighted_unifrac
+
+    dm = world.genotypes.pdist()
+    dm = DistanceMatrix(dm, dm.index.astype(str))
+    tree = neighbor_joining(dm).root_at_midpoint()
+    return pdist(
+        world.communities.values * coef,
+        metric=weighted_unifrac,
+        otu_ids=world.strain.values.astype(str),
+        tree=tree,
+        validate=False,
+    )
+
+
+def unifrac_error2(reference, estimate, coef=1e6):
+    ref_pdist = squareform(unifrac_pdist(reference, coef=coef))
+    est_pdist = squareform(unifrac_pdist(estimate, coef=coef))
+
+    out = []
+    for i in range(len(ref_pdist)):
+        ref_i, est_i = ref_pdist[:, i], est_pdist[:, i]
+        out.append(_mae(np.delete(ref_i, i), np.delete(est_i, i)))
+
+    return np.mean(out), pd.Series(out, index=reference.sample).rename_axis(
         index="sample"
     )
