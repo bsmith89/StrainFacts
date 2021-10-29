@@ -9,9 +9,12 @@ import xarray as xr
 
 def neighbor_joining(dm):
     from skbio.tree import nj as _neighbor_joining
+
     tree = _neighbor_joining(dm)
-    if pd.Series(dm.ids).astype(str).str.contains('_').any():
-        unrenamed_ids = pd.Series(dm.ids, index=[name.replace('_', ' ') for name in dm.ids])
+    if pd.Series(dm.ids).astype(str).str.contains("_").any():
+        unrenamed_ids = pd.Series(
+            dm.ids, index=[name.replace("_", " ") for name in dm.ids]
+        )
         for node in tree.tips():
             node.name = unrenamed_ids[node.name]
     return tree
@@ -145,10 +148,8 @@ def rank_abundance_error(reference, estimate, p=1):
     err = []
     for i in range(len(reference.sample)):
         err.append(
-            _mae(
-                np.sort(reference_padded[i] ** p),
-                np.sort(estimate_padded[i] ** p)
-            ) ** (1 / p)
+            _mae(np.sort(reference_padded[i] ** p), np.sort(estimate_padded[i] ** p))
+            ** (1 / p)
         )
 
     return np.mean(err), pd.Series(err, index=reference.sample).rename_axis(

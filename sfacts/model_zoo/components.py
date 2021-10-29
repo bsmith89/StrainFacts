@@ -95,7 +95,9 @@ def powerperturb_transformation(p, power, perturb):
 
 def powerperturb_transformation_inverse(p, power, perturb):
     power_rev = 1 / power
-    perturb_rev = 1 / powerperturb_transformation(perturb, power=power_rev, perturb=torch.tensor(1))
+    perturb_rev = 1 / powerperturb_transformation(
+        perturb, power=power_rev, perturb=torch.tensor(1)
+    )
     return powerperturb_transformation(p, power=power_rev, perturb=power_rev)
 
 

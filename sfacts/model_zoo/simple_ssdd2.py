@@ -63,20 +63,18 @@ def model(
 
     # Meta-community composition
     _rho = pyro.sample("_rho", dist.Dirichlet(_unit.repeat(s)))
-    rho = pyro.deterministic("rho", powerperturb_transformation(_rho, 1 / rho_hyper, _unit))
+    rho = pyro.deterministic(
+        "rho", powerperturb_transformation(_rho, 1 / rho_hyper, _unit)
+    )
     # rho = pyro.deterministic("rho", (_rho_unconditioned + eps) / (1 + eps * s))
     pyro.deterministic("metacommunity", rho)
 
     with pyro.plate("sample", n, dim=-1):
         # Community composition
-        _pi = pyro.sample(
-            "_pi", dist.Dirichlet(_unit.repeat(s))
-        )
+        _pi = pyro.sample("_pi", dist.Dirichlet(_unit.repeat(s)))
         pi = pyro.deterministic(
             "pi",
-            powerperturb_transformation(
-                _pi, 1 / pi_hyper, rho
-            ),
+            powerperturb_transformation(_pi, 1 / pi_hyper, rho),
         )
     pyro.deterministic("communities", pi)
 

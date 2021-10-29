@@ -70,7 +70,9 @@ def model(
             _gamma = pyro.sample("_gamma", dist.Beta(_unit, _unit))
             gamma = pyro.deterministic(
                 "gamma",
-                powerperturb_transformation_unit_interval(_gamma, 1 / gamma_hyper, _unit),
+                powerperturb_transformation_unit_interval(
+                    _gamma, 1 / gamma_hyper, _unit
+                ),
             )
             # # Position presence/absence
             # delta = pyro.sample(
@@ -85,7 +87,9 @@ def model(
 
     # Meta-community composition
     _rho = pyro.sample("_rho", dist.Dirichlet(_unit.repeat(s)))
-    rho = pyro.deterministic("rho", powerperturb_transformation(_rho, 1 / rho_hyper, _unit))
+    rho = pyro.deterministic(
+        "rho", powerperturb_transformation(_rho, 1 / rho_hyper, _unit)
+    )
     pyro.deterministic("metacommunity", rho)
 
     with pyro.plate("sample", n, dim=-1):

@@ -71,7 +71,8 @@ def model(
     with pyro.plate("sample", n, dim=-1):
         # Community composition
         _pi = pyro.sample(
-            "_pi", dist.Dirichlet(s * powerperturb_transformation(rho, (1 - beta), _unit))
+            "_pi",
+            dist.Dirichlet(s * powerperturb_transformation(rho, (1 - beta), _unit)),
         )
         pi = pyro.deterministic(
             "pi",
