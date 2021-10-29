@@ -225,8 +225,16 @@ class FitComplex(AppInterface):
         parser.add_argument(
             "--strains-per-sample",
             type=float,
-            required=True,
             help="Dynamically set strain number as a fraction of sample number.",
+        )
+        parser.add_argument(
+            "--num-strains",
+            "-s",
+            type=int,
+            help=(
+                "Fix initial strain number. "
+                "(Only one of --num-strains or --strains-per-sample may be set)"
+            ),
         )
         parser.add_argument("--num-positions", "-g", type=int)
         parser.add_argument(
@@ -254,6 +262,14 @@ class FitComplex(AppInterface):
     def transform_app_parameter_inputs(cls, args):
         args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
         args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
+        if args.num_strains and args.strains_per_sample:
+            raise Exception(
+                "Only one of --num-strains or --strains-per-sample may be set."
+            )
+        elif (args.num_strains is None) and (args.strains_per_sample is None):
+            raise Exception(
+                "One of either --num-strains or --strains-per-sample must be set."
+            )
         return args
 
     @classmethod
@@ -261,9 +277,13 @@ class FitComplex(AppInterface):
         metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
         if args.num_positions is not None:
             metagenotypes = metagenotypes.random_sample(position=args.num_positions)
-        num_strains = int(
-            np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
-        )
+        if args.strains_per_sample:
+            num_strains = int(
+                np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
+            )
+        else:
+            num_strains = args.num_strains
+
         est = sf.workflow.fit_subsampled_metagenotype_collapse_strains_then_refit(
             structure=args.model_structure,
             metagenotypes=metagenotypes,
