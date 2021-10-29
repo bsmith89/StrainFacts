@@ -30,9 +30,9 @@ import pyro.distributions as dist
         gamma_hyper=0.01,
         rho_hyper=5.0,
         pi_hyper=0.2,
-        beta=1.0,
         m_hyper_concentration=0.01,
         m_hyper_rate=2,
+        eps=1e-20,
         # alpha=1e3,
     ),
 )
@@ -44,10 +44,10 @@ def model(
     gamma_hyper,
     rho_hyper,
     pi_hyper,
-    beta,
     m_hyper_concentration,
     m_hyper_rate,
     # alpha,
+    eps,
     _unit,
 ):
     with pyro.plate("position", g, dim=-1):
@@ -63,20 +63,19 @@ def model(
 
     # Meta-community composition
     _rho = pyro.sample("_rho", dist.Dirichlet(_unit.repeat(s)))
-    rho = pyro.deterministic(
-        "rho", powerperturb_transformation(_rho, 1 / rho_hyper, _unit)
-    )
+    rho = pyro.deterministic("rho", powerperturb_transformation(_rho, 1 / rho_hyper, _unit))
+    # rho = pyro.deterministic("rho", (_rho_unconditioned + eps) / (1 + eps * s))
     pyro.deterministic("metacommunity", rho)
 
     with pyro.plate("sample", n, dim=-1):
         # Community composition
         _pi = pyro.sample(
-            "_pi", dist.Dirichlet(s * powerperturb_transformation(rho, (1 - beta), _unit))
+            "_pi", dist.Dirichlet(_unit.repeat(s))
         )
         pi = pyro.deterministic(
             "pi",
             powerperturb_transformation(
-                _pi, 1 / pi_hyper, powerperturb_transformation(rho, beta, _unit)
+                _pi, 1 / pi_hyper, rho
             ),
         )
     pyro.deterministic("communities", pi)

@@ -1,21 +1,20 @@
 from sfacts.model_zoo import (
     base,
     base_ssdd,
-    new_pi_regularization,
     with_missing,
     simple,
     simple_ssdd,
-    simple_with_error,
-    simple_dirichlet,
+    simple_no_rho,
+    simple2,
+    simple_ssdd2,
 )
 
 NAMED_STRUCTURES = dict(
     default=base.model,
     ssdd=base_ssdd.model,
-    new_regularization=new_pi_regularization.model,
     missing=with_missing.model,
-    simple=simple.model,
+    simple=simple2.model,
     simple_ssdd=simple_ssdd.model,
-    simple_dirichlet=simple_dirichlet.model,
-    simple_error=simple_with_error.model,
+    simple_no_rho=simple_no_rho.model,
+    simple_ssdd2=simple_ssdd2.model,
 )
