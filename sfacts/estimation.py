@@ -22,8 +22,17 @@ from tqdm import tqdm
 from sfacts.logging_util import info
 
 
-DEFAULT_OPT = pyro.optim.Adamax
-DEFAULT_OPT_KWARGS = dict(optim_args={"lr": 1e-1}, clip_args={"clip_norm": 100})
+
+OPTIMIZERS = dict()
+for _name, _default_optimizer_kwargs in [
+    ("Adam", dict(optim_args={})),
+    ("Adamax", dict(optim_args={"lr": 1e-2})),
+    ("Adadelta", dict(optim_args={})),
+    ("Adagrad", dict(optim_args={})),
+    ("AdamW", dict(optim_args={})),
+    ("RMSprop", dict(optim_args={"lr": 1e-2})),
+]:
+    OPTIMIZERS[_name] = pyro.optim.__dict__[_name], _default_optimizer_kwargs
 
 
 def estimate_parameters(
@@ -35,7 +44,7 @@ def estimate_parameters(
     maxiter=10000,
     lagA=20,
     lagB=100,
-    optimizer=None,
+    optimizer_name="Adamax",
     optimizer_kwargs=None,
     quiet=False,
     ignore_jit_warnings=False,
@@ -50,11 +59,13 @@ def estimate_parameters(
     else:
         loss = pyro.infer.Trace_ELBO()
 
-    if optimizer is None:
-        optimizer = DEFAULT_OPT
-    if optimizer_kwargs is None:
-        optimizer_kwargs = DEFAULT_OPT_KWARGS
-    opt = optimizer(**optimizer_kwargs)
+    optimizer, default_optimizer_kwargs = OPTIMIZERS[optimizer_name]
+    _optimizer_kwargs = default_optimizer_kwargs
+    if not optimizer_kwargs is None:
+        _optimizer_kwargs.update(optimizer_kwargs)
+    opt = optimizer(**_optimizer_kwargs)
+    if not quiet:
+        info(f"Optimizing parameters with {optimizer_name}(**{_optimizer_kwargs})")
 
     sf.pyro_util.set_random_seed(seed, warn=(not quiet))
 
