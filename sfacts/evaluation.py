@@ -52,9 +52,30 @@ def match_genotypes(reference, estimate, cdist=None):
         pd.Series(dist.min(axis=1), index=reference.strain).rename_axis(index="strain"),
     )
 
+def discretized_match_genotypes(reference, estimate, cdist=None):
+    if cdist is None:
+        cdist = genotype_cdist
+
+    gammaA = reference.genotypes.discretized().data.to_pandas()
+    gammaB = estimate.genotypes.discretized().data.to_pandas()
+
+    g = gammaA.shape[1]
+    dist = pd.DataFrame(cdist(gammaA, gammaB))
+    return (
+        pd.Series(dist.idxmin(axis=1), index=reference.strain).rename_axis(
+            index="strain"
+        ),
+        pd.Series(dist.min(axis=1), index=reference.strain).rename_axis(index="strain"),
+    )
+
 
 def genotype_error(reference, estimate, **kwargs):
     _, error = match_genotypes(reference, estimate, **kwargs)
+    return error.mean(), error
+
+
+def discretized_genotype_error(reference, estimate, **kwargs):
+    _, error = discretized_match_genotypes(reference, estimate, **kwargs)
     return error.mean(), error
 
 
@@ -65,6 +86,16 @@ def weighted_genotype_error(reference, estimate, weight_func=None, **kwargs):
     weight = weight_func(reference)
 
     _, error = genotype_error(reference, estimate, **kwargs)
+    return float((weight * error).sum() / weight.sum())
+
+
+def discretized_weighted_genotype_error(reference, estimate, weight_func=None, **kwargs):
+    if weight_func is None:
+        weight_func = lambda w: (w.data.mu * w.data.communities).sum("sample")
+
+    weight = weight_func(reference)
+
+    _, error = discretized_genotype_error(reference, estimate, **kwargs)
     return float((weight * error).sum() / weight.sum())
 
 
