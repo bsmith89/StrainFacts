@@ -503,8 +503,16 @@ class World:
         self.data.to_netcdf(path)
 
     @classmethod
-    def load(cls, path, validate=True):
-        data = xr.load_dataset(path)
+    def load(cls, filename_or_obj, validate=True):
+        data = xr.load_dataset(filename_or_obj)
+        world = cls(data)
+        if validate:
+            world.validate_constraints()
+        return world
+
+    @classmethod
+    def open(cls, filename_or_obj, validate=True):
+        data = xr.open_dataset(filename_or_obj)
         world = cls(data)
         if validate:
             world.validate_constraints()
