@@ -22,11 +22,10 @@ from tqdm import tqdm
 from sfacts.logging_util import info
 
 
-
 OPTIMIZERS = dict()
 for _name, _default_optimizer_kwargs in [
     ("Adam", dict(optim_args={})),
-    ("Adamax", dict(optim_args={"lr": 1e-2})),
+    ("Adamax", dict(optim_args={"lr": 5e-3})),
     ("Adadelta", dict(optim_args={})),
     ("Adagrad", dict(optim_args={})),
     ("AdamW", dict(optim_args={})),
@@ -64,8 +63,18 @@ def estimate_parameters(
     if not optimizer_kwargs is None:
         _optimizer_kwargs.update(optimizer_kwargs)
     opt = optimizer(**_optimizer_kwargs)
+    # scheduler = pyro.optim.ReduceLROnPlateau(dict(
+    #     optimizer=torch.optim.Adamax,
+    #     optim_args={'lr': 1e-1},
+    #     patience=lagA,
+    #     factor=0.9,
+    #     cooldown=lagB,
+    #     min_lr=1e-5,
+    # ))
     if not quiet:
-        info(f"Optimizing parameters with {optimizer_name}(**{_optimizer_kwargs})")
+        info(
+            f"Optimizing parameters with ReduceLROnPlateau({optimizer_name}(**{_optimizer_kwargs}))"
+        )
 
     sf.pyro_util.set_random_seed(seed, warn=(not quiet))
 
@@ -83,6 +92,7 @@ def estimate_parameters(
     try:
         for i in pbar:
             elbo = svi.step()
+            # scheduler.step(elbo)
 
             if np.isnan(elbo):
                 pbar.close()
@@ -99,6 +109,7 @@ def estimate_parameters(
                     delta_lagB = (history[-lagB] - history[-1]) / lagB
                     pbar.set_postfix(
                         {
+                            # "lr": list(scheduler.optim_objs.values())[0].optimizer.param_groups[0]['lr'],
                             "ELBO": history[-1],
                             "delta": delta,
                             f"lag{lagA}": delta_lagA,
