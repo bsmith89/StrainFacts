@@ -31,6 +31,7 @@ def add_optimization_arguments(parser):
     )
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--max-iter", default=int(1e5), type=int)
+    parser.add_argument("--random-seed", "--seed", "-r", type=int)
     parser.add_argument("--lag1", default=20, type=int)
     parser.add_argument("--lag2", default=100, type=int)
     parser.add_argument("--nojit", dest="jit", action="store_false", default=True)
@@ -38,6 +39,25 @@ def add_optimization_arguments(parser):
         "--optimizer", default="Adamax", choices=sf.estimation.OPTIMIZERS.keys()
     )
     parser.add_argument("--optimizer-learning-rate", type=float)
+
+
+def transform_optimization_parameter_inputs(args):
+    args = deepcopy(args)
+    optimizer_kwargs = {}
+    if args.optimizer_learning_rate is not None:
+        optimizer_kwargs["optim_args"] = dict(lr=args.optimizer_learning_rate)
+
+    args.estimation_kwargs = dict(
+        seed=args.random_seed,
+        jit=args.jit,
+        ignore_jit_warnings=True,
+        maxiter=args.max_iter,
+        lagA=args.lag1,
+        lagB=args.lag2,
+        optimizer_name=args.optimizer,
+        optimizer_kwargs=optimizer_kwargs,
+    )
+    return args
 
 
 class AppInterface:
@@ -117,8 +137,8 @@ class Simulate(AppInterface):
         )
         parser.add_argument("--template", "-w")
         parser.add_argument("--fix-from-template", default="")
-
         parser.add_argument("--random-seed", "--seed", "-r", type=int)
+
         parser.add_argument("--outpath", "-o", required=True)
 
     @classmethod
@@ -168,7 +188,6 @@ class FitSimple(AppInterface):
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
-        parser.add_argument("--random-seed", "--seed", "-r", type=int)
         add_optimization_arguments(parser)
         parser.add_argument("--inpath", "-i", required=True)
         parser.add_argument("--outpath", "-o", required=True)
@@ -178,6 +197,7 @@ class FitSimple(AppInterface):
     def transform_app_parameter_inputs(cls, args):
         args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
         args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
+        args = transform_optimization_parameter_inputs(args)
         return args
 
     @classmethod
@@ -193,18 +213,7 @@ class FitSimple(AppInterface):
             device=args.device,
             dtype=sf.pyro_util.PRECISION_MAP[args.precision],
             quiet=(not args.verbose),
-            estimation_kwargs=dict(
-                seed=args.random_seed,
-                jit=args.jit,
-                ignore_jit_warnings=True,
-                maxiter=args.max_iter,
-                lagA=args.lag1,
-                lagB=args.lag2,
-                optimizer_name=args.optimizer,
-                optimizer_kwargs=dict(
-                    optim_args={"lr": args.optimizer_learning_rate},
-                ),
-            ),
+            estimation_kwargs=args.estimation_kwargs,
         )
         est.dump(args.outpath)
 
@@ -240,7 +249,6 @@ class FitComplex(AppInterface):
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
-        parser.add_argument("--random-seed", "--seed", "-r", type=int)
         parser.add_argument("--inpath", "-i", required=True)
         parser.add_argument("--outpath", "-o", required=True)
         parser.add_argument("--verbose", "-v", action="store_true", default=False)
@@ -270,6 +278,7 @@ class FitComplex(AppInterface):
             raise Exception(
                 "One of either --num-strains or --strains-per-sample must be set."
             )
+        args = transform_optimization_parameter_inputs(args)
         return args
 
     @classmethod
@@ -295,18 +304,7 @@ class FitComplex(AppInterface):
             device=args.device,
             dtype=sf.pyro_util.PRECISION_MAP[args.precision],
             quiet=(not args.verbose),
-            estimation_kwargs=dict(
-                seed=args.random_seed,
-                jit=args.jit,
-                ignore_jit_warnings=True,
-                maxiter=args.max_iter,
-                lagA=args.lag1,
-                lagB=args.lag2,
-                optimizer_name=args.optimizer,
-                optimizer_kwargs=dict(
-                    optim_args={"lr": args.optimizer_learning_rate},
-                ),
-            ),
+            estimation_kwargs=args.estimation_kwargs,
         )
         est.dump(args.outpath)
 
