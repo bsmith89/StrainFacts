@@ -92,7 +92,7 @@ def estimate_parameters(
             history.append(elbo)
 
             # Reporting/Breaking
-            if i % 10 == 0:
+            if i % lagA == 0:
                 if i > lagB:
                     delta = history[-2] - history[-1]
                     delta_lagA = (history[-lagA] - history[-1]) / lagA
