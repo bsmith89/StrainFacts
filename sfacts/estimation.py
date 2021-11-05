@@ -22,7 +22,6 @@ from tqdm import tqdm
 from sfacts.logging_util import info
 
 
-
 OPTIMIZERS = dict()
 for _name, _default_optimizer_kwargs in [
     ("Adam", dict(optim_args={})),
