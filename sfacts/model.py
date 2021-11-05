@@ -268,6 +268,12 @@ class ParameterizedModel:
             )
         return sf.data.World(xr.Dataset(out))
 
+    def dict_from_world(self, world):
+        out = {}
+        for k in self.structure.description:
+            out[k] = world.data[k].values
+        return out
+
     def simulate(self, n=1, seed=None):
         sf.pyro_util.set_random_seed(seed)
         obs = pyro.infer.Predictive(self, num_samples=n)()

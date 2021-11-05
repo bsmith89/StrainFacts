@@ -20,7 +20,8 @@ import pyro
 import torch
 from tqdm import tqdm
 from sfacts.logging_util import info
-
+import torch.optim
+import pyro.optim
 
 
 OPTIMIZERS = dict()
@@ -33,6 +34,55 @@ for _name, _default_optimizer_kwargs in [
     ("RMSprop", dict(optim_args={"lr": 1e-2})),
 ]:
     OPTIMIZERS[_name] = pyro.optim.__dict__[_name], _default_optimizer_kwargs
+
+OPTIMIZERS["LBFGS"] = None, dict(
+    lr=1e-1, tolerance_grad=1e-12, tolerance_change=1e-12, max_iter=10, line_search_fn="strong_wolfe"
+)
+
+
+def _build_svi_stepper(
+    model, guide, loss, optimizer_name, optimizer_kwargs, quiet=False
+):
+    optimizer, default_optimizer_kwargs = OPTIMIZERS[optimizer_name]
+    _optimizer_kwargs = default_optimizer_kwargs
+    if optimizer_kwargs is not None:
+        _optimizer_kwargs.update(optimizer_kwargs)
+    opt = optimizer(**_optimizer_kwargs)
+    info(
+        f"Optimizing parameters with {optimizer_name}(**{_optimizer_kwargs})",
+        quiet=quiet,
+    )
+    svi = pyro.infer.SVI(model, guide, opt, loss=loss)
+    return lambda *args, **kwargs: svi.step(*args, **kwargs)
+
+
+def _build_lbfgs_stepper(model, guide, loss, optimizer_kwargs, quiet=False):
+    trace = pyro.poutine.trace(guide, param_only=True).get_trace()
+    params = [trace.nodes[name]["value"].unconstrained() for name in trace.param_nodes]
+    _, default_optimizer_kwargs = OPTIMIZERS["LBFGS"]
+    _optimizer_kwargs = default_optimizer_kwargs
+    # if optimizer_kwargs is not None:  # FIXME: Somehow need to respect PyroOptim args...
+    #     _optimizer_kwargs.update(optimizer_kwargs)
+    lbfgs = torch.optim.LBFGS(params, **_optimizer_kwargs)
+    loss_fn = loss.differentiable_loss
+
+    info(f"Optimizing parameters with LBFGS(**{_optimizer_kwargs})", quiet=quiet)
+
+    # def closure():
+    #     lbfgs.zero_grad()
+    #     loss = loss_fn(model, guide)
+    #     loss.backward()
+    #     loss = loss_fn(model, guide)
+    #     return loss.detach().numpy()
+    def closure():
+        if torch.is_grad_enabled():
+            lbfgs.zero_grad()
+        loss = loss_fn(model, guide)
+        if loss.requires_grad:
+            loss.backward()
+        return loss.cpu().detach().numpy()
+
+    return lambda *args, **kwargs: lbfgs.step(closure, *args, **kwargs)
 
 
 def estimate_parameters(
@@ -59,30 +109,35 @@ def estimate_parameters(
     else:
         loss = pyro.infer.Trace_ELBO()
 
-    optimizer, default_optimizer_kwargs = OPTIMIZERS[optimizer_name]
-    _optimizer_kwargs = default_optimizer_kwargs
-    if not optimizer_kwargs is None:
-        _optimizer_kwargs.update(optimizer_kwargs)
-    opt = optimizer(**_optimizer_kwargs)
-    if not quiet:
-        info(f"Optimizing parameters with {optimizer_name}(**{_optimizer_kwargs})")
-
     sf.pyro_util.set_random_seed(seed, warn=(not quiet))
 
-    _guide = pyro.infer.autoguide.AutoLaplaceApproximation(
+    guide = pyro.infer.autoguide.AutoLaplaceApproximation(
         model,
         init_loc_fn=pyro.infer.autoguide.initialization.init_to_value(
             values=all_torch(**initialize_params, dtype=dtype, device=device)
         ),
     )
-    svi = pyro.infer.SVI(model, _guide, opt, loss=loss)
+
+    if optimizer_name == "LBFGS":
+        step = _build_lbfgs_stepper(
+            model,
+            guide,
+            loss,
+            optimizer_kwargs,
+            quiet=quiet,
+        )
+    else:
+        step = _build_svi_stepper(
+            model, guide, loss, optimizer_name, optimizer_kwargs, quiet=quiet
+        )
+
     pyro.clear_param_store()
 
     history = []
     pbar = tqdm(range(maxiter), disable=quiet, mininterval=1.0)
     try:
         for i in pbar:
-            elbo = svi.step()
+            elbo = step()
 
             if np.isnan(elbo):
                 pbar.close()
@@ -116,7 +171,7 @@ def estimate_parameters(
             pass
         else:
             raise err
-    est = pyro.infer.Predictive(model, guide=_guide, num_samples=1)()
+    est = pyro.infer.Predictive(model, guide=guide, num_samples=1)()
     est = {k: est[k].detach().cpu().numpy().mean(0).squeeze() for k in est.keys()}
 
     if device.startswith("cuda"):

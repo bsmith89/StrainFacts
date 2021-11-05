@@ -79,6 +79,21 @@ def fit_metagenotypes_simple(
         quiet=quiet,
         **estimation_kwargs,
     )
+
+    sf.logging_util.info("Refining fit.", quiet=quiet)
+    estimation_kwargs.update(
+        dict(
+            initialize_params=pmodel.dict_from_world(est),
+            lagA=10,
+            lagB=20,
+            optimizer_name="LBFGS",
+        )
+    )
+    est, history2 = sf.estimation.estimate_parameters(
+        pmodel,
+        quiet=quiet,
+        **estimation_kwargs,
+    )
     end_time = time.time()
     delta_time = end_time - start_time
     sf.logging_util.info(f"END: Fit in {delta_time} seconds.", quiet=quiet)
