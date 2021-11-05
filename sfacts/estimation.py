@@ -36,7 +36,11 @@ for _name, _default_optimizer_kwargs in [
     OPTIMIZERS[_name] = pyro.optim.__dict__[_name], _default_optimizer_kwargs
 
 OPTIMIZERS["LBFGS"] = None, dict(
-    lr=1e-1, tolerance_grad=1e-12, tolerance_change=1e-12, max_iter=10, line_search_fn="strong_wolfe"
+    lr=1e-1,
+    tolerance_grad=1e-12,
+    tolerance_change=1e-12,
+    max_iter=10,
+    line_search_fn="strong_wolfe",
 )
 
 

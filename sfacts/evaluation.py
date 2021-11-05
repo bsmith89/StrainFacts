@@ -52,6 +52,7 @@ def match_genotypes(reference, estimate, cdist=None):
         pd.Series(dist.min(axis=1), index=reference.strain).rename_axis(index="strain"),
     )
 
+
 def discretized_match_genotypes(reference, estimate, cdist=None):
     if cdist is None:
         cdist = genotype_cdist
@@ -89,7 +90,9 @@ def weighted_genotype_error(reference, estimate, weight_func=None, **kwargs):
     return float((weight * error).sum() / weight.sum())
 
 
-def discretized_weighted_genotype_error(reference, estimate, weight_func=None, **kwargs):
+def discretized_weighted_genotype_error(
+    reference, estimate, weight_func=None, **kwargs
+):
     if weight_func is None:
         weight_func = lambda w: (w.data.mu * w.data.communities).sum("sample")
 
@@ -154,8 +157,6 @@ def matched_strain_total_abundance_error(reference, estimate):
             out[i, j] = np.abs(ref_abund - est_abund.sum())
     out = pd.DataFrame(out, index=reference.sample, columns=reference.strain)
     return out, out.sum(1), out.sum(1).mean()
-
-
 
 
 def metagenotype_error(reference, estimate):
