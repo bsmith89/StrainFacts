@@ -24,14 +24,51 @@ from sfacts.logging_util import info
 
 OPTIMIZERS = dict()
 for _name, _default_optimizer_kwargs in [
-    ("Adam", dict(optim_args={})),
-    ("Adamax", dict(optim_args={"lr": 1e-2})),
-    ("Adadelta", dict(optim_args={})),
-    ("Adagrad", dict(optim_args={})),
-    ("AdamW", dict(optim_args={})),
-    ("RMSprop", dict(optim_args={"lr": 1e-2})),
+    ("Adam", dict(lr=0.1)),
+    ("Adamax", dict(lr=0.1)),
+    ("Adadelta", dict(lr=0.1)),
+    ("Adagrad", dict(lr=0.1)),
+    ("AdamW", dict(lr=0.1)),
+    ("RMSprop", dict(lr=0.1)),
 ]:
-    OPTIMIZERS[_name] = pyro.optim.__dict__[_name], _default_optimizer_kwargs
+    OPTIMIZERS[_name] = torch.optim.__dict__[_name], _default_optimizer_kwargs
+
+
+def get_scheduled_optimization_stepper(
+    model,
+    guide,
+    loss,
+    optimizer_name,
+    patience,
+    cooldown,
+    factor=0.5,
+    optimizer_kwargs=None,
+    quiet=False,
+):
+    optimizer, default_optimizer_kwargs = OPTIMIZERS[optimizer_name]
+    _optimizer_kwargs = default_optimizer_kwargs
+    if optimizer_kwargs is not None:
+        _optimizer_kwargs.update(optimizer_kwargs)
+
+    # opt = pyro.optim.ReduceLROnPlateau(optimizer(**_optimizer_kwargs)
+    opt = pyro.optim.ReduceLROnPlateau(
+        dict(
+            optimizer=optimizer,
+            optim_args=_optimizer_kwargs,
+            patience=patience,
+            factor=factor,
+            cooldown=cooldown,
+            threshold=0,
+            min_lr=0,
+            eps=0,
+        )
+    )
+    info(
+        f"Optimizing parameters with {optimizer_name}(**{_optimizer_kwargs})",
+        quiet=quiet,
+    )
+    svi = pyro.infer.SVI(model, guide, opt, loss=loss)
+    return svi.step, opt
 
 
 def estimate_parameters(
@@ -58,30 +95,35 @@ def estimate_parameters(
     else:
         loss = pyro.infer.Trace_ELBO()
 
-    optimizer, default_optimizer_kwargs = OPTIMIZERS[optimizer_name]
-    _optimizer_kwargs = default_optimizer_kwargs
-    if not optimizer_kwargs is None:
-        _optimizer_kwargs.update(optimizer_kwargs)
-    opt = optimizer(**_optimizer_kwargs)
-    if not quiet:
-        info(f"Optimizing parameters with {optimizer_name}(**{_optimizer_kwargs})")
-
-    sf.pyro_util.set_random_seed(seed, warn=(not quiet))
-
-    _guide = pyro.infer.autoguide.AutoLaplaceApproximation(
+    guide = pyro.infer.autoguide.AutoLaplaceApproximation(
         model,
         init_loc_fn=pyro.infer.autoguide.initialization.init_to_value(
             values=all_torch(**initialize_params, dtype=dtype, device=device)
         ),
     )
-    svi = pyro.infer.SVI(model, _guide, opt, loss=loss)
+
+    step, scheduler = get_scheduled_optimization_stepper(
+        model,
+        guide,
+        loss,
+        optimizer_name,
+        factor=0.5,
+        patience=lagB,
+        cooldown=lagB,
+        optimizer_kwargs=optimizer_kwargs,
+        quiet=quiet,
+    )
+
+    sf.pyro_util.set_random_seed(seed, warn=(not quiet))
+
     pyro.clear_param_store()
 
     history = []
     pbar = tqdm(range(maxiter), disable=quiet, mininterval=1.0)
     try:
         for i in pbar:
-            elbo = svi.step()
+            elbo = step()
+            scheduler.step(elbo)
 
             if np.isnan(elbo):
                 pbar.close()
@@ -90,24 +132,32 @@ def estimate_parameters(
             # Fit tracking
             history.append(elbo)
 
-            # Reporting/Breaking
+            # Updating/Reporting/Breaking
             if i % lagA == 0:
-                if i > lagB:
+                learning_rate = list(scheduler.optim_objs.values())[
+                    0
+                ].optimizer.param_groups[0]["lr"]
+                delta = delta_lagA = delta_lagB = np.nan
+                if i > 2:
                     delta = history[-2] - history[-1]
+                if i > lagA:
                     delta_lagA = (history[-lagA] - history[-1]) / lagA
+                if i > lagB:
                     delta_lagB = (history[-lagB] - history[-1]) / lagB
-                    pbar.set_postfix(
-                        {
-                            "ELBO": history[-1],
-                            "delta": delta,
-                            f"lag{lagA}": delta_lagA,
-                            f"lag{lagB}": delta_lagB,
-                        }
-                    )
-                    if (delta_lagA <= 0) and (delta_lagB <= 0):
-                        pbar.close()
-                        info(f"Converged: ELBO={elbo:.5e}", quiet=quiet)
-                        break
+                pbar.set_postfix(
+                    {
+                        "ELBO": history[-1],
+                        "delta": delta,
+                        f"lag{lagA}": delta_lagA,
+                        f"lag{lagB}": delta_lagB,
+                        "lr": learning_rate,
+                    }
+                )
+                # if (delta_lagA <= 0) and (delta_lagB <= 0):
+                if learning_rate < 1e-6:
+                    pbar.close()
+                    info(f"Converged: ELBO={elbo:.5e}", quiet=quiet)
+                    break
     except KeyboardInterrupt as err:
         pbar.close()
         info(f"Interrupted: ELBO={elbo:.5e}", quiet=quiet)
@@ -115,7 +165,7 @@ def estimate_parameters(
             pass
         else:
             raise err
-    est = pyro.infer.Predictive(model, guide=_guide, num_samples=1)()
+    est = pyro.infer.Predictive(model, guide=guide, num_samples=1)()
     est = {k: est[k].detach().cpu().numpy().mean(0).squeeze() for k in est.keys()}
 
     if device.startswith("cuda"):

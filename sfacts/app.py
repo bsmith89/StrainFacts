@@ -45,7 +45,7 @@ def transform_optimization_parameter_inputs(args):
     args = deepcopy(args)
     optimizer_kwargs = {}
     if args.optimizer_learning_rate is not None:
-        optimizer_kwargs["optim_args"] = dict(lr=args.optimizer_learning_rate)
+        optimizer_kwargs["lr"] = args.optimizer_learning_rate
 
     args.estimation_kwargs = dict(
         seed=args.random_seed,
