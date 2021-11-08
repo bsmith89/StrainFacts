@@ -1,6 +1,6 @@
 from scipy.spatial.distance import cdist, pdist, squareform
 from scipy.stats import pearsonr, hmean
-from sfacts.math import genotype_cdist, adjusted_community_dissimilarity
+from sfacts.math import genotype_cdist, adjusted_community_dissimilarity, entropy
 from sfacts.data import Genotypes
 import pandas as pd
 import numpy as np
@@ -146,6 +146,11 @@ def integrated_community_error(reference, estimate):
         index="sample"
     )
 
+def community_entropy_error(reference, estimate):
+    ref_community_entropy = entropy(reference.communities.values)
+    est_community_entropy = entropy(estimate.communities.values)
+    diff = est_community_entropy - ref_community_entropy
+    return np.mean(diff), diff,
 
 def matched_strain_total_abundance_error(reference, estimate):
     best_match, _ = match_genotypes(reference, estimate, flip=True)
