@@ -340,7 +340,7 @@ plot_genotype = plot_generic_clustermap_factory(
     cmap="coolwarm",
     yticklabels=1,
     xticklabels=0,
-    row_colors_func=(lambda w: (w.genotypes.entropy())),
+    # row_colors_func=(lambda w: (w.genotypes.entropy())),
 )
 
 plot_masked_genotype = plot_generic_clustermap_factory(
