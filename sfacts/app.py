@@ -192,6 +192,7 @@ class FitSimple(AppInterface):
         parser.add_argument("--inpath", "-i", required=True)
         parser.add_argument("--outpath", "-o", required=True)
         parser.add_argument("--verbose", "-v", action="store_true", default=False)
+        parser.add_argument("--history-outpath")
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
@@ -216,6 +217,11 @@ class FitSimple(AppInterface):
             estimation_kwargs=args.estimation_kwargs,
         )
         est.dump(args.outpath)
+
+        if args.history_outpath:
+            with open(args.history_outpath, 'w') as f:
+                for elbo in history:
+                    print(elbo, file=f)
 
 
 class FitComplex(AppInterface):
