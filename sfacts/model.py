@@ -266,7 +266,12 @@ class ParameterizedModel:
                 dims=self.structure.description[k],
                 coords={dim: self.coords[dim] for dim in self.structure.description[k]},
             )
-        return sf.data.World(xr.Dataset(out))
+        return sf.data.World(
+            xr.Dataset(
+                out,
+                attrs=self.hyperparameters,
+            )
+        )
 
     def simulate(self, n=1, seed=None):
         sf.pyro_util.set_random_seed(seed)
