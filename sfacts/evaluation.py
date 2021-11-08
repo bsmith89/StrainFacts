@@ -103,15 +103,13 @@ def discretized_weighted_genotype_error(
 
 
 def braycurtis_error(reference, estimate):
-    piA = reference.communities.to_pandas()
-    piB = estimate.communities.to_pandas()
-    bcA = squareform(pdist(piA, metric="braycurtis"))
-    bcB = squareform(pdist(piB, metric="braycurtis"))
+    bcA = reference.communities.pdist("sample").values
+    bcB = estimate.communities.pdist("sample").values
 
     out = []
     for i in range(len(bcA)):
         bcA_i, bcB_i = bcA[:, i], bcB[:, i]
-        out.append(_mae(np.delete(bcA_i, i), np.delete(bcB_i, i)))
+        out.append(_rmse(np.delete(bcA_i, i), np.delete(bcB_i, i)))
 
     return np.mean(out), pd.Series(out, index=reference.sample).rename_axis(
         index="sample"
