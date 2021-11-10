@@ -34,6 +34,41 @@ for _name, _default_optimizer_kwargs in [
     OPTIMIZERS[_name] = torch.optim.__dict__[_name], _default_optimizer_kwargs
 
 
+def linear_annealing_schedule(start, end, annealing_steps, final_steps=0):
+    return np.concatenate(
+        [
+            np.linspace(start, end, num=annealing_steps),
+            np.repeat(end, final_steps),
+        ]
+    )
+
+
+def log_annealing_schedule(start, end, annealing_steps, final_steps=0):
+    return np.concatenate(
+        [
+            np.logspace(np.log10(start), np.log10(end), num=annealing_steps),
+            np.repeat(end, final_steps),
+        ]
+    )
+
+
+def invlinear_annealing_schedule(start, end, annealing_steps, final_steps=0):
+    return np.concatenate(
+        [
+            1 / np.linspace(1 / start, 1 / end, num=annealing_steps),
+            np.repeat(end, final_steps),
+        ]
+    )
+
+
+def named_annealing_schedule(name, *args, **kwargs):
+    return dict(
+        linear=linear_annealing_schedule,
+        log=log_annealing_schedule,
+        invlinear=invlinear_annealing_schedule,
+    )[name](*args, **kwargs)
+
+
 def get_scheduled_optimization_stepper(
     model,
     guide,
@@ -86,6 +121,7 @@ def estimate_parameters(
     ignore_jit_warnings=False,
     seed=None,
     catch_keyboard_interrupt=False,
+    lr_annealing_factor=0.5,
 ):
     if initialize_params is None:
         initialize_params = {}
@@ -107,7 +143,7 @@ def estimate_parameters(
         guide,
         loss,
         optimizer_name,
-        factor=0.5,
+        factor=lr_annealing_factor,
         patience=lagB,
         cooldown=lagB,
         optimizer_kwargs=optimizer_kwargs,
