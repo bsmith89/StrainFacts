@@ -86,7 +86,7 @@ def get_scheduled_optimization_stepper(
         _optimizer_kwargs.update(optimizer_kwargs)
 
     # opt = pyro.optim.ReduceLROnPlateau(optimizer(**_optimizer_kwargs)
-    opt = pyro.optim.ReduceLROnPlateau(
+    scheduler = pyro.optim.ReduceLROnPlateau(
         dict(
             optimizer=optimizer,
             optim_args=_optimizer_kwargs,
@@ -102,8 +102,8 @@ def get_scheduled_optimization_stepper(
         f"Optimizing parameters with {optimizer_name}(**{_optimizer_kwargs})",
         quiet=quiet,
     )
-    svi = pyro.infer.SVI(model, guide, opt, loss=loss)
-    return svi.step, opt
+    svi = pyro.infer.SVI(model, guide, scheduler, loss=loss)
+    return svi, scheduler
 
 
 def estimate_parameters(
@@ -138,7 +138,7 @@ def estimate_parameters(
         ),
     )
 
-    step, scheduler = get_scheduled_optimization_stepper(
+    svi, scheduler = get_scheduled_optimization_stepper(
         model,
         guide,
         loss,
@@ -158,7 +158,7 @@ def estimate_parameters(
     pbar = tqdm(range(maxiter), disable=quiet, mininterval=1.0)
     try:
         for i in pbar:
-            elbo = step()
+            elbo = svi.step()
             scheduler.step(elbo)
 
             if np.isnan(elbo):
