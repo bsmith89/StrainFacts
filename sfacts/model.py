@@ -122,9 +122,13 @@ class ParameterizedModel:
         device="cpu",
         data=None,
         hyperparameters=None,
+        passed_hyperparameters=None,
     ):
         if hyperparameters is None:
             hyperparameters = {}
+
+        if passed_hyperparameters is None:
+            passed_hyperparameters = []
 
         if data is None:
             data = {}
@@ -145,6 +149,7 @@ class ParameterizedModel:
         self.hyperparameters = self.structure.default_hyperparameters.copy()
         self.hyperparameters.update(hyperparameters)
         self.data = data
+        self.passed_hyperparameters = passed_hyperparameters
 
     @property
     def sizes(self):
@@ -164,6 +169,7 @@ class ParameterizedModel:
             + ("device=" + repr(self.device) + ", ")
             + ("hyperparameters=" + repr(self.hyperparameters) + ", ")
             + ("data=" + repr(self.data) + ", ")
+            + ("passed_hyperparameters=" + repr(self.passed_hyperparameters) + ", ")
             + ")"
         )
 
@@ -197,21 +203,33 @@ class ParameterizedModel:
             + pformat(self.data, indent=indent + 1)
             + "\n"
             + " " * (indent - 1)
+            + "passed_hyperparameters="
+            + pformat(self.passed_hyperparameters, indent=indent + 1)
+            + "\n"
+            + " " * (indent - 1)
             + ")"
         )
 
-    def __call__(self):
+    def __call__(self, *args):
         # Here's where all the action happens.
         # All parameters are cast based on dtype and device.
         # The model is conditioned on the
         # data, and then called with the shape tuple
         # and cast hyperparameters.
+        data = all_torch(**self.data, dtype=self.dtype, device=self.device)
+        hyperparameters = all_torch(
+            **self.hyperparameters, dtype=self.dtype, device=self.device
+        )
+        hyperparameters.update(
+            {
+                self.passed_hyperparameters[i]: args[i]
+                for i in range(len(self.passed_hyperparameters))
+            }
+        )
         return self.structure(
             self.shape,
-            data=all_torch(**self.data, dtype=self.dtype, device=self.device),
-            hyperparameters=all_torch(
-                **self.hyperparameters, dtype=self.dtype, device=self.device
-            ),
+            data=data,
+            hyperparameters=hyperparameters,
             unit=torch.tensor(1.0, dtype=self.dtype, device=self.device),
         )
 
@@ -232,6 +250,7 @@ class ParameterizedModel:
             device=self.device,
             hyperparameters=new_hyperparameters,
             data=self.data,
+            passed_hyperparameters=self.passed_hyperparameters,
         )
 
     def with_amended_coords(self, **coords):
@@ -244,6 +263,7 @@ class ParameterizedModel:
             device=self.device,
             hyperparameters=self.hyperparameters,
             data=self.data,
+            passed_hyperparameters=self.passed_hyperparameters,
         )
 
     def condition(self, **data):
@@ -256,7 +276,25 @@ class ParameterizedModel:
             device=self.device,
             hyperparameters=self.hyperparameters,
             data=new_data,
+            passed_hyperparameters=self.passed_hyperparameters,
         )
+
+    def with_passed_hyperparameters(self, *args, replace=True):
+        if not replace:
+            new_passed_hyperparameters = self.passed_hyperparameters.copy()
+            new_passed_hyperparameters.extend(args)
+        else:
+            new_passed_hyperparameters = args
+        return self.__class__(
+            structure=self.structure,
+            coords=self.coords,
+            dtype=self.dtype,
+            device=self.device,
+            hyperparameters=self.hyperparameters,
+            data=self.data,
+            passed_hyperparameters=new_passed_hyperparameters,
+        )
+
 
     def format_world(self, data):
         out = {}
@@ -273,11 +311,11 @@ class ParameterizedModel:
             )
         )
 
-    def simulate(self, n=1, seed=None):
+    def simulate(self, *args, n=1, seed=None):
         sf.pyro_util.set_random_seed(seed)
-        obs = pyro.infer.Predictive(self, num_samples=n)()
+        obs = pyro.infer.Predictive(self, num_samples=n)(*args)
         obs = {k: obs[k].detach().cpu().numpy().squeeze() for k in obs.keys()}
         return obs
 
-    def simulate_world(self, seed=None):
-        return self.format_world(self.simulate(n=1, seed=seed))
+    def simulate_world(self, *args, seed=None):
+        return self.format_world(self.simulate(*args, n=1, seed=seed))
