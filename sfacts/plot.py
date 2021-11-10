@@ -390,9 +390,15 @@ plot_community = plot_generic_clustermap_factory(
 )
 
 
-def plot_loss_history(trace):
-    trace = np.array(trace)
-    plt.plot((trace - trace.min()))
+def plot_loss_history(*args):
+    traces = []
+    trace_min = []
+    for trace in args:
+        traces.append(np.array(trace))
+        trace_min.append(traces[-1].min())
+    trace_min = np.min(trace_min)
+    for trace in traces:
+        plt.plot(trace - trace_min)
     plt.yscale("log")
 
 
