@@ -126,11 +126,14 @@ def estimate_parameters(
     if initialize_params is None:
         initialize_params = {}
 
+    sf.pyro_util.set_random_seed(seed, warn=(not quiet))
+
     if jit:
         loss = pyro.infer.JitTrace_ELBO(ignore_jit_warnings=ignore_jit_warnings)
     else:
         loss = pyro.infer.Trace_ELBO()
 
+    pyro.clear_param_store()
     guide = pyro.infer.autoguide.AutoLaplaceApproximation(
         model,
         init_loc_fn=pyro.infer.autoguide.initialization.init_to_value(
@@ -149,10 +152,6 @@ def estimate_parameters(
         optimizer_kwargs=optimizer_kwargs,
         quiet=quiet,
     )
-
-    sf.pyro_util.set_random_seed(seed, warn=(not quiet))
-
-    pyro.clear_param_store()
 
     history = []
     pbar = tqdm(range(maxiter), disable=quiet, mininterval=1.0)
