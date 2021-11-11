@@ -184,9 +184,7 @@ def estimate_parameters(
     )
     try:
         for i, *passed_hyperparameters in pbar:
-            # elbo = svi.step(*(torch.tensor(v[i], device=device, dtype=dtype) for v in anneal_hyperparameters.values()))
-            elbo_curr = svi.step(*passed_hyperparameters)
-            elbo = svi.evaluate_loss(*final_anneal_hyperparameters.values())
+            elbo = svi.step(*passed_hyperparameters)
             if i > annealiter:
                 scheduler.step(elbo)
 
@@ -233,9 +231,11 @@ def estimate_parameters(
 
         else:
             pbar.close()
+            elbo = svi.evaluate_loss(*final_anneal_hyperparameters.values())
             info(f"Reached maxiter: ELBO={elbo:.5e}", quiet=quiet)
     except KeyboardInterrupt as err:
         pbar.close()
+        elbo = svi.evaluate_loss(*final_anneal_hyperparameters.values())
         info(f"Interrupted: ELBO={elbo:.5e}", quiet=quiet)
         if catch_keyboard_interrupt:
             pass
