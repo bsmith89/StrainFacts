@@ -34,6 +34,41 @@ for _name, _default_optimizer_kwargs in [
     OPTIMIZERS[_name] = torch.optim.__dict__[_name], _default_optimizer_kwargs
 
 
+def linear_annealing_schedule(start, end, annealing_steps, final_steps=0):
+    return np.concatenate(
+        [
+            np.linspace(start, end, num=annealing_steps),
+            np.repeat(end, final_steps),
+        ]
+    )
+
+
+def log_annealing_schedule(start, end, annealing_steps, final_steps=0):
+    return np.concatenate(
+        [
+            np.logspace(np.log10(start), np.log10(end), num=annealing_steps),
+            np.repeat(end, final_steps),
+        ]
+    )
+
+
+def invlinear_annealing_schedule(start, end, annealing_steps, final_steps=0):
+    return np.concatenate(
+        [
+            1 / np.linspace(1 / start, 1 / end, num=annealing_steps),
+            np.repeat(end, final_steps),
+        ]
+    )
+
+
+def named_annealing_schedule(name, *args, **kwargs):
+    return dict(
+        linear=linear_annealing_schedule,
+        log=log_annealing_schedule,
+        invlinear=invlinear_annealing_schedule,
+    )[name](*args, **kwargs)
+
+
 def get_scheduled_optimization_stepper(
     model,
     guide,
@@ -86,9 +121,31 @@ def estimate_parameters(
     ignore_jit_warnings=False,
     seed=None,
     catch_keyboard_interrupt=False,
+    anneal_hyperparameters=None,
+    annealiter=0,
+    lr_annealing_factor=0.5,
 ):
     if initialize_params is None:
         initialize_params = {}
+
+    if anneal_hyperparameters is None:
+        anneal_hyperparameters = {}
+    anneal_hyperparameters = {
+        k: torch.tensor(
+            named_annealing_schedule(
+                **anneal_hyperparameters[k],
+                annealing_steps=annealiter,
+                final_steps=maxiter - annealiter,
+            ),
+            dtype=dtype,
+            device=device,
+        )
+        for k in anneal_hyperparameters
+    }
+    final_anneal_hyperparameters = {
+        k: anneal_hyperparameters[k][-1] for k in anneal_hyperparameters
+    }
+    model = model.with_passed_hyperparameters(*anneal_hyperparameters.keys())
 
     sf.pyro_util.set_random_seed(seed, warn=(not quiet))
 
@@ -110,7 +167,7 @@ def estimate_parameters(
         guide,
         loss,
         optimizer_name,
-        factor=0.5,
+        factor=lr_annealing_factor,
         patience=lagB,
         cooldown=lagB,
         optimizer_kwargs=optimizer_kwargs,
@@ -118,11 +175,18 @@ def estimate_parameters(
     )
 
     history = []
-    pbar = tqdm(range(maxiter), disable=quiet, mininterval=1.0)
+    pbar = tqdm(
+        zip(range(maxiter), *anneal_hyperparameters.values()),
+        total=maxiter,
+        disable=quiet,
+        mininterval=1.0,
+        bar_format="{l_bar}{r_bar}",
+    )
     try:
-        for i in pbar:
-            elbo = svi.step()
-            scheduler.step(elbo)
+        for i, *passed_hyperparameters in pbar:
+            elbo = svi.step(*passed_hyperparameters)
+            if i > annealiter:
+                scheduler.step(elbo)
 
             if np.isnan(elbo):
                 pbar.close()
@@ -143,28 +207,44 @@ def estimate_parameters(
                     delta_lagA = (history[-lagA] - history[-1]) / lagA
                 if i > lagB:
                     delta_lagB = (history[-lagB] - history[-1]) / lagB
-                pbar.set_postfix(
+                pbar_postfix = {
+                    "ELBO": history[-1],
+                    "delta": delta,
+                    f"lag{lagA}": delta_lagA,
+                    f"lag{lagB}": delta_lagB,
+                    "lr": learning_rate,
+                }
+                pbar_postfix.update(
                     {
-                        "ELBO": history[-1],
-                        "delta": delta,
-                        f"lag{lagA}": delta_lagA,
-                        f"lag{lagB}": delta_lagB,
-                        "lr": learning_rate,
+                        k: v.cpu().numpy()
+                        for k, v in zip(
+                            anneal_hyperparameters.keys(), passed_hyperparameters
+                        )
                     }
                 )
+                pbar.set_postfix(pbar_postfix)
                 # if (delta_lagA <= 0) and (delta_lagB <= 0):
                 if learning_rate < 1e-6:
                     pbar.close()
                     info(f"Converged: ELBO={elbo:.5e}", quiet=quiet)
                     break
+
+        else:
+            pbar.close()
+            elbo = svi.evaluate_loss(*final_anneal_hyperparameters.values())
+            info(f"Reached maxiter: ELBO={elbo:.5e}", quiet=quiet)
     except KeyboardInterrupt as err:
         pbar.close()
+        elbo = svi.evaluate_loss(*final_anneal_hyperparameters.values())
         info(f"Interrupted: ELBO={elbo:.5e}", quiet=quiet)
         if catch_keyboard_interrupt:
             pass
         else:
             raise err
-    est = pyro.infer.Predictive(model, guide=guide, num_samples=1)()
+
+    est = pyro.infer.Predictive(model, guide=guide, num_samples=1)(
+        *passed_hyperparameters
+    )
     est = {k: est[k].detach().cpu().numpy().mean(0).squeeze() for k in est.keys()}
 
     if device.startswith("cuda"):
@@ -182,7 +262,12 @@ def estimate_parameters(
         #         )
         torch.cuda.empty_cache()
 
-    return model.format_world(est), history
+    return (
+        model.with_hyperparameters(
+            **dict(zip(anneal_hyperparameters.keys(), passed_hyperparameters))
+        ).format_world(est),
+        history,
+    )
 
 
 def strain_cluster(world, thresh, linkage="complete", pdist_func=None):
