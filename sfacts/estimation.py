@@ -263,7 +263,9 @@ def estimate_parameters(
         torch.cuda.empty_cache()
 
     return (
-        model.with_hyperparameters(dict(zip(anneal_hyperparameters.keys(), passed_hyperparameters))).format_world(est),
+        model.with_hyperparameters(
+            **dict(zip(anneal_hyperparameters.keys(), passed_hyperparameters))
+        ).format_world(est),
         history,
     )
 
