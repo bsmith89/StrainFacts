@@ -52,23 +52,27 @@ def model(
 ):
     with pyro.plate("position", g, dim=-1):
         with pyro.plate("strain", s, dim=-2):
-            _gamma = pyro.sample("_gamma", dist.Beta(_unit, _unit))
-            gamma = pyro.deterministic(
-                "gamma",
-                powerperturb_transformation_unit_interval(
-                    _gamma, 1 / gamma_hyper, _unit
-                ),
-            )
+            gamma = pyro.sample("gamma", dist.Beta(gamma_hyper, gamma_hyper))
+            # _gamma = pyro.sample("_gamma", dist.Beta(_unit, _unit))
+            # gamma = pyro.deterministic(
+            #     "gamma",
+            #     powerperturb_transformation_unit_interval(
+            #         _gamma, 1 / gamma_hyper, _unit
+            #     ),
+            # )
     pyro.deterministic("genotypes", gamma)
 
     # Meta-community composition
-    _rho = pyro.sample("_rho", dist.Dirichlet(_unit.repeat(s) * rho_hyper))
-    rho = pyro.deterministic("rho", (_rho + eps) / (1 + eps * s))
+    rho = pyro.sample("rho", dist.Dirichlet(_unit.repeat(s) * rho_hyper))
     pyro.deterministic("metacommunity", rho)
 
     with pyro.plate("sample", n, dim=-1):
         # Community composition
-        pi = pyro.sample("pi", dist.Dirichlet(pi_hyper * rho))
+        _pi = pyro.sample("_pi", dist.Dirichlet(_unit.repeat(s)))
+        pi = pyro.deterministic(
+            "pi",
+            powerperturb_transformation(_pi, 1 / pi_hyper, rho),
+        )
     pyro.deterministic("communities", pi)
 
     m = pyro.sample(
