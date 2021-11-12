@@ -77,6 +77,8 @@ def fit_metagenotypes_simple(
     est, history = sf.estimation.estimate_parameters(
         pmodel,
         quiet=quiet,
+        device=device,
+        dtype=dtype,
         **estimation_kwargs,
     )
     end_time = time.time()
