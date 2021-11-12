@@ -22,6 +22,9 @@ from tqdm import tqdm
 from sfacts.logging_util import info
 
 
+def _tqdm_format_num(n):
+    return f'{n:+#0.3e}'
+
 OPTIMIZERS = dict()
 for _name, _default_optimizer_kwargs in [
     ("Adam", dict(lr=0.1)),
@@ -175,6 +178,7 @@ def estimate_parameters(
     )
 
     history = []
+    tqdm.format_num = staticmethod(_tqdm_format_num)  # Monkeypatch to format numbers better
     pbar = tqdm(
         zip(range(maxiter), *anneal_hyperparameters.values()),
         total=maxiter,
@@ -209,14 +213,14 @@ def estimate_parameters(
                     delta_lagB = (history[-lagB] - history[-1]) / lagB
                 pbar_postfix = {
                     "ELBO": history[-1],
-                    "delta": delta,
-                    f"lag{lagA}": delta_lagA,
-                    f"lag{lagB}": delta_lagB,
+                    "delta": np.nan_to_num(delta),
+                    f"lag{lagA}": np.nan_to_num(delta_lagA),
+                    f"lag{lagB}": np.nan_to_num(delta_lagB),
                     "lr": learning_rate,
                 }
                 pbar_postfix.update(
                     {
-                        k: v.cpu().numpy()
+                        k: float(v.cpu().numpy())
                         for k, v in zip(
                             anneal_hyperparameters.keys(), passed_hyperparameters
                         )
