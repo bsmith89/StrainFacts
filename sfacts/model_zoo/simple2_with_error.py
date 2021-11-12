@@ -78,10 +78,10 @@ def model(
     epsilon = pyro.deterministic("epsilon", epsilon_hyper)
     with pyro.plate("sample", n, dim=-1):
         # Community composition
-        _pi = pyro.sample("_pi", dist.Dirichlet(_unit.repeat(s)))
+        _pi = pyro.sample("_pi", dist.Dirichlet(_unit.repeat(s) * pi_hyper))
         pi = pyro.deterministic(
             "pi",
-            powerperturb_transformation(_pi, 1 / pi_hyper, rho),
+            powerperturb_transformation(_pi, _unit, rho),
         )
     pyro.deterministic("communities", pi)
 
@@ -111,7 +111,7 @@ def model(
         dist.Binomial(
             probs=p,
             total_count=m,
-            validate_args=False,
+            # validate_args=False,
         ).to_event(),
     )
     pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
