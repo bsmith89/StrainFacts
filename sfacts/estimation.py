@@ -37,28 +37,43 @@ for _name, _default_optimizer_kwargs in [
     OPTIMIZERS[_name] = torch.optim.__dict__[_name], _default_optimizer_kwargs
 
 
-def linear_annealing_schedule(start, end, annealing_steps, final_steps=0):
+def linear_annealing_schedule(start, end, annealing_steps, wait_steps=0, total_steps=None):
+    if total_steps is None:
+        total_steps = annealing_steps
+    final_steps = total_steps - (annealing_steps)
+    assert wait_steps < annealing_steps
     return np.concatenate(
         [
-            np.linspace(start, end, num=annealing_steps),
+            np.repeat(start, wait_steps),
+            np.linspace(start, end, num=annealing_steps - wait_steps),
             np.repeat(end, final_steps),
         ]
     )
 
 
-def log_annealing_schedule(start, end, annealing_steps, final_steps=0):
+def log_annealing_schedule(start, end, annealing_steps, wait_steps=0, total_steps=None):
+    if total_steps is None:
+        total_steps = annealing_steps
+    final_steps = total_steps - (annealing_steps)
+    assert wait_steps < annealing_steps
     return np.concatenate(
         [
-            np.logspace(np.log10(start), np.log10(end), num=annealing_steps),
+            np.repeat(start, wait_steps),
+            np.logspace(np.log10(start), np.log10(end), num=annealing_steps - wait_steps),
             np.repeat(end, final_steps),
         ]
     )
 
 
-def invlinear_annealing_schedule(start, end, annealing_steps, final_steps=0):
+def invlinear_annealing_schedule(start, end, annealing_steps, wait_steps=0, total_steps=None):
+    if total_steps is None:
+        total_steps = annealing_steps
+    final_steps = total_steps - (annealing_steps)
+    assert wait_steps < annealing_steps
     return np.concatenate(
         [
-            1 / np.linspace(1 / start, 1 / end, num=annealing_steps),
+            np.repeat(start, wait_steps),
+            1 / np.linspace(1 / start, 1 / end, num=annealing_steps - wait_steps),
             np.repeat(end, final_steps),
         ]
     )
@@ -138,7 +153,7 @@ def estimate_parameters(
             named_annealing_schedule(
                 **anneal_hyperparameters[k],
                 annealing_steps=annealiter,
-                final_steps=maxiter - annealiter,
+                total_steps=maxiter,
             ),
             dtype=dtype,
             device=device,
