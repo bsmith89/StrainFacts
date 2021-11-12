@@ -54,12 +54,13 @@ def fit_metagenotypes_simple(
     quiet=False,
     estimation_kwargs=None,
 ):
+    _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
+
     if estimation_kwargs is None:
         estimation_kwargs = {}
 
-    sf.logging_util.info(
+    _info(
         f"START: Fitting {nstrain} strains with data shape {metagenotypes.sizes}.",
-        quiet=quiet,
     )
     pmodel = sf.model.ParameterizedModel(
         structure,
