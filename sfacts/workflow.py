@@ -47,6 +47,7 @@ def fit_metagenotypes_simple(
     metagenotypes,
     nstrain,
     hyperparameters=None,
+    anneal_hyperparameters=None,
     condition_on=None,
     device="cpu",
     dtype=torch.float32,
