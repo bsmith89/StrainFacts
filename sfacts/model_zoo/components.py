@@ -13,6 +13,7 @@ SHARED_DESCRIPTIONS = dict(
     rho=("strain",),
     pi=("sample", "strain"),
     epsilon=("sample",),
+    epsilon_hyper=(),
     m_hyper_r=("sample",),
     m_hyper_r_mean=(),
     m_hyper_r_scale=(),
