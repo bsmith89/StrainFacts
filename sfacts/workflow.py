@@ -48,6 +48,7 @@ def fit_metagenotypes_simple(
     nstrain,
     hyperparameters=None,
     anneal_hyperparameters=None,
+    annealiter=0,
     condition_on=None,
     device="cpu",
     dtype=torch.float32,
@@ -82,6 +83,7 @@ def fit_metagenotypes_simple(
         device=device,
         dtype=dtype,
         anneal_hyperparameters=anneal_hyperparameters,
+        annealiter=annealiter,
         **estimation_kwargs,
     )
     end_time = time.time()
@@ -96,6 +98,7 @@ def fit_metagenotypes_collapse_strains_then_refit(
     nstrain,
     hyperparameters=None,
     anneal_hyperparameters=None,
+    annealiter=0,
     condition_on=None,
     device="cpu",
     dtype=torch.float32,
@@ -138,6 +141,7 @@ def fit_metagenotypes_collapse_strains_then_refit(
         device=device,
         dtype=dtype,
         anneal_hyperparameters=anneal_hyperparameters,
+        annealiter=annealiter,
         **estimation_kwargs,
     )
     _info("Finished initial fitting.")
