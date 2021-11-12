@@ -153,6 +153,7 @@ def fit_metagenotypes_collapse_strains_then_refit(
             .condition(pi=est_curr.data.communities.values)
             .condition(**metagenotypes.to_counts_and_totals())
         ),
+        initialize_params=dict(gamma=est_curr.data.genotypes.values),
         quiet=quiet,
         device=device,
         dtype=dtype,
@@ -254,6 +255,7 @@ def fit_metagenotypes_then_collapse_and_refine_each(
             .condition(pi=est_curr.data.communities.values)
             .condition(**metagenotypes.to_counts_and_totals())
         ),
+        initialize_params=dict(gamma=est_curr.data.genotypes.values),
         quiet=quiet,
         device=device,
         dtype=dtype,
@@ -301,6 +303,7 @@ def fit_metagenotypes_then_collapse_and_refine_each(
             )
             .condition(**metagenotypes.to_counts_and_totals())
         ),
+        initialize_params=dict(gamma=est_curr.data.genotypes.values),
         quiet=quiet,
         device=device,
         dtype=dtype,
