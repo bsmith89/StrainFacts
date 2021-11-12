@@ -209,7 +209,7 @@ def estimate_parameters(
 
             if np.isnan(elbo):
                 pbar.close()
-                raise RuntimeError("nlp NaN?")
+                raise RuntimeError("NLP NaN?")
 
             # Fit tracking
             history.append(elbo)
@@ -227,7 +227,7 @@ def estimate_parameters(
                 if i > lagB:
                     delta_lagB = (history[-lagB] - history[-1]) / lagB
                 pbar_postfix = {
-                    "nlp": history[-1],
+                    "NLP": history[-1],
                     "delta": np.nan_to_num(delta),
                     f"lag{lagA}": np.nan_to_num(delta_lagA),
                     f"lag{lagB}": np.nan_to_num(delta_lagB),
@@ -245,17 +245,17 @@ def estimate_parameters(
                 # if (delta_lagA <= 0) and (delta_lagB <= 0):
                 if learning_rate < 1e-6:
                     pbar.close()
-                    info(f"Converged: nlp={elbo:.5e}", quiet=quiet)
+                    info(f"Converged: NLP={elbo:.5e}", quiet=quiet)
                     break
 
         else:
             pbar.close()
             elbo = svi.evaluate_loss(*final_anneal_hyperparameters.values())
-            info(f"Reached maxiter: nlp={elbo:.5e}", quiet=quiet)
+            info(f"Reached maxiter: NLP={elbo:.5e}", quiet=quiet)
     except KeyboardInterrupt as err:
         pbar.close()
         elbo = svi.evaluate_loss(*final_anneal_hyperparameters.values())
-        info(f"Interrupted: nlp={elbo:.5e}", quiet=quiet)
+        info(f"Interrupted: NLP={elbo:.5e}", quiet=quiet)
         if catch_keyboard_interrupt:
             pass
         else:
