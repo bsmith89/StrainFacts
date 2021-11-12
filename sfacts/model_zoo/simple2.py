@@ -52,14 +52,14 @@ def model(
 ):
     with pyro.plate("position", g, dim=-1):
         with pyro.plate("strain", s, dim=-2):
-            gamma = pyro.sample("gamma", dist.Beta(gamma_hyper, gamma_hyper))
-            # _gamma = pyro.sample("_gamma", dist.Beta(_unit, _unit))
-            # gamma = pyro.deterministic(
-            #     "gamma",
-            #     powerperturb_transformation_unit_interval(
-            #         _gamma, 1 / gamma_hyper, _unit
-            #     ),
-            # )
+            # gamma = pyro.sample("gamma", dist.Beta(gamma_hyper, gamma_hyper))
+            _gamma = pyro.sample("_gamma", dist.Beta(_unit, _unit))
+            gamma = pyro.deterministic(
+                "gamma",
+                powerperturb_transformation_unit_interval(
+                    _gamma, 1 / gamma_hyper, _unit
+                ),
+            )
     pyro.deterministic("genotypes", gamma)
 
     # Meta-community composition
