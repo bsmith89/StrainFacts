@@ -248,7 +248,7 @@ class FitSimple(AppInterface):
         est.dump(args.outpath)
 
         if args.history_outpath:
-            with open(args.history_outpath, 'w') as f:
+            with open(args.history_outpath, "w") as f:
                 for elbo in history:
                     print(elbo, file=f)
 
