@@ -315,6 +315,7 @@ def fit_metagenotypes_then_collapse_and_refine_each(
     _info(f"END: Fit in {delta_time} seconds.")
     return est_curr, [history0, history1, history2, history3]
 
+
 def fit_subsampled_metagenotypes_then_collapse_and_refine_each_then_iteratively_refit_genotypes(
     structure,
     metagenotypes,
@@ -341,21 +342,15 @@ def fit_subsampled_metagenotypes_then_collapse_and_refine_each_then_iteratively_
     if stage2_hyperparameters is None:
         stage2_hyperparameters = {}
 
-    _info(
-        f"START: Fitting data with shape {metagenotypes.sizes}."
-    )
+    _info(f"START: Fitting data with shape {metagenotypes.sizes}.")
 
-    _info(
-        f"Subsampling {nposition} positions."
-    )
+    _info(f"Subsampling {nposition} positions.")
     sf.pyro_util.set_random_seed(seed, warn=(not quiet))
     nposition = min(nposition, metagenotypes.sizes["position"])
     metagenotypes_full = metagenotypes
     metagenotypes = metagenotypes.random_sample(position=nposition)
 
-    _info(
-        f"Fitting {nstrain} strains with data shape {metagenotypes.sizes}."
-    )
+    _info(f"Fitting {nstrain} strains with data shape {metagenotypes.sizes}.")
     start_time = time.time()
     pmodel = sf.model.ParameterizedModel(
         structure,
