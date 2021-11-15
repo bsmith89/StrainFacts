@@ -142,6 +142,7 @@ def estimate_parameters(
     anneal_hyperparameters=None,
     annealiter=0,
     lr_annealing_factor=0.5,
+    minimum_lr=1e-6,
 ):
     if initialize_params is None:
         initialize_params = {}
@@ -243,7 +244,7 @@ def estimate_parameters(
                 )
                 pbar.set_postfix(pbar_postfix)
                 # if (delta_lagA <= 0) and (delta_lagB <= 0):
-                if learning_rate < 1e-6:
+                if learning_rate < minimum_lr:
                     pbar.close()
                     info(f"Converged: NLP={elbo:.5e}", quiet=quiet)
                     break
