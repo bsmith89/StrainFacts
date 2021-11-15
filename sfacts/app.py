@@ -116,6 +116,35 @@ class NoOp(AppInterface):
         print(args)
 
 
+class FilterMetagenotypes(AppInterface):
+    app_name = "filter_mgen"
+    description = (
+        "Filter metagenotypes based on position polymorphism and sample coverage."
+    )
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument("inpath")
+        parser.add_argument("outpath")
+        parser.add_argument("--min-minor-allele-freq", type=float, default=0.05)
+        parser.add_argument("--min-horizontal-cvrg", type=float, default=0.1)
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        assert 0 < args.min_minor_allele_freq < 1
+        assert 0 < args.min_horizontal_cvrg < 1
+        return args
+
+    @classmethod
+    def run(cls, args):
+        mgen_all = sf.data.Metagenotypes.load(args.inpath)
+        mgen_filt = mgen_all.select_variable_positions(
+            thresh=0.05
+        ).select_samples_with_coverage(0.05)
+        mgen_filt.dump(args.outpath)
+
+
+
 class Simulate(AppInterface):
     app_name = "simulate"
     description = "Simulate from a metagenotype model."
@@ -322,7 +351,7 @@ def main():
     )
 
     app_subparsers = parser.add_subparsers()
-    for subcommand in [NoOp, Simulate, FitSimple, FitComplex]:
+    for subcommand in [NoOp, FilterMetagenotypes, Simulate, FitSimple, FitComplex]:
         subcommand._add_app_subparser(app_subparsers)
 
     args = parser.parse_args()
