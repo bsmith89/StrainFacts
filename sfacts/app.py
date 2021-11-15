@@ -328,7 +328,7 @@ class FitComplex(AppInterface):
         else:
             num_strains = args.num_strains
 
-        est = sf.workflow.fit_subsampled_metagenotype_collapse_strains_then_refit(
+        est = sf.workflow.fit_metagenotypes_then_collapse_and_refine_each(
             structure=args.model_structure,
             metagenotypes=metagenotypes,
             nstrain=num_strains,
