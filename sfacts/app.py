@@ -300,6 +300,11 @@ class FitComplex(AppInterface):
             type=float,
             help="Minimum single-sample abundance to keep a strain.",
         )
+        # parser.add_argument("--anneal-steps", default=0)
+        # parser.add_argument("--anneal-hyperparameters", default='')
+        # parser.add_argument(
+        #     "--refinement-hyperparameters", nargs="+", action="append", default=[]
+        # )
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
