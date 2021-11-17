@@ -39,35 +39,19 @@ def _hmae(x, y):
 def match_genotypes(reference, estimate, cdist=None):
     if cdist is None:
         cdist = genotype_cdist
-
     gammaA = reference.genotypes.data.to_pandas()
     gammaB = estimate.genotypes.data.to_pandas()
-
-    g = gammaA.shape[1]
-    dist = pd.DataFrame(cdist(gammaA, gammaB))
-    return (
-        pd.Series(dist.idxmin(axis=1), index=reference.strain).rename_axis(
-            index="strain"
-        ),
-        pd.Series(dist.min(axis=1), index=reference.strain).rename_axis(index="strain"),
-    )
+    dist = pd.DataFrame(cdist(gammaA, gammaB), index=gammaA.index, columns=gammaB.index)
+    return (dist.idxmin(axis=1), dist.min(axis=1))
 
 
 def discretized_match_genotypes(reference, estimate, cdist=None):
     if cdist is None:
         cdist = genotype_cdist
-
     gammaA = reference.genotypes.discretized().data.to_pandas()
     gammaB = estimate.genotypes.discretized().data.to_pandas()
-
-    g = gammaA.shape[1]
-    dist = pd.DataFrame(cdist(gammaA, gammaB))
-    return (
-        pd.Series(dist.idxmin(axis=1), index=reference.strain).rename_axis(
-            index="strain"
-        ),
-        pd.Series(dist.min(axis=1), index=reference.strain).rename_axis(index="strain"),
-    )
+    dist = pd.DataFrame(cdist(gammaA, gammaB), index=gammaA.index, columns=gammaB.index)
+    return (dist.idxmin(axis=1), dist.min(axis=1))
 
 
 def genotype_error(reference, estimate, **kwargs):
