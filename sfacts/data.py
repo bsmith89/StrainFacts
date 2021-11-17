@@ -6,6 +6,7 @@ from scipy.spatial.distance import pdist, squareform
 from scipy.cluster.hierarchy import linkage
 import scipy as sp
 from functools import partial
+from warnings import warn
 
 
 def _on_2_simplex(d):
@@ -179,11 +180,11 @@ class Metagenotypes(WrappedDataArrayMixin):
 
     @classmethod
     def load(cls, filename_or_obj, validate=True):
-        data = (
-            xr.load_dataarray(filename_or_obj)
-            .rename({"library_id": "sample"})
-            .squeeze(drop=True)
-        )
+        data = xr.load_dataarray(filename_or_obj)
+        if 'library_id' in data.dims:
+            warn("Converting 'library_id' dimension to 'sample'.")
+            data = data.rename({"library_id": "sample"})
+        data = data.squeeze(drop=True).astype(int)
         return cls._post_load(data)
 
     @classmethod

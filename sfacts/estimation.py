@@ -116,10 +116,10 @@ def get_scheduled_optimization_stepper(
             eps=0,
         )
     )
-    info(
-        f"Optimizing parameters with {optimizer_name}(**{_optimizer_kwargs})",
-        quiet=quiet,
-    )
+    # info(
+    #     f"Optimizing parameters with {optimizer_name}(**{_optimizer_kwargs})",
+    #     quiet=quiet,
+    # )
     svi = pyro.infer.SVI(model, guide, scheduler, loss=loss)
     return svi, scheduler
 
@@ -284,7 +284,7 @@ def estimate_parameters(
 
     return (
         model.with_hyperparameters(
-            **dict(zip(anneal_hyperparameters.keys(), passed_hyperparameters))
+            **{k: passed_hyperparameters[i].detach().cpu().numpy() for i, k in enumerate(anneal_hyperparameters.keys())}
         ).format_world(est),
         history,
     )

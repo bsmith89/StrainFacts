@@ -1,12 +1,15 @@
 import pyro
 import torch
 import sfacts as sf
+import numpy as np
 
 
 PRECISION_MAP = {32: torch.float32, 64: torch.float64}
 
 
 def as_torch(x, dtype=None, device=None):
+    # if x.dtype == np.uint64:
+    #     x.astype('int64')
     # Cast inputs and set device
     if isinstance(x, torch.Tensor):
         return torch.tensor(x.numpy(), dtype=dtype, device=device)

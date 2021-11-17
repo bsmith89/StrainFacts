@@ -39,6 +39,12 @@ def add_optimization_arguments(parser):
         "--optimizer", default="Adamax", choices=sf.estimation.OPTIMIZERS.keys()
     )
     parser.add_argument("--optimizer-learning-rate", type=float)
+    parser.add_argument(
+        "--min-optimizer-learning-rate",
+        type=float,
+        default=1e-6,
+        help="Learning rate threshold to stop reduction 'schedule'.",
+    )
 
 
 def transform_optimization_parameter_inputs(args):
@@ -56,6 +62,7 @@ def transform_optimization_parameter_inputs(args):
         lagB=args.lag2,
         optimizer_name=args.optimizer,
         optimizer_kwargs=optimizer_kwargs,
+        minimum_lr=args.min_optimizer_learning_rate,
     )
     return args
 
@@ -124,15 +131,19 @@ class FilterMetagenotypes(AppInterface):
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument("inpath")
-        parser.add_argument("outpath")
         parser.add_argument("--min-minor-allele-freq", type=float, default=0.05)
         parser.add_argument("--min-horizontal-cvrg", type=float, default=0.1)
+        parser.add_argument("--num-positions", type=int)
+        parser.add_argument("--random-seed", type=int)
+        parser.add_argument("inpath")
+        parser.add_argument("outpath")
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
         assert 0 < args.min_minor_allele_freq < 1
         assert 0 < args.min_horizontal_cvrg < 1
+        if args.num_positions is None:
+            args.num_positions = int(1e20)
         return args
 
     @classmethod
@@ -141,8 +152,11 @@ class FilterMetagenotypes(AppInterface):
         mgen_filt = mgen_all.select_variable_positions(
             thresh=0.05
         ).select_samples_with_coverage(0.05)
-        mgen_filt.dump(args.outpath)
 
+        nposition = min(mgen_filt.sizes["position"], args.num_positions)
+        np.random.seed(args.random_seed)
+        mgen_filt_ss = mgen_filt.random_sample(position=nposition)
+        mgen_filt_ss.dump(args.outpath)
 
 
 class Simulate(AppInterface):
@@ -217,22 +231,40 @@ class FitSimple(AppInterface):
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
+        parser.add_argument("--anneal-wait", type=int, default=0)
+        parser.add_argument("--anneal-steps", type=int, default=0)
+        parser.add_argument("--anneal-hyperparameters", nargs="+", default=[])
         add_optimization_arguments(parser)
-        parser.add_argument("--inpath", "-i", required=True)
-        parser.add_argument("--outpath", "-o", required=True)
+        parser.add_argument(
+            "--tsv",
+            action="store_true",
+            default=False,
+            help="Input file is in TSV format (rather than NetCDF).",
+        )
         parser.add_argument("--verbose", "-v", action="store_true", default=False)
         parser.add_argument("--history-outpath")
+        parser.add_argument("inpath")
+        parser.add_argument("outpath")
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
         args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
         args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
+        args.anneal_hyperparameters = {
+            k: dict(name="log", start=1.0, end=args.hyperparameters[k], wait_steps=args.anneal_wait)
+            for k in args.anneal_hyperparameters
+        }
         args = transform_optimization_parameter_inputs(args)
         return args
 
     @classmethod
     def run(cls, args):
-        metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+        if args.tsv:
+            metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+        else:
+            metagenotypes = sf.data.Metagenotypes.load(args.inpath)
+
+        np.random.seed(args.random_seed)
         if args.num_positions:
             metagenotypes = metagenotypes.random_sample(args.num_positions, "position")
         est, history = sf.workflow.fit_metagenotypes_simple(
@@ -240,6 +272,8 @@ class FitSimple(AppInterface):
             metagenotypes=metagenotypes,
             nstrain=args.num_strains,
             hyperparameters=args.hyperparameters,
+            anneal_hyperparameters=args.anneal_hyperparameters,
+            annealiter=args.anneal_steps,
             device=args.device,
             dtype=sf.pyro_util.PRECISION_MAP[args.precision],
             quiet=(not args.verbose),
@@ -284,9 +318,16 @@ class FitComplex(AppInterface):
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
-        parser.add_argument("--inpath", "-i", required=True)
-        parser.add_argument("--outpath", "-o", required=True)
+        parser.add_argument(
+            "--tsv",
+            action="store_true",
+            default=False,
+            help="Input file is in TSV format (rather than NetCDF).",
+        )
         parser.add_argument("--verbose", "-v", action="store_true", default=False)
+        parser.add_argument("--history-outpath")
+        parser.add_argument("inpath")
+        parser.add_argument("outpath")
         add_optimization_arguments(parser)
         parser.add_argument(
             "--collapse",
@@ -300,11 +341,12 @@ class FitComplex(AppInterface):
             type=float,
             help="Minimum single-sample abundance to keep a strain.",
         )
-        # parser.add_argument("--anneal-steps", default=0)
-        # parser.add_argument("--anneal-hyperparameters", default='')
-        # parser.add_argument(
-        #     "--refinement-hyperparameters", nargs="+", action="append", default=[]
-        # )
+        parser.add_argument("--anneal-wait", type=int, default=0)
+        parser.add_argument("--anneal-steps", type=int, default=0)
+        parser.add_argument("--anneal-hyperparameters", nargs="+", default=[])
+        parser.add_argument(
+            "--refinement-hyperparameters", nargs="+", action="append", default=[]
+        )
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
@@ -319,13 +361,36 @@ class FitComplex(AppInterface):
                 "One of either --num-strains or --strains-per-sample must be set."
             )
         args = transform_optimization_parameter_inputs(args)
+        del args.estimation_kwargs['seed']  # Here consumed by workflow, not estimation.
+        args.anneal_hyperparameters = {
+            k: dict(name="log", start=1.0, end=args.hyperparameters[k], wait_steps=args.anneal_wait)
+            for k in args.anneal_hyperparameters
+        }
+        args.refinement_hyperparameters = parse_hyperparameter_strings(args.refinement_hyperparameters)
         return args
 
     @classmethod
     def run(cls, args):
-        metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
-        if args.num_positions is not None:
-            metagenotypes = metagenotypes.random_sample(position=args.num_positions)
+        warnings.filterwarnings(
+            "ignore",
+            category=UserWarning,
+            module="sfacts.math",
+            lineno=43,
+            message="Progress bar not implemented for genotype_pdist.",
+        )
+        warnings.filterwarnings(
+            "ignore",
+            category=RuntimeWarning,
+            module="sfacts.math",
+            lineno=26,
+            message="invalid value encountered in float_scalars",
+        )
+
+        if args.tsv:
+            metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+        else:
+            metagenotypes = sf.data.Metagenotypes.load(args.inpath)
+
         if args.strains_per_sample:
             num_strains = int(
                 np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
@@ -333,20 +398,32 @@ class FitComplex(AppInterface):
         else:
             num_strains = args.num_strains
 
-        est = sf.workflow.fit_metagenotypes_then_collapse_and_refine_each(
+        est, (
+            history,
+            *_,
+        ) = sf.workflow.fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
             structure=args.model_structure,
             metagenotypes=metagenotypes,
             nstrain=num_strains,
+            nposition=args.num_positions,
             diss_thresh=args.collapse,
             frac_thresh=args.cull,
             hyperparameters=args.hyperparameters,
-            stage2_hyperparameters=dict(gamma_hyper=1.0),
+            anneal_hyperparameters=args.anneal_hyperparameters,
+            annealiter=args.anneal_steps,
+            stage2_hyperparameters=args.refinement_hyperparameters,
             device=args.device,
             dtype=sf.pyro_util.PRECISION_MAP[args.precision],
             quiet=(not args.verbose),
+            seed=args.random_seed,
             estimation_kwargs=args.estimation_kwargs,
         )
         est.dump(args.outpath)
+
+        if args.history_outpath:
+            with open(args.history_outpath, "w") as f:
+                for elbo in history:
+                    print(elbo, file=f)
 
 
 def main():

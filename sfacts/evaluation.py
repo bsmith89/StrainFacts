@@ -166,7 +166,7 @@ def metagenotype_error(reference, estimate):
     estimated_metagenotypes = estimate.data.p * reference.data.m
     err = np.abs(estimated_metagenotypes - reference.metagenotypes.sel(allele="alt"))
     mean_sample_error = err.mean("position") / reference.data.mu
-    return float(mean_sample_error.mean()), mean_sample_error.to_series()
+    return float(err.sum() / reference.data.m.sum()), mean_sample_error.to_series()
 
 
 def rank_abundance_error(reference, estimate, p=1):
