@@ -181,7 +181,7 @@ class Metagenotypes(WrappedDataArrayMixin):
     @classmethod
     def load(cls, filename_or_obj, validate=True):
         data = xr.load_dataarray(filename_or_obj)
-        if 'library_id' in data.dims:
+        if "library_id" in data.dims:
             warn("Converting 'library_id' dimension to 'sample'.")
             data = data.rename({"library_id": "sample"})
         data = data.squeeze(drop=True).astype(int)

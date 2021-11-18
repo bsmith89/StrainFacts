@@ -403,9 +403,9 @@ def plot_loss_history(*args):
         trace_min.append(traces[-1].min())
     trace_min = np.min(trace_min)
     for i, trace in enumerate(traces):
-        plt.plot(trace - trace_min, label=f'{trace[-1]:0.3e} ({i})')
+        plt.plot(trace - trace_min, label=f"{trace[-1]:0.3e} ({i})")
     plt.yscale("log")
-    plt.legend(loc='upper right')
+    plt.legend(loc="upper right")
 
 
 def nmds_ordination(dmat):
