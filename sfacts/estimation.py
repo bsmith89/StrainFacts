@@ -280,7 +280,7 @@ def estimate_parameters(
 
     return (
         model.with_hyperparameters(
-            **dict(zip(anneal_hyperparameters.keys(), passed_hyperparameters))
+            **{k: passed_hyperparameters[i].detach().cpu().numpy() for i, k in enumerate(anneal_hyperparameters.keys())}
         ).format_world(est),
         history,
     )
