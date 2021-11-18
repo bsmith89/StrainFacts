@@ -92,231 +92,7 @@ def fit_metagenotypes_simple(
     return est, history
 
 
-def fit_metagenotypes_collapse_strains_then_refit(
-    structure,
-    metagenotypes,
-    nstrain,
-    hyperparameters=None,
-    anneal_hyperparameters=None,
-    annealiter=0,
-    condition_on=None,
-    device="cpu",
-    dtype=torch.float32,
-    quiet=False,
-    estimation_kwargs=None,
-    stage2_hyperparameters=None,
-    diss_thresh=0.0,
-    frac_thresh=0.0,
-):
-
-    _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
-
-    if estimation_kwargs is None:
-        estimation_kwargs = {}
-    if stage2_hyperparameters is None:
-        stage2_hyperparameters = {}
-
-    sf.logging_util.info(
-        f"START: Fitting {nstrain} strains with data shape {metagenotypes.sizes}.",
-        quiet=quiet,
-    )
-    start_time = time.time()
-    pmodel = sf.model.ParameterizedModel(
-        structure,
-        coords=dict(
-            sample=metagenotypes.sample.values,
-            position=metagenotypes.position.values,
-            allele=metagenotypes.allele.values,
-            strain=range(nstrain),
-        ),
-        hyperparameters=hyperparameters,
-        data=condition_on,
-        device=device,
-        dtype=dtype,
-    ).condition(**metagenotypes.to_counts_and_totals())
-
-    est_curr, history0 = sf.estimation.estimate_parameters(
-        pmodel,
-        quiet=quiet,
-        device=device,
-        dtype=dtype,
-        anneal_hyperparameters=anneal_hyperparameters,
-        annealiter=annealiter,
-        **estimation_kwargs,
-    )
-    _info("Finished initial fitting.")
-
-    _info(f"Refitting genotypes with {stage2_hyperparameters}.")
-    est_curr, history1 = sf.estimation.estimate_parameters(
-        (
-            pmodel.with_hyperparameters(**stage2_hyperparameters)
-            .condition(pi=est_curr.data.communities.values)
-            .condition(**metagenotypes.to_counts_and_totals())
-        ),
-        initialize_params=dict(gamma=est_curr.data.genotypes.values),
-        quiet=quiet,
-        device=device,
-        dtype=dtype,
-        **estimation_kwargs,
-    )
-
-    _info(f"Collapsing {nstrain} initial strains.")
-    agg_communities = sf.estimation.communities_aggregated_by_strain_cluster(
-        est_curr,
-        diss_thresh=diss_thresh,
-        pdist_func=lambda w: w.genotypes.pdist(quiet=quiet),
-        frac_thresh=frac_thresh,
-    )
-    _info(f"{agg_communities.sizes['strain']} strains after collapsing.")
-
-    _info("Refitting genotypes.")
-    est_curr, history2 = sf.estimation.estimate_parameters(
-        (
-            pmodel.with_hyperparameters(**stage2_hyperparameters)
-            .with_amended_coords(
-                position=metagenotypes.position.values,
-                strain=agg_communities.strain.values,
-            )
-            .condition(
-                pi=agg_communities.values,
-            )
-            .condition(**metagenotypes.to_counts_and_totals())
-        ),
-        quiet=quiet,
-        device=device,
-        dtype=dtype,
-        **estimation_kwargs,
-    )
-
-    end_time = time.time()
-    delta_time = end_time - start_time
-    _info(f"END: Fit in {delta_time} seconds.")
-    return est_curr, [history0, history1, history2]
-
-
-def fit_metagenotypes_then_collapse_and_refine_each(
-    structure,
-    metagenotypes,
-    nstrain,
-    hyperparameters=None,
-    anneal_hyperparameters=None,
-    annealiter=0,
-    condition_on=None,
-    device="cpu",
-    dtype=torch.float32,
-    quiet=False,
-    estimation_kwargs=None,
-    stage2_hyperparameters=None,
-    diss_thresh=0.0,
-    frac_thresh=0.0,
-):
-
-    _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
-
-    if estimation_kwargs is None:
-        estimation_kwargs = {}
-    if stage2_hyperparameters is None:
-        stage2_hyperparameters = {}
-
-    sf.logging_util.info(
-        f"START: Fitting {nstrain} strains with data shape {metagenotypes.sizes}.",
-        quiet=quiet,
-    )
-    start_time = time.time()
-    pmodel = sf.model.ParameterizedModel(
-        structure,
-        coords=dict(
-            sample=metagenotypes.sample.values,
-            position=metagenotypes.position.values,
-            allele=metagenotypes.allele.values,
-            strain=range(nstrain),
-        ),
-        hyperparameters=hyperparameters,
-        data=condition_on,
-        device=device,
-        dtype=dtype,
-    ).condition(**metagenotypes.to_counts_and_totals())
-
-    est_curr, history0 = sf.estimation.estimate_parameters(
-        pmodel,
-        quiet=quiet,
-        device=device,
-        dtype=dtype,
-        anneal_hyperparameters=anneal_hyperparameters,
-        annealiter=annealiter,
-        **estimation_kwargs,
-    )
-    _info("Finished initial fitting.")
-
-    _info(f"Refitting genotypes with {stage2_hyperparameters}.")
-    est_curr, history1 = sf.estimation.estimate_parameters(
-        (
-            pmodel.with_hyperparameters(**stage2_hyperparameters)
-            .condition(pi=est_curr.data.communities.values)
-            .condition(**metagenotypes.to_counts_and_totals())
-        ),
-        initialize_params=dict(gamma=est_curr.data.genotypes.values),
-        quiet=quiet,
-        device=device,
-        dtype=dtype,
-        **estimation_kwargs,
-    )
-
-    _info(f"Collapsing {nstrain} initial strains.")
-    agg_communities = sf.estimation.communities_aggregated_by_strain_cluster(
-        est_curr,
-        diss_thresh=diss_thresh,
-        pdist_func=lambda w: w.genotypes.pdist(quiet=quiet),
-        frac_thresh=frac_thresh,
-    )
-    _info(f"{agg_communities.sizes['strain']} strains after collapsing.")
-
-    _info("Refitting genotypes.")
-    est_curr, history2 = sf.estimation.estimate_parameters(
-        (
-            pmodel.with_hyperparameters(**stage2_hyperparameters)
-            .with_amended_coords(
-                position=metagenotypes.position.values,
-                strain=agg_communities.strain.values,
-            )
-            .condition(
-                pi=agg_communities.values,
-            )
-            .condition(**metagenotypes.to_counts_and_totals())
-        ),
-        quiet=quiet,
-        device=device,
-        dtype=dtype,
-        **estimation_kwargs,
-    )
-
-    _info("Refitting communities.")
-    est_curr, history3 = sf.estimation.estimate_parameters(
-        (
-            pmodel.with_hyperparameters(**stage2_hyperparameters)
-            .with_amended_coords(
-                position=metagenotypes.position.values,
-                strain=est_curr.strain.values,
-            )
-            .condition(
-                gamma=est_curr.genotypes.values,
-            )
-            .condition(**metagenotypes.to_counts_and_totals())
-        ),
-        initialize_params=dict(gamma=est_curr.data.genotypes.values),
-        quiet=quiet,
-        device=device,
-        dtype=dtype,
-        **estimation_kwargs,
-    )
-
-    end_time = time.time()
-    delta_time = end_time - start_time
-    _info(f"END: Fit in {delta_time} seconds.")
-    return est_curr, [history0, history1, history2, history3]
-
-
-def fit_subsampled_metagenotypes_then_collapse_and_refine_each_then_iteratively_refit_genotypes(
+def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
     structure,
     metagenotypes,
     nstrain,
@@ -377,6 +153,11 @@ def fit_subsampled_metagenotypes_then_collapse_and_refine_each_then_iteratively_
         **estimation_kwargs,
     )
     _info("Finished initial fitting.")
+    _info(
+        "Average metagenotype error: {}".format(
+            sf.evaluation.metagenotype_error(est_curr, est_curr)[0]
+        )
+    )
 
     _info(f"Refitting genotypes with {stage2_hyperparameters}.")
     est_curr, history1 = sf.estimation.estimate_parameters(
@@ -385,12 +166,17 @@ def fit_subsampled_metagenotypes_then_collapse_and_refine_each_then_iteratively_
             .condition(pi=est_curr.data.communities.values)
             .condition(**metagenotypes.to_counts_and_totals())
         ),
-        initialize_params=dict(gamma=est_curr.data.genotypes.values),
+        # initialize_params=dict(gamma=est_curr.data.genotypes.values),
         quiet=quiet,
         device=device,
         dtype=dtype,
         seed=seed,
         **estimation_kwargs,
+    )
+    _info(
+        "Average metagenotype error: {}".format(
+            sf.evaluation.metagenotype_error(est_curr, est_curr)[0]
+        )
     )
 
     _info(f"Collapsing {nstrain} initial strains.")
@@ -401,47 +187,6 @@ def fit_subsampled_metagenotypes_then_collapse_and_refine_each_then_iteratively_
         frac_thresh=frac_thresh,
     )
     _info(f"{agg_communities.sizes['strain']} strains after collapsing.")
-
-    _info("Refitting genotypes.")
-    est_curr, history2 = sf.estimation.estimate_parameters(
-        (
-            pmodel.with_hyperparameters(**stage2_hyperparameters)
-            .with_amended_coords(
-                position=metagenotypes.position.values,
-                strain=agg_communities.strain.values,
-            )
-            .condition(
-                pi=agg_communities.values,
-            )
-            .condition(**metagenotypes.to_counts_and_totals())
-        ),
-        quiet=quiet,
-        device=device,
-        dtype=dtype,
-        seed=seed,
-        **estimation_kwargs,
-    )
-
-    _info("Refitting communities.")
-    est_curr, history3 = sf.estimation.estimate_parameters(
-        (
-            pmodel.with_hyperparameters(**stage2_hyperparameters)
-            .with_amended_coords(
-                position=metagenotypes.position.values,
-                strain=est_curr.strain.values,
-            )
-            .condition(
-                gamma=est_curr.genotypes.values,
-            )
-            .condition(**metagenotypes.to_counts_and_totals())
-        ),
-        initialize_params=dict(gamma=est_curr.data.genotypes.values),
-        quiet=quiet,
-        device=device,
-        dtype=dtype,
-        seed=seed,
-        **estimation_kwargs,
-    )
 
     _info("Iteratively refitting full-length genotypes.")
     genotypes_chunks = []
@@ -457,10 +202,10 @@ def fit_subsampled_metagenotypes_then_collapse_and_refine_each_then_iteratively_
             pmodel.with_hyperparameters(**stage2_hyperparameters)
             .with_amended_coords(
                 position=metagenotypes_chunk.position.values,
-                strain=est_curr.strain.values,
+                strain=agg_communities.strain.values,
             )
             .condition(
-                pi=est_curr.communities.values,
+                pi=agg_communities.values,
             )
             .condition(**metagenotypes_chunk.to_counts_and_totals()),
             quiet=quiet,
@@ -475,11 +220,11 @@ def fit_subsampled_metagenotypes_then_collapse_and_refine_each_then_iteratively_
     est_curr = sf.data.World(
         est_curr.data.drop_dims(["position", "allele"]).assign(
             genotypes=genotypes.data,
-            metagenotypes=metagenotypes.data,
+            metagenotypes=metagenotypes_full.data,
         )
     )
 
     end_time = time.time()
     delta_time = end_time - start_time
     _info(f"END: Fit in {delta_time} seconds.")
-    return est_curr, [history0, history1, history2, history3]
+    return est_curr, [history0, history1]
