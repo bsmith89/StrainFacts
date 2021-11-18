@@ -263,6 +263,8 @@ class FitSimple(AppInterface):
             metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
         else:
             metagenotypes = sf.data.Metagenotypes.load(args.inpath)
+
+        np.random.seed(args.random_seed)
         if args.num_positions:
             metagenotypes = metagenotypes.random_sample(args.num_positions, "position")
         est, history = sf.workflow.fit_metagenotypes_simple(
