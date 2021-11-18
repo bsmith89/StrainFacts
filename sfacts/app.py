@@ -231,6 +231,9 @@ class FitSimple(AppInterface):
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
+        parser.add_argument("--anneal-wait", type=int, default=0)
+        parser.add_argument("--anneal-steps", type=int, default=0)
+        parser.add_argument("--anneal-hyperparameters", nargs="+", default=[])
         add_optimization_arguments(parser)
         parser.add_argument("--inpath", "-i", required=True)
         parser.add_argument("--outpath", "-o", required=True)
@@ -241,6 +244,10 @@ class FitSimple(AppInterface):
     def transform_app_parameter_inputs(cls, args):
         args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
         args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
+        args.anneal_hyperparameters = {
+            k: dict(name="log", start=1.0, end=args.hyperparameters[k], wait_steps=args.anneal_wait)
+            for k in args.anneal_hyperparameters
+        }
         args = transform_optimization_parameter_inputs(args)
         return args
 
@@ -254,6 +261,8 @@ class FitSimple(AppInterface):
             metagenotypes=metagenotypes,
             nstrain=args.num_strains,
             hyperparameters=args.hyperparameters,
+            anneal_hyperparameters=args.anneal_hyperparameters,
+            annealiter=args.anneal_steps,
             device=args.device,
             dtype=sf.pyro_util.PRECISION_MAP[args.precision],
             quiet=(not args.verbose),
@@ -314,11 +323,12 @@ class FitComplex(AppInterface):
             type=float,
             help="Minimum single-sample abundance to keep a strain.",
         )
-        # parser.add_argument("--anneal-steps", default=0)
-        # parser.add_argument("--anneal-hyperparameters", default='')
-        # parser.add_argument(
-        #     "--refinement-hyperparameters", nargs="+", action="append", default=[]
-        # )
+        parser.add_argument("--anneal-wait", type=int, default=0)
+        parser.add_argument("--anneal-steps", type=int, default=0)
+        parser.add_argument("--anneal-hyperparameters", nargs="+", default=[])
+        parser.add_argument(
+            "--refinement-hyperparameters", nargs="+", action="append", default=[]
+        )
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
@@ -333,6 +343,11 @@ class FitComplex(AppInterface):
                 "One of either --num-strains or --strains-per-sample must be set."
             )
         args = transform_optimization_parameter_inputs(args)
+        args.anneal_hyperparameters = {
+            k: dict(name="log", start=1.0, end=args.hyperparameters[k], wait_steps=args.anneal_wait)
+            for k in args.anneal_hyperparameters
+        }
+        args.refinement_hyperparameters = parse_hyperparameter_strings(args.refinement_hyperparameters)
         return args
 
     @classmethod
@@ -354,7 +369,9 @@ class FitComplex(AppInterface):
             diss_thresh=args.collapse,
             frac_thresh=args.cull,
             hyperparameters=args.hyperparameters,
-            stage2_hyperparameters=dict(gamma_hyper=1.0),
+            anneal_hyperparameters=args.anneal_hyperparameters,
+            annealiter=args.anneal_steps,
+            stage2_hyperparameters=args.refinement_hyperparameters,
             device=args.device,
             dtype=sf.pyro_util.PRECISION_MAP[args.precision],
             quiet=(not args.verbose),
