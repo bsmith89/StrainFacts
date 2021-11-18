@@ -392,12 +392,14 @@ class Genotypes(WrappedDataArrayMixin):
 
     def entropy(self, dim="strain"):
         if dim == "strain":
-            sum_over = "position"
+            over = "position"
         elif dim == "position":
-            sum_over = "strain"
+            over = "strain"
         p = self.data
-        ent = sf.math.binary_entropy(p)
-        return ent.sum(sum_over).rename("entropy")
+        ent = pd.DataFrame(
+            sf.math.binary_entropy(p), columns=self.position, index=self.strain
+        ).rename_axis(columns="position", index="strain").stack().to_xarray()
+        return ent.mean(over).rename("entropy")
 
 
 class Missingness(WrappedDataArrayMixin):
