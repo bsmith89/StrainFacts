@@ -235,10 +235,16 @@ class FitSimple(AppInterface):
         parser.add_argument("--anneal-steps", type=int, default=0)
         parser.add_argument("--anneal-hyperparameters", nargs="+", default=[])
         add_optimization_arguments(parser)
-        parser.add_argument("--inpath", "-i", required=True)
-        parser.add_argument("--outpath", "-o", required=True)
+        parser.add_argument(
+            "--tsv",
+            action="store_true",
+            default=False,
+            help="Input file is in TSV format (rather than NetCDF).",
+        )
         parser.add_argument("--verbose", "-v", action="store_true", default=False)
         parser.add_argument("--history-outpath")
+        parser.add_argument("inpath")
+        parser.add_argument("outpath")
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
@@ -253,7 +259,10 @@ class FitSimple(AppInterface):
 
     @classmethod
     def run(cls, args):
-        metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+        if args.tsv:
+            metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+        else:
+            metagenotypes = sf.data.Metagenotypes.load(args.inpath)
         if args.num_positions:
             metagenotypes = metagenotypes.random_sample(args.num_positions, "position")
         est, history = sf.workflow.fit_metagenotypes_simple(
@@ -307,9 +316,16 @@ class FitComplex(AppInterface):
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
-        parser.add_argument("--inpath", "-i", required=True)
-        parser.add_argument("--outpath", "-o", required=True)
+        parser.add_argument(
+            "--tsv",
+            action="store_true",
+            default=False,
+            help="Input file is in TSV format (rather than NetCDF).",
+        )
         parser.add_argument("--verbose", "-v", action="store_true", default=False)
+        parser.add_argument("--history-outpath")
+        parser.add_argument("inpath")
+        parser.add_argument("outpath")
         add_optimization_arguments(parser)
         parser.add_argument(
             "--collapse",
@@ -352,9 +368,11 @@ class FitComplex(AppInterface):
 
     @classmethod
     def run(cls, args):
-        metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
-        if args.num_positions is not None:
-            metagenotypes = metagenotypes.random_sample(position=args.num_positions)
+        if args.tsv:
+            metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+        else:
+            metagenotypes = sf.data.Metagenotypes.load(args.inpath)
+
         if args.strains_per_sample:
             num_strains = int(
                 np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
@@ -362,7 +380,10 @@ class FitComplex(AppInterface):
         else:
             num_strains = args.num_strains
 
-        est = sf.workflow.fit_metagenotypes_then_collapse_and_refine_each(
+        est, (
+            history,
+            *_,
+        ) = sf.workflow.fit_metagenotypes_then_collapse_and_refine_each(
             structure=args.model_structure,
             metagenotypes=metagenotypes,
             nstrain=num_strains,
@@ -378,6 +399,11 @@ class FitComplex(AppInterface):
             estimation_kwargs=args.estimation_kwargs,
         )
         est.dump(args.outpath)
+
+        if args.history_outpath:
+            with open(args.history_outpath, "w") as f:
+                for elbo in history:
+                    print(elbo, file=f)
 
 
 def main():
