@@ -39,6 +39,12 @@ def add_optimization_arguments(parser):
         "--optimizer", default="Adamax", choices=sf.estimation.OPTIMIZERS.keys()
     )
     parser.add_argument("--optimizer-learning-rate", type=float)
+    parser.add_argument(
+        "--min-optimizer-learning-rate",
+        type=float,
+        default=1e-6,
+        help="Learning rate threshold to stop reduction 'schedule'.",
+    )
 
 
 def transform_optimization_parameter_inputs(args):
@@ -56,6 +62,7 @@ def transform_optimization_parameter_inputs(args):
         lagB=args.lag2,
         optimizer_name=args.optimizer,
         optimizer_kwargs=optimizer_kwargs,
+        minimum_lr=args.min_optimizer_learning_rate,
     )
     return args
 
