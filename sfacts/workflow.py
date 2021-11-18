@@ -97,6 +97,7 @@ def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
     metagenotypes,
     nstrain,
     nposition,
+    npositionB=None,
     hyperparameters=None,
     anneal_hyperparameters=None,
     annealiter=0,
@@ -117,6 +118,8 @@ def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
         estimation_kwargs = {}
     if stage2_hyperparameters is None:
         stage2_hyperparameters = {}
+    if npositionB is None:
+        npositionB = nposition
 
     _info(f"START: Fitting data with shape {metagenotypes.sizes}.")
 
@@ -192,7 +195,7 @@ def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
     genotypes_chunks = []
     for position_start, position_end in _chunk_start_end_iterator(
         metagenotypes_full.sizes["position"],
-        nposition,
+        npositionB,
     ):
         _info(f"Fitting bin [{position_start}, {position_end}).")
         metagenotypes_chunk = metagenotypes_full.mlift(
