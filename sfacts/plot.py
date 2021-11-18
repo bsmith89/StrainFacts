@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from sklearn.manifold import MDS
 import warnings
+import sfacts as sf
 
 
 def _calculate_clustermap_sizes(
@@ -109,6 +110,10 @@ def plot_generic_clustermap_factory(
         background_color=background_color,
         **kwargs,
     ):
+
+        if isinstance(world, sf.data.WrappedDataArrayMixin):
+            world = world.to_world()
+
         matrix_data = matrix_func(world)
 
         if isel is None:
