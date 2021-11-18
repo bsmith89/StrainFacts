@@ -116,10 +116,6 @@ def get_scheduled_optimization_stepper(
             eps=0,
         )
     )
-    info(
-        f"Optimizing parameters with {optimizer_name}(**{_optimizer_kwargs})",
-        quiet=quiet,
-    )
     svi = pyro.infer.SVI(model, guide, scheduler, loss=loss)
     return svi, scheduler
 
