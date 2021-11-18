@@ -361,6 +361,7 @@ class FitComplex(AppInterface):
                 "One of either --num-strains or --strains-per-sample must be set."
             )
         args = transform_optimization_parameter_inputs(args)
+        del args.estimation_kwargs['seed']  # Here consumed by workflow, not estimation.
         args.anneal_hyperparameters = {
             k: dict(name="log", start=1.0, end=args.hyperparameters[k], wait_steps=args.anneal_wait)
             for k in args.anneal_hyperparameters
@@ -400,10 +401,11 @@ class FitComplex(AppInterface):
         est, (
             history,
             *_,
-        ) = sf.workflow.fit_metagenotypes_then_collapse_and_refine_each(
+        ) = sf.workflow.fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
             structure=args.model_structure,
             metagenotypes=metagenotypes,
             nstrain=num_strains,
+            nposition=args.num_positions,
             diss_thresh=args.collapse,
             frac_thresh=args.cull,
             hyperparameters=args.hyperparameters,
@@ -413,6 +415,7 @@ class FitComplex(AppInterface):
             device=args.device,
             dtype=sf.pyro_util.PRECISION_MAP[args.precision],
             quiet=(not args.verbose),
+            seed=args.random_seed,
             estimation_kwargs=args.estimation_kwargs,
         )
         est.dump(args.outpath)
