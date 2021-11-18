@@ -368,6 +368,21 @@ class FitComplex(AppInterface):
 
     @classmethod
     def run(cls, args):
+        warnings.filterwarnings(
+            "ignore",
+            category=UserWarning,
+            module="sfacts.math",
+            lineno=43,
+            message="Progress bar not implemented for genotype_pdist.",
+        )
+        warnings.filterwarnings(
+            "ignore",
+            category=RuntimeWarning,
+            module="sfacts.math",
+            lineno=26,
+            message="invalid value encountered in float_scalars",
+        )
+
         if args.tsv:
             metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
         else:
