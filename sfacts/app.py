@@ -131,15 +131,19 @@ class FilterMetagenotypes(AppInterface):
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument("inpath")
-        parser.add_argument("outpath")
         parser.add_argument("--min-minor-allele-freq", type=float, default=0.05)
         parser.add_argument("--min-horizontal-cvrg", type=float, default=0.1)
+        parser.add_argument("--num-positions", type=int)
+        parser.add_argument("--random-seed", type=int)
+        parser.add_argument("inpath")
+        parser.add_argument("outpath")
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
         assert 0 < args.min_minor_allele_freq < 1
         assert 0 < args.min_horizontal_cvrg < 1
+        if args.num_positions is None:
+            args.num_positions = int(1e20)
         return args
 
     @classmethod
@@ -148,8 +152,11 @@ class FilterMetagenotypes(AppInterface):
         mgen_filt = mgen_all.select_variable_positions(
             thresh=0.05
         ).select_samples_with_coverage(0.05)
-        mgen_filt.dump(args.outpath)
 
+        nposition = min(mgen_filt.sizes["position"], args.num_positions)
+        np.random.seed(args.random_seed)
+        mgen_filt_ss = mgen_filt.random_sample(position=nposition)
+        mgen_filt_ss.dump(args.outpath)
 
 
 class Simulate(AppInterface):
