@@ -10,6 +10,8 @@ from sfacts.model_zoo import (
     simple_ssdd2,
     simple_ssdd2_with_error,
     simple_like_sfinder,
+    ssdd3,
+    ssdd3_with_error,
 )
 
 NAMED_STRUCTURES = dict(
@@ -23,4 +25,6 @@ NAMED_STRUCTURES = dict(
     simple_ssdd2=simple_ssdd2.model,
     simple_ssdd2_with_error=simple_ssdd2_with_error.model,
     simple_like_sfinder=simple_like_sfinder.model,
+    ssdd3=ssdd3.model,
+    ssdd3_with_error=ssdd3_with_error.model,
 )
