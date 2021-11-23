@@ -209,11 +209,16 @@ def unifrac_error(reference, estimate, coef=1e6):
     )
 
 
-def unifrac_pdist(world, coef=1e6):
+def unifrac_pdist(world, coef=1e6, discretized=False):
     from skbio import DistanceMatrix
     from skbio.diversity.beta import weighted_unifrac
 
-    dm = world.genotypes.pdist()
+    if discretized:
+        genotypes = world.genotypes.discretized()
+    else:
+        genotypes = world.genotypes
+
+    dm = genotypes.pdist()
     dm = DistanceMatrix(dm, dm.index.astype(str))
     tree = neighbor_joining(dm).root_at_midpoint()
     return pdist(
@@ -225,9 +230,9 @@ def unifrac_pdist(world, coef=1e6):
     )
 
 
-def unifrac_error2(reference, estimate, coef=1e6):
-    ref_pdist = squareform(unifrac_pdist(reference, coef=coef))
-    est_pdist = squareform(unifrac_pdist(estimate, coef=coef))
+def unifrac_error2(reference, estimate, coef=1e6, discretized=True):
+    ref_pdist = squareform(unifrac_pdist(reference, coef=coef, discretized=discretized))
+    est_pdist = squareform(unifrac_pdist(estimate, coef=coef, discretized=discretized))
 
     out = []
     for i in range(len(ref_pdist)):
