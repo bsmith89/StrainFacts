@@ -398,9 +398,10 @@ class FitComplex(AppInterface):
         else:
             num_strains = args.num_strains
 
-        est, (
-            history,
-            *_,
+        (
+            est,
+            est_list,
+            history_list,
         ) = sf.workflow.fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
             structure=args.model_structure,
             metagenotypes=metagenotypes,
@@ -419,6 +420,7 @@ class FitComplex(AppInterface):
             estimation_kwargs=args.estimation_kwargs,
         )
         est.dump(args.outpath)
+        history = history_list[0]
 
         if args.history_outpath:
             with open(args.history_outpath, "w") as f:
