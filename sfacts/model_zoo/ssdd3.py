@@ -91,11 +91,6 @@ def model(
     # Expected fractions of each allele at each position
     p = pyro.deterministic("p", pi @ gamma)
     y = pyro.sample(
-        "y",
-        dist.Binomial(
-            probs=p,
-            total_count=m,
-            validate_args=False,
-        ).to_event(),
+        "y", dist.Binomial(probs=p, total_count=m, validate_args=False,).to_event(),
     )
     pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))

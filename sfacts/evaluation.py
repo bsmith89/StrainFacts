@@ -95,8 +95,9 @@ def braycurtis_error(reference, estimate):
         bcA_i, bcB_i = bcA[:, i], bcB[:, i]
         out.append(_rmse(np.delete(bcA_i, i), np.delete(bcB_i, i)))
 
-    return np.mean(out), pd.Series(out, index=reference.sample).rename_axis(
-        index="sample"
+    return (
+        np.mean(out),
+        pd.Series(out, index=reference.sample).rename_axis(index="sample"),
     )
 
 
@@ -124,8 +125,9 @@ def integrated_community_error(reference, estimate):
     ref_expect = (ref_outer * ref_genotypes_cdist).sum(axis=(1, 2))
 
     err = np.abs(est_expect - ref_expect)
-    return np.mean(err), pd.Series(err, index=reference.sample).rename_axis(
-        index="sample"
+    return (
+        np.mean(err),
+        pd.Series(err, index=reference.sample).rename_axis(index="sample"),
     )
 
 
@@ -176,8 +178,9 @@ def rank_abundance_error(reference, estimate, p=1):
             ** (1 / p)
         )
 
-    return np.mean(err), pd.Series(err, index=reference.sample).rename_axis(
-        index="sample"
+    return (
+        np.mean(err),
+        pd.Series(err, index=reference.sample).rename_axis(index="sample"),
     )
 
 
@@ -209,8 +212,9 @@ def unifrac_error(reference, estimate, coef=1e6):
                 validate=False,
             )
         )
-    return np.mean(diss), pd.Series(diss, index=reference.sample).rename_axis(
-        index="sample"
+    return (
+        np.mean(diss),
+        pd.Series(diss, index=reference.sample).rename_axis(index="sample"),
     )
 
 
@@ -244,6 +248,7 @@ def unifrac_error2(reference, estimate, coef=1e6, discretized=True):
         ref_i, est_i = ref_pdist[:, i], est_pdist[:, i]
         out.append(_mae(np.delete(ref_i, i), np.delete(est_i, i)))
 
-    return np.mean(out), pd.Series(out, index=reference.sample).rename_axis(
-        index="sample"
+    return (
+        np.mean(out),
+        pd.Series(out, index=reference.sample).rename_axis(index="sample"),
     )

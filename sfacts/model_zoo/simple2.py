@@ -15,16 +15,7 @@ import pyro.distributions as dist
     dims=SHARED_DIMS,
     description=_mapping_subset(
         SHARED_DESCRIPTIONS,
-        [
-            "rho",
-            "p",
-            "m",
-            "y",
-            "genotypes",
-            "communities",
-            "metagenotypes",
-            "mu",
-        ],
+        ["rho", "p", "m", "y", "genotypes", "communities", "metagenotypes", "mu",],
     ),
     default_hyperparameters=dict(
         gamma_hyper=0.01,
@@ -69,10 +60,7 @@ def model(
     with pyro.plate("sample", n, dim=-1):
         # Community composition
         _pi = pyro.sample("_pi", dist.Dirichlet(_unit.repeat(s) * pi_hyper))
-        pi = pyro.deterministic(
-            "pi",
-            powerperturb_transformation(_pi, _unit, rho),
-        )
+        pi = pyro.deterministic("pi", powerperturb_transformation(_pi, _unit, rho),)
     pyro.deterministic("communities", pi)
 
     m = pyro.sample(

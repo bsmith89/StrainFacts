@@ -15,15 +15,7 @@ import pyro.distributions as dist
     dims=SHARED_DIMS,
     description=_mapping_subset(
         SHARED_DESCRIPTIONS,
-        [
-            "p",
-            "m",
-            "y",
-            "genotypes",
-            "communities",
-            "metagenotypes",
-            "mu",
-        ],
+        ["p", "m", "y", "genotypes", "communities", "metagenotypes", "mu",],
     ),
     default_hyperparameters=dict(
         gamma_hyper=0.01,
@@ -84,12 +76,7 @@ def model(
     )
     # Observation
     y = pyro.sample(
-        "y",
-        dist.Binomial(
-            probs=p,
-            total_count=m,
-            validate_args=False,
-        ).to_event(),
+        "y", dist.Binomial(probs=p, total_count=m, validate_args=False,).to_event(),
     )
     pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
     pyro.deterministic("mu", m.mean(axis=1))

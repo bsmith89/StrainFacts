@@ -113,16 +113,14 @@ def model(
         ).unsqueeze(-1)
         # Sample coverage
         mu = pyro.sample(
-            "mu",
-            dist.LogNormal(loc=torch.log(mu_hyper_mean), scale=mu_hyper_scale),
+            "mu", dist.LogNormal(loc=torch.log(mu_hyper_mean), scale=mu_hyper_scale),
         )
     pyro.deterministic("communities", pi)
 
     # Depth at each position
     nu = pyro.deterministic("nu", pi @ delta)
     m = pyro.sample(
-        "m",
-        NegativeBinomialReparam(nu * mu.reshape((-1, 1)), m_hyper_r).to_event(),
+        "m", NegativeBinomialReparam(nu * mu.reshape((-1, 1)), m_hyper_r).to_event(),
     )
 
     # Expected fractions of each allele at each position
@@ -135,9 +133,7 @@ def model(
     y = pyro.sample(
         "y",
         dist.BetaBinomial(
-            concentration1=alpha * p,
-            concentration0=alpha * (1 - p),
-            total_count=m,
+            concentration1=alpha * p, concentration0=alpha * (1 - p), total_count=m,
         ).to_event(),
     )
     pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))

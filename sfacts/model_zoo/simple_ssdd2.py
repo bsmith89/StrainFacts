@@ -15,16 +15,7 @@ import pyro.distributions as dist
     dims=SHARED_DIMS,
     description=_mapping_subset(
         SHARED_DESCRIPTIONS,
-        [
-            "rho",
-            "p",
-            "m",
-            "y",
-            "genotypes",
-            "communities",
-            "metagenotypes",
-            "mu",
-        ],
+        ["rho", "p", "m", "y", "genotypes", "communities", "metagenotypes", "mu",],
     ),
     default_hyperparameters=dict(
         gamma_hyper=0.01,
@@ -73,8 +64,7 @@ def model(
         # Community composition
         _pi = pyro.sample("_pi", dist.Dirichlet(_unit.repeat(s)))
         pi = pyro.deterministic(
-            "pi",
-            powerperturb_transformation(_pi, 1 / pi_hyper, rho),
+            "pi", powerperturb_transformation(_pi, 1 / pi_hyper, rho),
         )
     pyro.deterministic("communities", pi)
 
@@ -96,12 +86,7 @@ def model(
     #     ).to_event(),
     # )
     y = pyro.sample(
-        "y",
-        dist.Binomial(
-            probs=p,
-            total_count=m,
-            validate_args=False,
-        ).to_event(),
+        "y", dist.Binomial(probs=p, total_count=m, validate_args=False,).to_event(),
     )
     pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
     pyro.deterministic("mu", m.mean(axis=1))

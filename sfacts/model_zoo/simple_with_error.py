@@ -93,12 +93,7 @@ def model(
     )
 
     y = pyro.sample(
-        "y",
-        dist.Binomial(
-            probs=p,
-            total_count=m,
-            validate_args=False,
-        ).to_event(),
+        "y", dist.Binomial(probs=p, total_count=m, validate_args=False,).to_event(),
     )
     pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
     pyro.deterministic("mu", m.mean(axis=1))
