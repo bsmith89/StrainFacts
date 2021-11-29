@@ -396,9 +396,14 @@ class Genotypes(WrappedDataArrayMixin):
         elif dim == "position":
             over = "strain"
         p = self.data
-        ent = pd.DataFrame(
-            sf.math.binary_entropy(p), columns=self.position, index=self.strain
-        ).rename_axis(columns="position", index="strain").stack().to_xarray()
+        ent = (
+            pd.DataFrame(
+                sf.math.binary_entropy(p), columns=self.position, index=self.strain
+            )
+            .rename_axis(columns="position", index="strain")
+            .stack()
+            .to_xarray()
+        )
         return ent.mean(over).rename("entropy")
 
 

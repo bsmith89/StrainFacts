@@ -251,7 +251,12 @@ class FitSimple(AppInterface):
         args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
         args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
         args.anneal_hyperparameters = {
-            k: dict(name="log", start=1.0, end=args.hyperparameters[k], wait_steps=args.anneal_wait)
+            k: dict(
+                name="log",
+                start=1.0,
+                end=args.hyperparameters[k],
+                wait_steps=args.anneal_wait,
+            )
             for k in args.anneal_hyperparameters
         }
         args = transform_optimization_parameter_inputs(args)
@@ -362,12 +367,19 @@ class FitComplex(AppInterface):
                 "One of either --num-strains or --strains-per-sample must be set."
             )
         args = transform_optimization_parameter_inputs(args)
-        del args.estimation_kwargs['seed']  # Here consumed by workflow, not estimation.
+        del args.estimation_kwargs["seed"]  # Here consumed by workflow, not estimation.
         args.anneal_hyperparameters = {
-            k: dict(name="log", start=1.0, end=args.hyperparameters[k], wait_steps=args.anneal_wait)
+            k: dict(
+                name="log",
+                start=1.0,
+                end=args.hyperparameters[k],
+                wait_steps=args.anneal_wait,
+            )
             for k in args.anneal_hyperparameters
         }
-        args.refinement_hyperparameters = parse_hyperparameter_strings(args.refinement_hyperparameters)
+        args.refinement_hyperparameters = parse_hyperparameter_strings(
+            args.refinement_hyperparameters
+        )
         return args
 
     @classmethod

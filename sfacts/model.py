@@ -295,7 +295,6 @@ class ParameterizedModel:
             passed_hyperparameters=new_passed_hyperparameters,
         )
 
-
     def format_world(self, data):
         out = {}
         for k in self.structure.description:

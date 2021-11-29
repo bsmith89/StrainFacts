@@ -81,7 +81,8 @@ def model(
     m = pyro.sample(
         "m",
         dist.GammaPoisson(
-            rate=m_hyper_concentration / mu.reshape((-1, 1)), concentration=m_hyper_concentration
+            rate=m_hyper_concentration / mu.reshape((-1, 1)),
+            concentration=m_hyper_concentration,
         )
         .expand([n, g])
         .to_event(),

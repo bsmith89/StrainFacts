@@ -128,11 +128,16 @@ def integrated_community_error(reference, estimate):
         index="sample"
     )
 
+
 def community_entropy_error(reference, estimate):
     ref_community_entropy = entropy(reference.communities.values)
     est_community_entropy = entropy(estimate.communities.values)
     diff = est_community_entropy - ref_community_entropy
-    return np.mean(diff), diff,
+    return (
+        np.mean(diff),
+        diff,
+    )
+
 
 def matched_strain_total_abundance_error(reference, estimate):
     best_match, _ = match_genotypes(reference, estimate, flip=True)

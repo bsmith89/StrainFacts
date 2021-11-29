@@ -23,7 +23,8 @@ from sfacts.logging_util import info
 
 
 def _tqdm_format_num(n):
-    return f'{n:+#0.3e}'
+    return f"{n:+#0.3e}"
+
 
 OPTIMIZERS = dict()
 for _name, _default_optimizer_kwargs in [
@@ -37,7 +38,9 @@ for _name, _default_optimizer_kwargs in [
     OPTIMIZERS[_name] = torch.optim.__dict__[_name], _default_optimizer_kwargs
 
 
-def linear_annealing_schedule(start, end, annealing_steps, wait_steps=0, total_steps=None):
+def linear_annealing_schedule(
+    start, end, annealing_steps, wait_steps=0, total_steps=None
+):
     if total_steps is None:
         total_steps = annealing_steps
     final_steps = total_steps - (annealing_steps)
@@ -59,13 +62,17 @@ def log_annealing_schedule(start, end, annealing_steps, wait_steps=0, total_step
     return np.concatenate(
         [
             np.repeat(start, wait_steps),
-            np.logspace(np.log10(start), np.log10(end), num=annealing_steps - wait_steps),
+            np.logspace(
+                np.log10(start), np.log10(end), num=annealing_steps - wait_steps
+            ),
             np.repeat(end, final_steps),
         ]
     )
 
 
-def invlinear_annealing_schedule(start, end, annealing_steps, wait_steps=0, total_steps=None):
+def invlinear_annealing_schedule(
+    start, end, annealing_steps, wait_steps=0, total_steps=None
+):
     if total_steps is None:
         total_steps = annealing_steps
     final_steps = total_steps - (annealing_steps)
@@ -190,7 +197,9 @@ def estimate_parameters(
     )
 
     history = []
-    tqdm.format_num = staticmethod(_tqdm_format_num)  # Monkeypatch to format numbers better
+    tqdm.format_num = staticmethod(
+        _tqdm_format_num
+    )  # Monkeypatch to format numbers better
     pbar = tqdm(
         zip(range(maxiter), *anneal_hyperparameters.values()),
         total=maxiter,
@@ -280,7 +289,10 @@ def estimate_parameters(
 
     return (
         model.with_hyperparameters(
-            **{k: passed_hyperparameters[i].detach().cpu().numpy() for i, k in enumerate(anneal_hyperparameters.keys())}
+            **{
+                k: passed_hyperparameters[i].detach().cpu().numpy()
+                for i, k in enumerate(anneal_hyperparameters.keys())
+            }
         ).format_world(est),
         history,
     )
