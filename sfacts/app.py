@@ -315,6 +315,7 @@ class FitComplex(AppInterface):
             ),
         )
         parser.add_argument("--num-positions", "-g", type=int)
+        parser.add_argument("--num-positionsB", type=int)
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
@@ -407,6 +408,7 @@ class FitComplex(AppInterface):
             metagenotypes=metagenotypes,
             nstrain=num_strains,
             nposition=args.num_positions,
+            npositionB=args.num_positionsB,
             diss_thresh=args.collapse,
             frac_thresh=args.cull,
             hyperparameters=args.hyperparameters,
