@@ -60,7 +60,9 @@ def fit_metagenotypes_simple(
     if estimation_kwargs is None:
         estimation_kwargs = {}
 
-    _info(f"START: Fitting {nstrain} strains with data shape {metagenotypes.sizes}.",)
+    _info(
+        f"START: Fitting {nstrain} strains with data shape {metagenotypes.sizes}.",
+    )
     pmodel = sf.model.ParameterizedModel(
         structure,
         coords=dict(
@@ -202,7 +204,8 @@ def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
     _info("Iteratively refitting full-length genotypes.")
     genotypes_chunks = []
     for position_start, position_end in _chunk_start_end_iterator(
-        metagenotypes_full.sizes["position"], npositionB,
+        metagenotypes_full.sizes["position"],
+        npositionB,
     ):
         _info(f"Fitting bin [{position_start}, {position_end}).")
         metagenotypes_chunk = metagenotypes_full.mlift(
@@ -214,7 +217,9 @@ def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
                 position=metagenotypes_chunk.position.values,
                 strain=agg_communities.strain.values,
             )
-            .condition(pi=agg_communities.values,)
+            .condition(
+                pi=agg_communities.values,
+            )
             .condition(**metagenotypes_chunk.to_counts_and_totals()),
             quiet=quiet,
             device=device,
@@ -229,7 +234,8 @@ def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
     genotypes = sf.data.Genotypes(xr.concat(genotypes_chunks, dim="position"))
     est_curr = sf.data.World(
         est_curr.data.drop_dims(["position", "allele"]).assign(
-            genotypes=genotypes.data, metagenotypes=metagenotypes_full.data,
+            genotypes=genotypes.data,
+            metagenotypes=metagenotypes_full.data,
         )
     )
     est_list.append(est_curr)

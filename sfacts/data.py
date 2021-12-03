@@ -71,7 +71,11 @@ class WrappedDataArrayMixin:
         for k in coords:
             if coords[k] is None:
                 coords[k] = range(shapes[k])
-        data = xr.DataArray(x, dims=cls.dims, coords=coords,)
+        data = xr.DataArray(
+            x,
+            dims=cls.dims,
+            coords=coords,
+        )
         return cls(data)
 
     @classmethod
@@ -293,7 +297,11 @@ class Metagenotypes(WrappedDataArrayMixin):
         return self.to_estimated_genotypes(pseudo=pseudo).linkage(dim=_dim, **kwargs)
 
     def cosine_linkage(
-        self, dim="sample", method="complete", optimal_ordering=False, **kwargs,
+        self,
+        dim="sample",
+        method="complete",
+        optimal_ordering=False,
+        **kwargs,
     ):
         dmat = self.cosine_pdist(dim=dim)
         cdmat = squareform(dmat)

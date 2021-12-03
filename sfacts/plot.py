@@ -268,7 +268,7 @@ plot_metagenotype2 = plot_generic_clustermap_factory(
             .rename("mean_depth")
         )
     ),
-    background_color='darkgrey',
+    background_color="darkgrey",
 )
 
 
@@ -487,7 +487,12 @@ def ordination_plot(
     ordin = ordin_func(dmat)
 
     scatter_kwargs = dict(
-        c=colors, cmap="viridis", s=sizes, edgecolor="k", lw=0.2, alpha=0.8,
+        c=colors,
+        cmap="viridis",
+        s=sizes,
+        edgecolor="k",
+        lw=0.2,
+        alpha=0.8,
     )
     scatter_kwargs.update(kwargs)
     if ax is None:
@@ -540,7 +545,10 @@ def plot_metagenotype_frequency_spectrum(
         for i, sample in enumerate(sample_list):
             ax = axs[i, i]
             ax.axvline(
-                max_frac.sel(sample=sample), linestyle="--", lw=1, color="darkblue",
+                max_frac.sel(sample=sample),
+                linestyle="--",
+                lw=1,
+                color="darkblue",
             )
             ax.axvline(
                 max_frac_complement.sel(sample=sample),
@@ -582,7 +590,9 @@ def plot_metagenotype_frequency_spectrum_comparison(
 
 
 def plot_beta_diversity_comparison(
-    worldA, worldB, **kwargs,
+    worldA,
+    worldB,
+    **kwargs,
 ):
     cdmatA = squareform(worldA.communities.pdist(dim="sample"))
     cdmatB = squareform(worldB.communities.pdist(dim="sample"))
