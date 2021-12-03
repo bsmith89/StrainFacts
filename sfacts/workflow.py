@@ -122,7 +122,6 @@ def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
 
     _info(f"START: Fitting data with shape {metagenotypes.sizes}.")
 
-    _info(f"Subsampling {nposition} positions.")
     sf.pyro_util.set_random_seed(seed, warn=(not quiet))
     nposition = min(nposition, metagenotypes.sizes["position"])
     if npositionB is None:
@@ -131,6 +130,7 @@ def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
         npositionB = min(npositionB, metagenotypes.sizes["position"])
 
     metagenotypes_full = metagenotypes
+    _info(f"Subsampling {nposition} positions.")
     metagenotypes = metagenotypes.random_sample(position=nposition)
 
     _info(f"Fitting {nstrain} strains with data shape {metagenotypes.sizes}.")
