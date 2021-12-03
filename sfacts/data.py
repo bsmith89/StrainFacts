@@ -455,7 +455,7 @@ class Communities(WrappedDataArrayMixin):
             sum_over = "strain"
         p = self.data
         ent = sf.math.entropy(p, axis=sum_over)
-        return ent.rename("entropy")
+        return pd.Series(ent, index=getattr(p, dim)).rename_axis(index=dim).to_xarray()
 
 
 class Overdispersion(WrappedDataArrayMixin):
