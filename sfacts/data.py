@@ -59,7 +59,7 @@ class WrappedDataArrayMixin:
 
     @classmethod
     def load_from_tsv(cls, path, validate=True):
-        data = pd.read_table(path, index_col=cls.dims).squeeze().to_xarray()
+        data = pd.read_table(path, index_col=cls.dims).to_xarray()
         data.name = cls.variable_name
         return cls._post_load(data)
 
@@ -180,7 +180,12 @@ class Metagenotypes(WrappedDataArrayMixin):
         if "library_id" in data.dims:
             warn("Converting 'library_id' dimension to 'sample'.")
             data = data.rename({"library_id": "sample"})
-        data = data.squeeze(drop=True).astype(int)
+        if "species_id" in data.dims:
+            warn("Dropping 'species_id' from dims.")
+            # FIXME: This is a hack because one of my data inputs includes the
+            # species_id even though it shouldn't.
+            data = data.squeeze(dim=("species_id",))
+        data = data.astype(int)
         return cls._post_load(data)
 
     @classmethod
