@@ -201,10 +201,11 @@ class Metagenotypes(WrappedDataArrayMixin):
         x = np.stack([y, m - y], axis=-1)
         return cls.from_ndarray(x, coords=coords)
 
-    def dump(self, path, validate=True):
+    def dump(self, path, int_type='uint32', validate=True):
         if validate:
             self.validate_constraints()
-        self.data.astype(np.uint8).to_dataset(name="tally").to_netcdf(
+        assert np.iinfo(int_type).max > self.data.values.max()
+        self.data.astype(int_type).to_dataset(name="tally").to_netcdf(
             path, encoding=dict(tally=dict(zlib=True, complevel=6))
         )
 
