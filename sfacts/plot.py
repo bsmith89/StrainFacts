@@ -509,6 +509,7 @@ def plot_metagenotype_frequency_spectrum(
     world,
     sample_list=None,
     show_dominant=False,
+    show_predict=False,
     axwidth=2,
     axheight=1.5,
     bins=None,
@@ -518,7 +519,7 @@ def plot_metagenotype_frequency_spectrum(
     if sample_list is None:
         sample_list = world.sample.values
 
-    hist_kwargs = dict(color="black")
+    hist_kwargs = dict()
     hist_kwargs.update(kwargs)
 
     n = len(sample_list)
@@ -532,6 +533,7 @@ def plot_metagenotype_frequency_spectrum(
         bins = np.linspace(0.5, 1.0, num=21)
 
     frequencies = world.metagenotypes.mlift("sel", sample=sample_list).frequencies()
+    frequencies_predict = world.data['p'].sel(sample=sample_list)
     for sample_i, row in zip(sample_list, axs):
         for sample_j, ax in zip(sample_list, row):
             domfreq_ij = (
@@ -539,7 +541,14 @@ def plot_metagenotype_frequency_spectrum(
                 .mean("sample")
                 .max("allele")
             )
-            ax.hist(domfreq_ij, bins=bins, **hist_kwargs)
+            ax.hist(domfreq_ij, bins=bins, color='black', **hist_kwargs)
+            if show_predict:
+                freq_predict_ij = (
+                    frequencies_predict.sel(sample=[sample_i, sample_j])
+                    .mean("sample")
+                )
+                domfreq_predict_ij = xr.where(freq_predict_ij > 0.5, freq_predict_ij, 1 - freq_predict_ij)
+                ax.hist(domfreq_predict_ij, bins=bins, color='red', **hist_kwargs, histtype='step')
 
     if show_dominant:
         max_frac = world.communities.sel(sample=sample_list).max("strain")
