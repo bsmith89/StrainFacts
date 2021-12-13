@@ -346,9 +346,15 @@ def nmf_approximation(
     max_iter=int(1e4),
     random_state=None,
     init="random",
+    eps=1e-10,
     **kwargs,
 ):
-    d = world.metagenotypes.to_series().unstack("sample")
+    d = (
+        world.metagenotypes
+        # .frequencies(pseudo=pseudo)
+        .to_series()
+        .unstack("sample")
+    )
     columns = d.columns
     index = d.index
 
@@ -369,13 +375,13 @@ def nmf_approximation(
         **kwargs,
     )
     pi1 = (
-        pd.DataFrame(pi0, columns=columns)
+        pd.DataFrame(pi0 + eps, columns=columns)
         .rename_axis(index="strain")
         .stack()
         .to_xarray()
     )
     gamma1 = (
-        pd.DataFrame(gamma0, index=index)
+        pd.DataFrame(gamma0 + eps, index=index)
         .rename_axis(columns="strain")
         .stack()
         .to_xarray()

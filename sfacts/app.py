@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 
-import sys
 import argparse
 import warnings
-import xarray as xr
-import torch
 import sfacts as sf
 import numpy as np
-import importlib
 from copy import deepcopy
 import itertools
 
@@ -233,7 +229,9 @@ class FitSimple(AppInterface):
         )
         parser.add_argument("--anneal-wait", type=int, default=0)
         parser.add_argument("--anneal-steps", type=int, default=0)
-        parser.add_argument("--anneal-hyperparameters", nargs="+", default=[])
+        parser.add_argument(
+            "--anneal-hyperparameters", nargs="+", action="append", default=[]
+        )
         add_optimization_arguments(parser)
         parser.add_argument(
             "--tsv",
@@ -250,10 +248,13 @@ class FitSimple(AppInterface):
     def transform_app_parameter_inputs(cls, args):
         args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
         args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
+        args.anneal_hyperparameters = parse_hyperparameter_strings(
+            args.anneal_hyperparameters
+        )
         args.anneal_hyperparameters = {
             k: dict(
                 name="log",
-                start=1.0,
+                start=args.anneal_hyperparameters[k],
                 end=args.hyperparameters[k],
                 wait_steps=args.anneal_wait,
             )
@@ -336,6 +337,12 @@ class FitComplex(AppInterface):
         parser.add_argument("outpath")
         add_optimization_arguments(parser)
         parser.add_argument(
+            "--nmf-init",
+            action="store_true",
+            default=False,
+            help="Use NMF to select starting parameters.",
+        )
+        parser.add_argument(
             "--collapse",
             default=0.0,
             type=float,
@@ -349,7 +356,9 @@ class FitComplex(AppInterface):
         )
         parser.add_argument("--anneal-wait", type=int, default=0)
         parser.add_argument("--anneal-steps", type=int, default=0)
-        parser.add_argument("--anneal-hyperparameters", nargs="+", default=[])
+        parser.add_argument(
+            "--anneal-hyperparameters", nargs="+", action="append", default=[]
+        )
         parser.add_argument(
             "--refinement-hyperparameters", nargs="+", action="append", default=[]
         )
@@ -358,6 +367,9 @@ class FitComplex(AppInterface):
     def transform_app_parameter_inputs(cls, args):
         args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
         args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
+        args.anneal_hyperparameters = parse_hyperparameter_strings(
+            args.anneal_hyperparameters
+        )
         if args.num_strains and args.strains_per_sample:
             raise Exception(
                 "Only one of --num-strains or --strains-per-sample may be set."
@@ -371,7 +383,7 @@ class FitComplex(AppInterface):
         args.anneal_hyperparameters = {
             k: dict(
                 name="log",
-                start=1.0,
+                start=args.anneal_hyperparameters[k],
                 end=args.hyperparameters[k],
                 wait_steps=args.anneal_wait,
             )
@@ -421,6 +433,7 @@ class FitComplex(AppInterface):
             nstrain=num_strains,
             nposition=args.num_positions,
             npositionB=args.num_positionsB,
+            nmf_init=args.nmf_init,
             diss_thresh=args.collapse,
             frac_thresh=args.cull,
             hyperparameters=args.hyperparameters,
@@ -442,6 +455,488 @@ class FitComplex(AppInterface):
                     print(elbo, file=f)
 
 
+class FitComplex2(AppInterface):
+    app_name = "complex_fit2"
+    description = "Fit data using some tricky tactics."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "--model-structure",
+            "-m",
+            default="full_metagenotype",
+            help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
+            choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
+        )
+        parser.add_argument(
+            "--strains-per-sample",
+            type=float,
+            help="Dynamically set strain number as a fraction of sample number.",
+        )
+        parser.add_argument(
+            "--num-strains",
+            "-s",
+            type=int,
+            help=(
+                "Fix initial strain number. "
+                "(Only one of --num-strains or --strains-per-sample may be set)"
+            ),
+        )
+        parser.add_argument("--num-positions", "-g", type=int)
+        parser.add_argument("--num-positionsB", type=int)
+        parser.add_argument(
+            "--hyperparameters", "-p", nargs="+", action="append", default=[]
+        )
+        parser.add_argument(
+            "--tsv",
+            action="store_true",
+            default=False,
+            help="Input file is in TSV format (rather than NetCDF).",
+        )
+        parser.add_argument("--verbose", "-v", action="store_true", default=False)
+        # parser.add_argument("--history-outpath")
+        parser.add_argument("inpath")
+        parser.add_argument("--outpath0", required=True)
+        parser.add_argument("--outpath1", required=True)
+        parser.add_argument("--outpath2", required=True)
+        add_optimization_arguments(parser)
+        parser.add_argument(
+            "--nmf-init",
+            action="store_true",
+            default=False,
+            help="Use NMF to select starting parameters.",
+        )
+        parser.add_argument(
+            "--collapse",
+            default=0.0,
+            type=float,
+            help="Dissimilarity threshold to collapse highly similar strains.",
+        )
+        parser.add_argument(
+            "--cull",
+            default=0.0,
+            type=float,
+            help="Minimum single-sample abundance to keep a strain.",
+        )
+        parser.add_argument("--anneal-wait", type=int, default=0)
+        parser.add_argument("--anneal-steps", type=int, default=0)
+        parser.add_argument(
+            "--anneal-hyperparameters", nargs="+", action="append", default=[]
+        )
+        parser.add_argument(
+            "--refinement-hyperparameters", nargs="+", action="append", default=[]
+        )
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
+        args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
+        args.anneal_hyperparameters = parse_hyperparameter_strings(
+            args.anneal_hyperparameters
+        )
+        if args.num_strains and args.strains_per_sample:
+            raise Exception(
+                "Only one of --num-strains or --strains-per-sample may be set."
+            )
+        elif (args.num_strains is None) and (args.strains_per_sample is None):
+            raise Exception(
+                "One of either --num-strains or --strains-per-sample must be set."
+            )
+        if args.num_positions is None:
+            args.num_positions = int(1e20)
+        args = transform_optimization_parameter_inputs(args)
+        args.anneal_hyperparameters = {
+            k: dict(
+                name="log",
+                start=args.anneal_hyperparameters[k],
+                end=args.hyperparameters[k],
+                wait_steps=args.anneal_wait,
+            )
+            for k in args.anneal_hyperparameters
+        }
+        _refinement_hyperparameters = parse_hyperparameter_strings(
+            args.refinement_hyperparameters
+        )
+        args.refinement_hyperparameters = args.hyperparameters
+        args.refinement_hyperparameters.update(_refinement_hyperparameters)
+        return args
+
+    @classmethod
+    def run(cls, args):
+        warnings.filterwarnings(
+            "ignore",
+            category=UserWarning,
+            module="sfacts.math",
+            lineno=43,
+            message="Progress bar not implemented for genotype_pdist.",
+        )
+        warnings.filterwarnings(
+            "ignore",
+            category=RuntimeWarning,
+            module="sfacts.math",
+            lineno=26,
+            message="invalid value encountered in float_scalars",
+        )
+
+        if args.tsv:
+            metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+        else:
+            metagenotypes = sf.data.Metagenotypes.load(args.inpath)
+
+        if args.strains_per_sample:
+            num_strains = int(
+                np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
+            )
+        else:
+            num_strains = args.num_strains
+
+        np.random.seed(args.random_seed)
+        num_positions_ss = min(args.num_positions, metagenotypes.sizes["position"])
+        metagenotypes_ss = metagenotypes.random_sample(position=num_positions_ss)
+
+        est0, *_ = sf.workflow.fit_metagenotypes_complex(
+            structure=args.model_structure,
+            metagenotypes=metagenotypes_ss,
+            nstrain=num_strains,
+            nmf_init=args.nmf_init,
+            nmf_seed=args.random_seed,
+            hyperparameters=args.hyperparameters,
+            anneal_hyperparameters=args.anneal_hyperparameters,
+            annealiter=args.anneal_steps,
+            device=args.device,
+            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            quiet=(not args.verbose),
+            estimation_kwargs=args.estimation_kwargs,
+        )
+        est0.dump(args.outpath0)
+
+        est1, *_ = sf.workflow.fit_genotypes_conditioned_on_communities_then_collapse(
+            structure=args.model_structure,
+            metagenotypes=metagenotypes_ss,
+            communities=est0.communities,
+            hyperparameters=args.refinement_hyperparameters,
+            diss_thresh=args.collapse,
+            frac_thresh=args.cull,
+            device=args.device,
+            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            quiet=(not args.verbose),
+            estimation_kwargs=args.estimation_kwargs,
+        )
+        est1.dump(args.outpath1)
+
+        est2, *_ = sf.workflow.iteratively_fit_genotypes_conditioned_on_communities(
+            structure=args.model_structure,
+            metagenotypes=metagenotypes,
+            communities=est1.communities,
+            nposition=args.num_positionsB,
+            hyperparameters=args.refinement_hyperparameters,
+            device=args.device,
+            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            quiet=(not args.verbose),
+            estimation_kwargs=args.estimation_kwargs,
+        )
+        est2.dump(args.outpath2)
+
+class FitCommunities0(AppInterface):
+    app_name = "community_fit0"
+    description = "Fit community composition."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "--model-structure",
+            "-m",
+            default="full_metagenotype",
+            help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
+            choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
+        )
+        parser.add_argument(
+            "--strains-per-sample",
+            type=float,
+            help="Dynamically set strain number as a fraction of sample number.",
+        )
+        parser.add_argument(
+            "--num-strains",
+            "-s",
+            type=int,
+            help=(
+                "Fix initial strain number. "
+                "(Only one of --num-strains or --strains-per-sample may be set)"
+            ),
+        )
+        parser.add_argument("--num-positions", "-g", type=int)
+        parser.add_argument(
+            "--hyperparameters", "-p", nargs="+", action="append", default=[]
+        )
+        parser.add_argument(
+            "--tsv",
+            action="store_true",
+            default=False,
+            help="Input file is in TSV format (rather than NetCDF).",
+        )
+        parser.add_argument("--verbose", "-v", action="store_true", default=False)
+        # parser.add_argument("--history-outpath")
+        parser.add_argument("inpath")
+        parser.add_argument("outpath")
+        add_optimization_arguments(parser)
+        parser.add_argument(
+            "--nmf-init",
+            action="store_true",
+            default=False,
+            help="Use NMF to select starting parameters.",
+        )
+        parser.add_argument("--anneal-wait", type=int, default=0)
+        parser.add_argument("--anneal-steps", type=int, default=0)
+        parser.add_argument(
+            "--anneal-hyperparameters", nargs="+", action="append", default=[]
+        )
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
+        args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
+        args.anneal_hyperparameters = parse_hyperparameter_strings(
+            args.anneal_hyperparameters
+        )
+        if args.num_strains and args.strains_per_sample:
+            raise Exception(
+                "Only one of --num-strains or --strains-per-sample may be set."
+            )
+        elif (args.num_strains is None) and (args.strains_per_sample is None):
+            raise Exception(
+                "One of either --num-strains or --strains-per-sample must be set."
+            )
+        if args.num_positions is None:
+            args.num_positions = int(1e20)
+        args = transform_optimization_parameter_inputs(args)
+        args.anneal_hyperparameters = {
+            k: dict(
+                name="log",
+                start=args.anneal_hyperparameters[k],
+                end=args.hyperparameters[k],
+                wait_steps=args.anneal_wait,
+            )
+            for k in args.anneal_hyperparameters
+        }
+        return args
+
+    @classmethod
+    def run(cls, args):
+        warnings.filterwarnings(
+            "ignore",
+            category=UserWarning,
+            module="sfacts.math",
+            lineno=43,
+            message="Progress bar not implemented for genotype_pdist.",
+        )
+        warnings.filterwarnings(
+            "ignore",
+            category=RuntimeWarning,
+            module="sfacts.math",
+            lineno=26,
+            message="invalid value encountered in float_scalars",
+        )
+
+        if args.tsv:
+            metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+        else:
+            metagenotypes = sf.data.Metagenotypes.load(args.inpath)
+
+        if args.strains_per_sample:
+            num_strains = int(
+                np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
+            )
+        else:
+            num_strains = args.num_strains
+
+        np.random.seed(args.random_seed)
+        num_positions_ss = min(args.num_positions, metagenotypes.sizes["position"])
+        metagenotypes_ss = metagenotypes.random_sample(position=num_positions_ss)
+
+        est0, *_ = sf.workflow.fit_metagenotypes_complex(
+            structure=args.model_structure,
+            metagenotypes=metagenotypes_ss,
+            nstrain=num_strains,
+            nmf_init=args.nmf_init,
+            nmf_seed=args.random_seed,
+            hyperparameters=args.hyperparameters,
+            anneal_hyperparameters=args.anneal_hyperparameters,
+            annealiter=args.anneal_steps,
+            device=args.device,
+            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            quiet=(not args.verbose),
+            estimation_kwargs=args.estimation_kwargs,
+        )
+        est0.dump(args.outpath)
+
+class FitCommunities(AppInterface):
+    app_name = "community_fit"
+    description = "Fit community composition based on a subsample of metagenotype positions."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "--model-structure",
+            "-m",
+            default="full_metagenotype",
+            help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
+            choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
+        )
+        parser.add_argument(
+            "--strains-per-sample",
+            type=float,
+            help="Dynamically set strain number as a fraction of sample number.",
+        )
+        parser.add_argument(
+            "--num-strains",
+            "-s",
+            type=int,
+            help=(
+                "Fix initial strain number. "
+                "(Only one of --num-strains or --strains-per-sample may be set)"
+            ),
+        )
+        parser.add_argument("--num-positions", "-g", type=int)
+        parser.add_argument(
+            "--hyperparameters", "-p", nargs="+", action="append", default=[]
+        )
+        parser.add_argument(
+            "--tsv",
+            action="store_true",
+            default=False,
+            help="Input file is in TSV format (rather than NetCDF).",
+        )
+        parser.add_argument("--verbose", "-v", action="store_true", default=False)
+        # parser.add_argument("--history-outpath")
+        parser.add_argument("inpath")
+        parser.add_argument("outpath")
+        parser.add_argument("--outpath-initial", required=True)
+        add_optimization_arguments(parser)
+        parser.add_argument(
+            "--nmf-init",
+            action="store_true",
+            default=False,
+            help="Use NMF to select starting parameters.",
+        )
+        parser.add_argument(
+            "--collapse",
+            default=0.0,
+            type=float,
+            help="Dissimilarity threshold to collapse highly similar strains.",
+        )
+        parser.add_argument(
+            "--cull",
+            default=0.0,
+            type=float,
+            help="Minimum single-sample abundance to keep a strain.",
+        )
+        parser.add_argument("--anneal-wait", type=int, default=0)
+        parser.add_argument("--anneal-steps", type=int, default=0)
+        parser.add_argument(
+            "--anneal-hyperparameters", nargs="+", action="append", default=[]
+        )
+        parser.add_argument(
+            "--refinement-hyperparameters", nargs="+", action="append", default=[]
+        )
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
+        args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
+        args.anneal_hyperparameters = parse_hyperparameter_strings(
+            args.anneal_hyperparameters
+        )
+        if args.num_strains and args.strains_per_sample:
+            raise Exception(
+                "Only one of --num-strains or --strains-per-sample may be set."
+            )
+        elif (args.num_strains is None) and (args.strains_per_sample is None):
+            raise Exception(
+                "One of either --num-strains or --strains-per-sample must be set."
+            )
+        if args.num_positions is None:
+            args.num_positions = int(1e20)
+        args = transform_optimization_parameter_inputs(args)
+        args.anneal_hyperparameters = {
+            k: dict(
+                name="log",
+                start=args.anneal_hyperparameters[k],
+                end=args.hyperparameters[k],
+                wait_steps=args.anneal_wait,
+            )
+            for k in args.anneal_hyperparameters
+        }
+        _refinement_hyperparameters = parse_hyperparameter_strings(
+            args.refinement_hyperparameters
+        )
+        args.refinement_hyperparameters = args.hyperparameters
+        args.refinement_hyperparameters.update(_refinement_hyperparameters)
+        return args
+
+    @classmethod
+    def run(cls, args):
+        warnings.filterwarnings(
+            "ignore",
+            category=UserWarning,
+            module="sfacts.math",
+            lineno=43,
+            message="Progress bar not implemented for genotype_pdist.",
+        )
+        warnings.filterwarnings(
+            "ignore",
+            category=RuntimeWarning,
+            module="sfacts.math",
+            lineno=26,
+            message="invalid value encountered in float_scalars",
+        )
+
+        if args.tsv:
+            metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+        else:
+            metagenotypes = sf.data.Metagenotypes.load(args.inpath)
+
+        if args.strains_per_sample:
+            num_strains = int(
+                np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
+            )
+        else:
+            num_strains = args.num_strains
+
+        np.random.seed(args.random_seed)
+        num_positions_ss = min(args.num_positions, metagenotypes.sizes["position"])
+        metagenotypes_ss = metagenotypes.random_sample(position=num_positions_ss)
+
+        est0, *_ = sf.workflow.fit_metagenotypes_complex(
+            structure=args.model_structure,
+            metagenotypes=metagenotypes_ss,
+            nstrain=num_strains,
+            nmf_init=args.nmf_init,
+            nmf_seed=args.random_seed,
+            hyperparameters=args.hyperparameters,
+            anneal_hyperparameters=args.anneal_hyperparameters,
+            annealiter=args.anneal_steps,
+            device=args.device,
+            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            quiet=(not args.verbose),
+            estimation_kwargs=args.estimation_kwargs,
+        )
+        est0.dump(args.outpath_initial)
+
+        est1, *_ = sf.workflow.fit_genotypes_conditioned_on_communities_then_collapse(
+            structure=args.model_structure,
+            metagenotypes=metagenotypes_ss,
+            communities=est0.communities,
+            hyperparameters=args.refinement_hyperparameters,
+            diss_thresh=args.collapse,
+            frac_thresh=args.cull,
+            device=args.device,
+            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            quiet=(not args.verbose),
+            estimation_kwargs=args.estimation_kwargs,
+        )
+        est1.dump(args.outpath)
+
+
 def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -449,7 +944,16 @@ def main():
     )
 
     app_subparsers = parser.add_subparsers()
-    for subcommand in [NoOp, FilterMetagenotypes, Simulate, FitSimple, FitComplex]:
+    for subcommand in [
+        NoOp,
+        FilterMetagenotypes,
+        Simulate,
+        FitSimple,
+        FitComplex,
+        FitComplex2,
+        FitCommunities0,
+        FitCommunities,
+    ]:
         subcommand._add_app_subparser(app_subparsers)
 
     args = parser.parse_args()
