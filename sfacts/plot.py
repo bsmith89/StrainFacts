@@ -5,6 +5,7 @@ from scipy.spatial.distance import squareform
 import pandas as pd
 import numpy as np
 from sklearn.manifold import MDS
+import xarray as xr
 import warnings
 import sfacts as sf
 
@@ -402,7 +403,8 @@ plot_missing = plot_generic_clustermap_factory(
 
 plot_community = plot_generic_clustermap_factory(
     matrix_func=lambda w: w.communities.data.T,
-    row_linkage_func=lambda w: w.genotypes.linkage(dim="strain"),
+    # row_linkage_func=lambda w: w.genotypes.linkage(dim="strain"),
+    row_linkage_func=lambda w: w.communities.linkage(dim="strain"),
     col_linkage_func=lambda w: w.communities.linkage(dim="sample"),
     row_colors_func=(lambda w: (w.communities.sum("sample").pipe(np.sqrt))),
     metric="cosine",
