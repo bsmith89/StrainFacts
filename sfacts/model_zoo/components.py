@@ -19,6 +19,7 @@ SHARED_DESCRIPTIONS = dict(
     m_hyper_r=("sample",),
     m_hyper_r_mean=(),
     m_hyper_r_scale=(),
+    mu_hyper_mean=(),
     mu=("sample",),
     nu=("sample", "position"),
     p_noerr=("sample", "position"),

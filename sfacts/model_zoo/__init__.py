@@ -14,6 +14,7 @@ from sfacts.model_zoo import (
     ssdd3_with_error,
     ssdd3_with_error_with_missing,
     ssdd4_with_error,
+    simplest_simulation,
 )
 
 NAMED_STRUCTURES = dict(
@@ -31,4 +32,5 @@ NAMED_STRUCTURES = dict(
     ssdd3_with_error=ssdd3_with_error.model,
     ssdd3_with_error_with_missing=ssdd3_with_error_with_missing.model,
     ssdd4_with_error=ssdd4_with_error.model,
+    simplest_simulation=simplest_simulation.model,
 )
