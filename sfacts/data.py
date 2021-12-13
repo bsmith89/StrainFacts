@@ -59,7 +59,8 @@ class WrappedDataArrayMixin:
 
     @classmethod
     def load_from_tsv(cls, path, validate=True):
-        data = pd.read_table(path, index_col=cls.dims).to_xarray()
+        data = pd.read_table(path, index_col=cls.dims)
+        data = data.squeeze().to_xarray()
         data.name = cls.variable_name
         return cls._post_load(data)
 
