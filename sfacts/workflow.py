@@ -455,6 +455,7 @@ def iteratively_fit_genotypes_conditioned_on_communities(
 ):
 
     _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
+    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(*args, quiet=quiet, **kwargs)
 
     if estimation_kwargs is None:
         estimation_kwargs = {}
@@ -465,64 +466,58 @@ def iteratively_fit_genotypes_conditioned_on_communities(
     nstrain = len(communities.strain)
     nsample = len(communities.sample)
     nposition_full = len(metagenotypes.position)
-    _info(
-        f"START: Fitting genotypes for {nposition_full} positions conditioned on provided communities with {nstrain} strains and {nsample} samples."
-    )
+    with _phase_info("Fitting genotypes for {nposition_full} positions."):
+        _info(f"Conditioned on provided communities with {nstrain} strains and {nsample} samples.")
+        nposition = min(nposition, nposition_full)
 
-    nposition = min(nposition, nposition_full)
-
-    metagenotypes_full = metagenotypes
-    start_time = time.time()
-    pmodel = sf.model.ParameterizedModel(
-        structure,
-        coords=dict(
-            sample=communities.sample.values,
-            position=range(nposition),
-            allele=metagenotypes_full.allele.values,
-            strain=communities.strain.values,
-        ),
-        hyperparameters=hyperparameters,
-        data=dict(
-            pi=communities.values,
-        ),
-        device=device,
-        dtype=dtype,
-    )
-
-    _info("Iteratively fitting genotypes by chunks.")
-    genotypes_chunks = []
-    for position_start, position_end in _chunk_start_end_iterator(
-        metagenotypes_full.sizes["position"],
-        nposition,
-    ):
-        _info(f"Fitting bin [{position_start}, {position_end}).")
-        metagenotypes_chunk = metagenotypes_full.mlift(
-            "isel", position=slice(position_start, position_end)
-        )
-        est_curr, history = sf.estimation.estimate_parameters(
-            pmodel.with_amended_coords(
-                position=metagenotypes_chunk.position.values,
-            ).condition(**metagenotypes_chunk.to_counts_and_totals()),
-            quiet=quiet,
+        metagenotypes_full = metagenotypes
+        start_time = time.time()
+        pmodel = sf.model.ParameterizedModel(
+            structure,
+            coords=dict(
+                sample=communities.sample.values,
+                position=range(nposition),
+                allele=metagenotypes_full.allele.values,
+                strain=communities.strain.values,
+            ),
+            hyperparameters=hyperparameters,
+            data=dict(
+                pi=communities.values,
+            ),
             device=device,
             dtype=dtype,
-            **estimation_kwargs,
         )
-        genotypes_chunks.append(est_curr.genotypes.data)
-        history_list.append(history)
+
+        _info("Iteratively fitting genotypes by chunks.")
+        genotypes_chunks = []
+        for position_start, position_end in _chunk_start_end_iterator(
+            metagenotypes_full.sizes["position"],
+            nposition,
+        ):
+            with _phase_info(f"Chunk [{position_start}, {position_end})."):
+                metagenotypes_chunk = metagenotypes_full.mlift(
+                    "isel", position=slice(position_start, position_end)
+                )
+                est_curr, history = sf.estimation.estimate_parameters(
+                    pmodel.with_amended_coords(
+                        position=metagenotypes_chunk.position.values,
+                    ).condition(**metagenotypes_chunk.to_counts_and_totals()),
+                    quiet=quiet,
+                    device=device,
+                    dtype=dtype,
+                    **estimation_kwargs,
+                )
+                genotypes_chunks.append(est_curr.genotypes.data)
+                history_list.append(history)
+                est_list.append(est_curr)
+
+        with _phase_info(f"Concatenating chunks."):
+            genotypes = sf.data.Genotypes(xr.concat(genotypes_chunks, dim="position"))
+            est_curr = sf.data.World(
+                est_curr.data.drop_dims(["position", "allele"]).assign(
+                    genotypes=genotypes.data,
+                    metagenotypes=metagenotypes_full.data,
+                )
+            )
         est_list.append(est_curr)
-    _info("Finished fitting all chunks.")
-
-    genotypes = sf.data.Genotypes(xr.concat(genotypes_chunks, dim="position"))
-    est_curr = sf.data.World(
-        est_curr.data.drop_dims(["position", "allele"]).assign(
-            genotypes=genotypes.data,
-            metagenotypes=metagenotypes_full.data,
-        )
-    )
-    est_list.append(est_curr)
-
-    end_time = time.time()
-    delta_time = end_time - start_time
-    _info(f"END: Fit in {delta_time} seconds.")
     return est_curr, est_list, history_list
