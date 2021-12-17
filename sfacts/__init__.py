@@ -21,7 +21,7 @@ from sfacts.plot import (
     plot_loss_history,
     plot_metagenotype_frequency_spectrum,
 )
-from sfacts.data import Metagenotypes, World
+from sfacts.data import Metagenotypes, Genotypes, Communities, World
 from sfacts.evaluation import (
     match_genotypes,
     discretized_genotype_error,
