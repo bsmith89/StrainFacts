@@ -940,6 +940,112 @@ class FitCommunities(AppInterface):
         est1.dump(args.outpath)
 
 
+class FitGenotypes(AppInterface):
+    app_name = "genotype_fit"
+    description = (
+        "Fit strain genotypes based on fixed community compositions and metagenotypes."
+    )
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "--model-structure",
+            "-m",
+            default="full_metagenotype",
+            help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
+            choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
+        )
+        parser.add_argument("--num-positions", "-g", type=int)
+        parser.add_argument("--num-positionsB", type=int)
+        parser.add_argument("--block-number", "-i", type=int)
+        parser.add_argument(
+            "--hyperparameters", "-p", nargs="+", action="append", default=[]
+        )
+        parser.add_argument("--verbose", "-v", action="store_true", default=False)
+        # parser.add_argument("--history-outpath")
+        parser.add_argument("community")
+        parser.add_argument("metagenotype")
+        parser.add_argument("outpath")
+        add_optimization_arguments(parser)
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
+        args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
+        if args.num_positions is None:
+            args.num_positions = int(1e20)
+        if args.num_positionsB is None:
+            args.num_positionsB = args.num_positions
+        args = transform_optimization_parameter_inputs(args)
+        return args
+
+    @classmethod
+    def run(cls, args):
+        communities = sf.data.World.load(args.community).communities
+        metagenotypes = sf.data.Metagenotypes.load(args.metagenotype)
+
+        total_num_positions = metagenotypes.sizes["position"]
+        num_positions = min(args.num_positions, metagenotypes.sizes["position"])
+        num_positionsB = min(args.num_positionsB, metagenotypes.sizes["position"])
+        block_start = args.block_number * num_positions
+        block_stop = min((args.block_number + 1) * num_positions, total_num_positions)
+        assert total_num_positions >= block_start
+        sf.logging_util.info(
+            (
+                f"Selecting genotype block {args.block_number} "
+                f"as [{block_start}, {block_stop}) "
+                f"from {total_num_positions} positions."
+            ),
+            quiet=(not args.verbose),
+        )
+
+        metagenotypes = metagenotypes.mlift(
+            "isel", position=slice(block_start, block_stop)
+        )
+
+        est, *_ = sf.workflow.iteratively_fit_genotypes_conditioned_on_communities(
+            structure=args.model_structure,
+            metagenotypes=metagenotypes,
+            communities=communities,
+            nposition=num_positionsB,
+            hyperparameters=args.hyperparameters,
+            device=args.device,
+            dtype=args.dtype,
+            quiet=(not args.verbose),
+            estimation_kwargs=args.estimation_kwargs,
+        )
+        est.genotypes.dump(args.outpath)
+
+
+class ConcatGenotypes(AppInterface):
+    app_name = "genotype_concatenate"
+    description = "Combine step of a split-apply-combine workflow."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument("--verbose", "-v", action="store_true", default=False)
+        parser.add_argument("--community")
+        parser.add_argument("--metagenotype")
+        parser.add_argument("--outpath", required=True)
+        parser.add_argument("genotypes", nargs="+")
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        return args
+
+    @classmethod
+    def run(cls, args):
+        communities = sf.data.World.load(args.community).communities
+        metagenotypes = sf.data.Metagenotypes.load(args.metagenotype)
+        all_genotypes = {}
+        for i, gpath in enumerate(args.genotypes):
+            all_genotypes[i] = append(sf.Genotypes.load(gpath))
+        all_genotypes = sf.Genotypes.concat(all_genotypes, dim="position", rename=False)
+        world = sf.World.from_combined(communities, metagenotypes, all_genotypes)
+        assert set(world.position) == set(all_genotypes.position)
+        world.dump(args.outpath)
+
+
 SUBCOMMANDS = [
     NoOp,
     FilterMetagenotypes,
@@ -949,6 +1055,8 @@ SUBCOMMANDS = [
     FitComplex2,
     FitCommunities0,
     FitCommunities,
+    FitGenotypes,
+    ConcatGenotypes,
 ]
 
 
