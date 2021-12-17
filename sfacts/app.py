@@ -1037,12 +1037,14 @@ class ConcatGenotypes(AppInterface):
     def run(cls, args):
         communities = sf.data.World.load(args.community).communities
         metagenotypes = sf.data.Metagenotypes.load(args.metagenotype)
+        # FIXME: Not clear why metagenotypes and genotypes have different coordinates (int vs. str).
+        metagenotypes.data['position'] = metagenotypes.data.position.astype(str)
         all_genotypes = {}
         for i, gpath in enumerate(args.genotypes):
-            all_genotypes[i] = append(sf.Genotypes.load(gpath))
+            all_genotypes[i] = sf.World.load(gpath).genotypes
         all_genotypes = sf.Genotypes.concat(all_genotypes, dim="position", rename=False)
         world = sf.World.from_combined(communities, metagenotypes, all_genotypes)
-        assert set(world.position) == set(all_genotypes.position)
+        assert set(world.position.values) == set(all_genotypes.position.values)
         world.dump(args.outpath)
 
 
