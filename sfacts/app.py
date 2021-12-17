@@ -46,6 +46,7 @@ def add_optimization_arguments(parser):
 def transform_optimization_parameter_inputs(args):
     args = deepcopy(args)
     optimizer_kwargs = {}
+    args.dtype = sf.pyro_util.PRECISION_MAP[args.precision]
     if args.optimizer_learning_rate is not None:
         optimizer_kwargs["lr"] = args.optimizer_learning_rate
 
@@ -281,7 +282,7 @@ class FitSimple(AppInterface):
             anneal_hyperparameters=args.anneal_hyperparameters,
             annealiter=args.anneal_steps,
             device=args.device,
-            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            dtype=args.dtype,
             quiet=(not args.verbose),
             estimation_kwargs=args.estimation_kwargs,
         )
@@ -441,7 +442,7 @@ class FitComplex(AppInterface):
             annealiter=args.anneal_steps,
             stage2_hyperparameters=args.refinement_hyperparameters,
             device=args.device,
-            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            dtype=args.dtype,
             quiet=(not args.verbose),
             seed=args.random_seed,
             estimation_kwargs=args.estimation_kwargs,
@@ -604,7 +605,7 @@ class FitComplex2(AppInterface):
             anneal_hyperparameters=args.anneal_hyperparameters,
             annealiter=args.anneal_steps,
             device=args.device,
-            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            dtype=args.dtype,
             quiet=(not args.verbose),
             estimation_kwargs=args.estimation_kwargs,
         )
@@ -618,7 +619,7 @@ class FitComplex2(AppInterface):
             diss_thresh=args.collapse,
             frac_thresh=args.cull,
             device=args.device,
-            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            dtype=args.dtype,
             quiet=(not args.verbose),
             estimation_kwargs=args.estimation_kwargs,
         )
@@ -631,11 +632,12 @@ class FitComplex2(AppInterface):
             nposition=args.num_positionsB,
             hyperparameters=args.refinement_hyperparameters,
             device=args.device,
-            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            dtype=args.dtype,
             quiet=(not args.verbose),
             estimation_kwargs=args.estimation_kwargs,
         )
         est2.dump(args.outpath2)
+
 
 class FitCommunities0(AppInterface):
     app_name = "community_fit0"
@@ -763,7 +765,7 @@ class FitCommunities0(AppInterface):
             anneal_hyperparameters=args.anneal_hyperparameters,
             annealiter=args.anneal_steps,
             device=args.device,
-            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            dtype=args.dtype,
             quiet=(not args.verbose),
             estimation_kwargs=args.estimation_kwargs,
         )
@@ -916,7 +918,7 @@ class FitCommunities(AppInterface):
             anneal_hyperparameters=args.anneal_hyperparameters,
             annealiter=args.anneal_steps,
             device=args.device,
-            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            dtype=args.dtype,
             quiet=(not args.verbose),
             estimation_kwargs=args.estimation_kwargs,
         )
@@ -930,7 +932,7 @@ class FitCommunities(AppInterface):
             diss_thresh=args.collapse,
             frac_thresh=args.cull,
             device=args.device,
-            dtype=sf.pyro_util.PRECISION_MAP[args.precision],
+            dtype=args.dtype,
             quiet=(not args.verbose),
             estimation_kwargs=args.estimation_kwargs,
         )
