@@ -146,13 +146,17 @@ class WrappedDataArrayMixin:
         return f"{self.__class__.__name__}({self.data})"
 
     @classmethod
-    def concat(cls, data, dim):
+    def concat(cls, data, dim, rename=True):
         out_data = []
         new_coords = []
         for name in data:
             d = data[name].data
             out_data.append(d)
-            new_coords.extend([f"{name}_{i}" for i in d[dim].values])
+            if rename:
+                prefix=f"{name}_"
+            else:
+                prefix=""
+            new_coords.extend([f"{prefix}{i}" for i in d[dim].values])
         out_data = xr.concat(out_data, dim)
         out_data[dim] = new_coords
         return cls(out_data)
