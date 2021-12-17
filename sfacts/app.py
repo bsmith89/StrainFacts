@@ -1014,7 +1014,7 @@ class FitGenotypes(AppInterface):
             quiet=(not args.verbose),
             estimation_kwargs=args.estimation_kwargs,
         )
-        est.genotypes.dump(args.outpath)
+        est.genotypes.to_world().dump(args.outpath)
 
 
 class ConcatGenotypes(AppInterface):
