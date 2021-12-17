@@ -435,7 +435,7 @@ class Missingness(WrappedDataArrayMixin):
 class Communities(WrappedDataArrayMixin):
     dims = ("sample", "strain")
     constraints = dict(
-        strains_sum_to_1=lambda d: np.allclose(d.sum("strain"), 1.0, atol=1e-5)
+        strains_sum_to_1=lambda d: np.allclose(d.sum("strain"), 1.0, atol=1e-4)
     )
     variable_name = "communities"
 
@@ -482,7 +482,7 @@ class Communities(WrappedDataArrayMixin):
 
 class Overdispersion(WrappedDataArrayMixin):
     dims = ("sample",)
-    constraints = dict(strains_sum_to_1=_strictly_positive)
+    constraints = dict(strictly_positive=_strictly_positive)
     variable_name = "overdispersion"
 
 
