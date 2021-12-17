@@ -771,9 +771,10 @@ class FitCommunities0(AppInterface):
         )
         est0.dump(args.outpath)
 
+
 class FitCommunities(AppInterface):
     app_name = "community_fit"
-    description = "Fit community composition based on a subsample of metagenotype positions."
+    description = "Fit community composition, and cull/collapse low abundance/highly similar genotypes."
 
     @classmethod
     def add_subparser_arguments(cls, parser):
