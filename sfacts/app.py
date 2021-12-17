@@ -940,6 +940,18 @@ class FitCommunities(AppInterface):
         est1.dump(args.outpath)
 
 
+SUBCOMMANDS = [
+    NoOp,
+    FilterMetagenotypes,
+    Simulate,
+    FitSimple,
+    FitComplex,
+    FitComplex2,
+    FitCommunities0,
+    FitCommunities,
+]
+
+
 def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -947,17 +959,12 @@ def main():
     )
 
     app_subparsers = parser.add_subparsers()
-    for subcommand in [
-        NoOp,
-        FilterMetagenotypes,
-        Simulate,
-        FitSimple,
-        FitComplex,
-        FitComplex2,
-        FitCommunities0,
-        FitCommunities,
-    ]:
+    for subcommand in SUBCOMMANDS:
         subcommand._add_app_subparser(app_subparsers)
 
     args = parser.parse_args()
-    args._subcommand(args)
+    if not hasattr(args, "_subcommand"):
+        print(parser.format_help())
+        # args._subcommand = Help
+    else:
+        args._subcommand(args)
