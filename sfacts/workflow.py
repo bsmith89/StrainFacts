@@ -291,6 +291,7 @@ def fit_metagenotypes_complex(
 ):
 
     _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
+    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(*args, quiet=quiet, **kwargs)
 
     if estimation_kwargs is None:
         estimation_kwargs = {}
@@ -300,67 +301,63 @@ def fit_metagenotypes_complex(
     est_list = []
     history_list = []
 
-    _info(f"START: Fitting {nstrain} strains with data shape {metagenotypes.sizes}.")
+    with _phase_info(f"Fitting {nstrain} strains with data shape {metagenotypes.sizes}."):
+        if nmf_init:
+            with _phase_info("Initializing with NMF."):
+                _info("(This may take a while if data dimensions are large.)")
+                nmf_kwargs = dict(
+                    alpha=0.0,
+                    solver="cd",
+                    tol=1e-2,
+                    eps=1e-5,
+                )
+                nmf_kwargs.update(nmf_init_kwargs)
+                approx = sf.estimation.nmf_approximation(
+                    metagenotypes.to_world(),
+                    s=nstrain,
+                    random_state=nmf_seed,
+                    **nmf_kwargs,
+                )
+                initialize_params = dict(
+                    gamma=approx.genotypes.values,
+                    pi=approx.communities.values,
+                )
+        else:
+            initialize_params = None
 
-    start_time = time.time()
-    if nmf_init:
-        _info("Initializing with NMF (this may take a while if the data is large).")
-        nmf_kwargs = dict(
-            alpha=0.0,
-            solver="cd",
-            tol=1e-2,
-            eps=1e-5,
-        )
-        nmf_kwargs.update(nmf_init_kwargs)
-        approx = sf.estimation.nmf_approximation(
-            metagenotypes.to_world(),
-            s=nstrain,
-            random_state=nmf_seed,
-            **nmf_kwargs,
-        )
-        initialize_params = dict(
-            gamma=approx.genotypes.values,
-            pi=approx.communities.values,
-        )
-    else:
-        initialize_params = None
+        with _phase_info(f"Fitting model parameters."):
+            pmodel = sf.model.ParameterizedModel(
+                structure,
+                coords=dict(
+                    sample=metagenotypes.sample.values,
+                    position=metagenotypes.position.values,
+                    allele=metagenotypes.allele.values,
+                    strain=range(nstrain),
+                ),
+                hyperparameters=hyperparameters,
+                data=condition_on,
+                device=device,
+                dtype=dtype,
+            ).condition(**metagenotypes.to_counts_and_totals())
 
-    pmodel = sf.model.ParameterizedModel(
-        structure,
-        coords=dict(
-            sample=metagenotypes.sample.values,
-            position=metagenotypes.position.values,
-            allele=metagenotypes.allele.values,
-            strain=range(nstrain),
-        ),
-        hyperparameters=hyperparameters,
-        data=condition_on,
-        device=device,
-        dtype=dtype,
-    ).condition(**metagenotypes.to_counts_and_totals())
-
-    est_curr, history = sf.estimation.estimate_parameters(
-        pmodel,
-        quiet=quiet,
-        device=device,
-        dtype=dtype,
-        anneal_hyperparameters=anneal_hyperparameters,
-        annealiter=annealiter,
-        initialize_params=initialize_params,
-        **estimation_kwargs,
-    )
-    history_list.append(history)
-    est_list.append(est_curr)
-    _info("Finished initial fitting.")
-    _info(
-        "Average metagenotype error: {}".format(
-            sf.evaluation.metagenotype_error(est_curr, est_curr)[0]
+            est_curr, history = sf.estimation.estimate_parameters(
+                pmodel,
+                quiet=quiet,
+                device=device,
+                dtype=dtype,
+                anneal_hyperparameters=anneal_hyperparameters,
+                annealiter=annealiter,
+                initialize_params=initialize_params,
+                **estimation_kwargs,
+            )
+            history_list.append(history)
+            est_list.append(est_curr)
+        _info(
+            "Average metagenotype error: {}".format(
+                sf.evaluation.metagenotype_error(est_curr, est_curr)[0]
+            )
         )
-    )
 
-    end_time = time.time()
-    delta_time = end_time - start_time
-    _info(f"END: Fit in {delta_time} seconds.")
     return est_curr, est_list, history_list
 
 def fit_genotypes_conditioned_on_communities_then_collapse(
