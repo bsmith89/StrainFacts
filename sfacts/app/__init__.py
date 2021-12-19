@@ -204,90 +204,6 @@ class Simulate(AppInterface):
         world.dump(args.outpath)
 
 
-class FitSimple(AppInterface):
-    app_name = "fit_simple"
-    description = "Simply estimate parameters of a metagenotype model given data."
-
-    @classmethod
-    def add_subparser_arguments(cls, parser):
-        parser.add_argument(
-            "--model-structure",
-            "-m",
-            default="full_metagenotype",
-            help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
-            choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
-        )
-        parser.add_argument("--num-strains", "-s", type=int, required=True)
-        parser.add_argument("--num-positions", "-g", type=int)
-        parser.add_argument(
-            "--hyperparameters", "-p", nargs="+", action="append", default=[]
-        )
-        parser.add_argument("--anneal-wait", type=int, default=0)
-        parser.add_argument("--anneal-steps", type=int, default=0)
-        parser.add_argument(
-            "--anneal-hyperparameters", nargs="+", action="append", default=[]
-        )
-        add_optimization_arguments(parser)
-        parser.add_argument(
-            "--tsv",
-            action="store_true",
-            default=False,
-            help="Input file is in TSV format (rather than NetCDF).",
-        )
-        parser.add_argument("--verbose", "-v", action="store_true", default=False)
-        parser.add_argument("--history-outpath")
-        parser.add_argument("inpath")
-        parser.add_argument("outpath")
-
-    @classmethod
-    def transform_app_parameter_inputs(cls, args):
-        args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
-        args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
-        args.anneal_hyperparameters = parse_hyperparameter_strings(
-            args.anneal_hyperparameters
-        )
-        args.anneal_hyperparameters = {
-            k: dict(
-                name="log",
-                start=args.anneal_hyperparameters[k],
-                end=args.hyperparameters[k],
-                wait_steps=args.anneal_wait,
-            )
-            for k in args.anneal_hyperparameters
-        }
-        args = transform_optimization_parameter_inputs(args)
-        return args
-
-    @classmethod
-    def run(cls, args):
-        if args.tsv:
-            metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
-        else:
-            metagenotypes = sf.data.Metagenotypes.load(args.inpath)
-
-        np.random.seed(args.random_seed)
-        if args.num_positions:
-            metagenotypes = metagenotypes.random_sample(args.num_positions, "position")
-        est, history = sf.workflow.fit_metagenotypes_simple(
-            structure=args.model_structure,
-            metagenotypes=metagenotypes,
-            nstrain=args.num_strains,
-            hyperparameters=args.hyperparameters,
-            anneal_hyperparameters=args.anneal_hyperparameters,
-            annealiter=args.anneal_steps,
-            device=args.device,
-            dtype=args.dtype,
-            quiet=(not args.verbose),
-            estimation_kwargs=args.estimation_kwargs,
-        )
-        est.dump(args.outpath)
-
-        if args.history_outpath:
-            with open(args.history_outpath, "w") as f:
-                for elbo in history:
-                    print(elbo, file=f)
-
-
 class FitComplex(AppInterface):
     app_name = "fit_complex"
     description = "Fit data using some tricky tactics."
@@ -450,8 +366,8 @@ class FitComplex(AppInterface):
                     print(elbo, file=f)
 
 
-class FitComplex2(AppInterface):
-    app_name = "fit_complex2"
+class FitComplex(AppInterface):
+    app_name = "fit_complex"
     description = "Fit data using some tricky tactics."
 
     @classmethod
@@ -633,9 +549,9 @@ class FitComplex2(AppInterface):
         est2.dump(args.outpath2)
 
 
-class FitCommunities0(AppInterface):
-    app_name = "fit_community0"
-    description = "Fit community composition."
+class Fit(AppInterface):
+    app_name = "fit"
+    description = "Fit strain genotypes and community composition to metagenotype data."
 
     @classmethod
     def add_subparser_arguments(cls, parser):
@@ -766,9 +682,9 @@ class FitCommunities0(AppInterface):
         est0.dump(args.outpath)
 
 
-class FitCommunities(AppInterface):
-    app_name = "fit_community"
-    description = "Fit community composition, and cull/collapse low abundance/highly similar genotypes."
+class FitCommunitiesAndCollapse(AppInterface):
+    app_name = "fit_and_collapse"
+    description = "Fit community composition, and collapse low abundance/highly similar genotypes."
 
     @classmethod
     def add_subparser_arguments(cls, parser):
@@ -933,6 +849,48 @@ class FitCommunities(AppInterface):
         )
         est1.dump(args.outpath)
 
+class CollapseGenotypes(AppInterface):
+    app_name = "collapse_genotypes"
+    description = (
+        "Collapse low-abundance and highly similar genotypes."
+    )
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument("--verbose", "-v", action="store_true", default=False)
+        # parser.add_argument("--history-outpath")
+        parser.add_argument(
+            "--collapse",
+            default=0.0,
+            type=float,
+            help="Dissimilarity threshold to collapse highly similar strains.",
+        )
+        parser.add_argument(
+            "--cull",
+            default=0.0,
+            type=float,
+            help="Minimum single-sample abundance to keep a strain.",
+        )
+        parser.add_argument("inpath")
+        parser.add_argument("outpath")
+        add_optimization_arguments(parser)
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        return args
+
+    @classmethod
+    def run(cls, args):
+        in_world = sf.data.World.load(args.inpath)
+        out_world, *_ = sf.workflow.collapse_genotypes(
+            in_world,
+            diss_thresh=args.collapse,
+            frac_thresh=args.cull,
+            quiet=(not args.verbose),
+
+        )
+        out_world.dump(args.outpath)
+
 
 class FitGenotypes(AppInterface):
     app_name = "fit_genotype"
@@ -1044,14 +1002,15 @@ class ConcatGenotypes(AppInterface):
 
 SUBCOMMANDS = [
     NoOp,
-    SetupDummyModel,
+    SetupDummyModel,  # FIXME: Untested
     FilterMetagenotypes,
     Simulate,
-    FitSimple,
+    # FitComplex,
     FitComplex,
-    FitComplex2,
-    FitCommunities0,
-    FitCommunities,
+    Fit,
+    FitCommunitiesAndCollapse,
+    # RefineGenotypes,  # Add this app: making FitCommunitiesAndCollapse obsolete.
+    CollapseGenotypes,  # FIXME: Untested
     FitGenotypes,
     ConcatGenotypes,
 ]

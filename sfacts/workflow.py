@@ -467,6 +467,30 @@ def fit_genotypes_conditioned_on_communities_then_collapse(
     _info(f"END: Fit in {delta_time} seconds.")
     return est_curr, est_list, history_list
 
+def collapse_genotypes(
+    world,
+    diss_thresh,
+    frac_thresh,
+    quiet=False,
+):
+
+    _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
+    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(*args, quiet=quiet, **kwargs)
+
+    with _phase_info(
+        f"Collapsing initial {world.sizes['strain']} strains "
+        f"based on genotypes with {world.sizes['position']} positions "
+        f"in {world.sizes['sample']} samples."
+    ):
+        collapsed = sf.estimation.communities_aggregated_by_strain_cluster(
+            world,
+            diss_thresh=diss_thresh,
+            pdist_func=lambda w: w.genotypes.pdist(quiet=quiet),
+            frac_thresh=frac_thresh,
+        ).to_world()
+        _info(f"After collapsing, {collapsed.sizes['strain']} strains remain.")
+    return collapsed, [], []
+
 
 def iteratively_fit_genotypes_conditioned_on_communities(
     structure,
