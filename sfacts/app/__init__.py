@@ -32,7 +32,7 @@ class NoOp(AppInterface):
         print(args)
 
 
-class NoOp2(AppInterface):
+class SetupDummyModel(AppInterface):
     app_name = "setup_dummy_model"
     description = "Setup a model, but do nothing else (for benchmarking purposes)."
 
@@ -1044,7 +1044,7 @@ class ConcatGenotypes(AppInterface):
 
 SUBCOMMANDS = [
     NoOp,
-    NoOp2,
+    SetupDummyModel,
     FilterMetagenotypes,
     Simulate,
     FitSimple,
