@@ -33,7 +33,7 @@ class NoOp(AppInterface):
 
 
 class NoOp2(AppInterface):
-    app_name = "do_nothing2"
+    app_name = "setup_dummy_model"
     description = "Setup a model, but do nothing else (for benchmarking purposes)."
 
     @classmethod
@@ -205,7 +205,7 @@ class Simulate(AppInterface):
 
 
 class FitSimple(AppInterface):
-    app_name = "simple_fit"
+    app_name = "fit_simple"
     description = "Simply estimate parameters of a metagenotype model given data."
 
     @classmethod
@@ -289,7 +289,7 @@ class FitSimple(AppInterface):
 
 
 class FitComplex(AppInterface):
-    app_name = "complex_fit"
+    app_name = "fit_complex"
     description = "Fit data using some tricky tactics."
 
     @classmethod
@@ -451,7 +451,7 @@ class FitComplex(AppInterface):
 
 
 class FitComplex2(AppInterface):
-    app_name = "complex_fit2"
+    app_name = "fit_complex2"
     description = "Fit data using some tricky tactics."
 
     @classmethod
@@ -634,7 +634,7 @@ class FitComplex2(AppInterface):
 
 
 class FitCommunities0(AppInterface):
-    app_name = "community_fit0"
+    app_name = "fit_community0"
     description = "Fit community composition."
 
     @classmethod
@@ -767,7 +767,7 @@ class FitCommunities0(AppInterface):
 
 
 class FitCommunities(AppInterface):
-    app_name = "community_fit"
+    app_name = "fit_community"
     description = "Fit community composition, and cull/collapse low abundance/highly similar genotypes."
 
     @classmethod
@@ -935,7 +935,7 @@ class FitCommunities(AppInterface):
 
 
 class FitGenotypes(AppInterface):
-    app_name = "genotype_fit"
+    app_name = "fit_genotype"
     description = (
         "Fit strain genotypes based on fixed community compositions and metagenotypes."
     )
@@ -1012,7 +1012,7 @@ class FitGenotypes(AppInterface):
 
 
 class ConcatGenotypes(AppInterface):
-    app_name = "genotype_concatenate"
+    app_name = "concatenate_genotype_chunks"
     description = "Combine step of a split-apply-combine workflow."
 
     @classmethod
