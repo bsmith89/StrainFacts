@@ -43,6 +43,36 @@ def simulate_world(
     return model, world
 
 
+def setup_model_but_do_nothing(
+    structure,
+    metagenotypes,
+    nstrain,
+    device="cpu",
+    dtype=torch.float32,
+):
+    _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
+    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(*args, quiet=quiet, **kwargs)
+
+    _info(
+        f"START: NOT fitting {nstrain} strains with data shape {metagenotypes.sizes}. (This workflow is a no-op.)",
+    )
+    with _phase_info(f"NOT fitting {nstrain} strains with data shape {metagenotypes.sizes}."):
+        _info("(This workflow is a no-op for testing purposes.)")
+        pmodel = sf.model.ParameterizedModel(
+            structure,
+            coords=dict(
+                sample=metagenotypes.sample.values,
+                position=metagenotypes.position.values,
+                allele=metagenotypes.allele.values,
+                strain=range(nstrain),
+            ),
+            hyperparameters=hyperparameters,
+            data=condition_on,
+            device=device,
+            dtype=dtype,
+        ).condition(**metagenotypes.to_counts_and_totals())
+
+
 def fit_metagenotypes_simple(
     structure,
     metagenotypes,

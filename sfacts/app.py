@@ -120,6 +120,88 @@ class NoOp(AppInterface):
         print(args)
 
 
+class NoOp2(AppInterface):
+    app_name = "do_nothing2"
+    description = "Setup a model, but do nothing else (for benchmarking purposes)."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "--model-structure",
+            "-m",
+            default="full_metagenotype",
+            help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
+            choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
+        )
+        parser.add_argument(
+            "--strains-per-sample",
+            type=float,
+            help="Dynamically set strain number as a fraction of sample number.",
+        )
+        parser.add_argument(
+            "--num-strains",
+            "-s",
+            type=int,
+            help=(
+                "Fix initial strain number. "
+                "(Only one of --num-strains or --strains-per-sample may be set)"
+            ),
+        )
+        parser.add_argument("--num-positions", "-g", type=int)
+        parser.add_argument(
+            "--tsv",
+            action="store_true",
+            default=False,
+            help="Input file is in TSV format (rather than NetCDF).",
+        )
+        parser.add_argument("--verbose", "-v", action="store_true", default=False)
+        parser.add_argument("inpath")
+        add_optimization_arguments(parser)
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
+        if args.num_strains and args.strains_per_sample:
+            raise Exception(
+                "Only one of --num-strains or --strains-per-sample may be set."
+            )
+        elif (args.num_strains is None) and (args.strains_per_sample is None):
+            raise Exception(
+                "One of either --num-strains or --strains-per-sample must be set."
+            )
+        if args.num_positions is None:
+            args.num_positions = int(1e20)
+        return args
+
+    @classmethod
+    def run(cls, args):
+
+        if args.tsv:
+            metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+        else:
+            metagenotypes = sf.data.Metagenotypes.load(args.inpath)
+
+        if args.strains_per_sample:
+            num_strains = int(
+                np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
+            )
+        else:
+            num_strains = args.num_strains
+
+        np.random.seed(args.random_seed)
+        num_positions_ss = min(args.num_positions, metagenotypes.sizes["position"])
+        metagenotypes_ss = metagenotypes.random_sample(position=num_positions_ss)
+
+        sf.workflow.setup_model_but_do_nothing(
+            structure=args.model_structure,
+            metagenotypes=metagenotypes_ss,
+            nstrain=num_strains,
+            device=args.device,
+            dtype=args.dtype,
+            quiet=(not args.verbose),
+        )
+
+
 class FilterMetagenotypes(AppInterface):
     app_name = "filter_mgen"
     description = (
@@ -1050,6 +1132,7 @@ class ConcatGenotypes(AppInterface):
 
 SUBCOMMANDS = [
     NoOp,
+    NoOp2,
     FilterMetagenotypes,
     Simulate,
     FitSimple,
