@@ -181,6 +181,9 @@ def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
     _info(f"Fitting {nstrain} strains with data shape {metagenotypes.sizes}.")
     start_time = time.time()
     if nmf_init:
+        _info(
+            "Initializing with NMF (this may take a while if the data dimensions are large)."
+        )
         nmf_kwargs = DEFAULT_NMF_KWARGS.copy()
         nmf_kwargs.update(nmf_init_kwargs)
         approx = sf.estimation.nmf_approximation(
@@ -514,7 +517,7 @@ def iteratively_fit_genotypes_conditioned_on_communities(
     nstrain = len(communities.strain)
     nsample = len(communities.sample)
     nposition_full = len(metagenotypes.position)
-    with _phase_info("Fitting genotypes for {nposition_full} positions."):
+    with _phase_info(f"Fitting genotypes for {nposition_full} positions."):
         _info(f"Conditioned on provided communities with {nstrain} strains and {nsample} samples.")
         nposition = min(nposition, nposition_full)
 
