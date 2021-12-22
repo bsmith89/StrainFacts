@@ -66,7 +66,6 @@ class SetupDummyModel(AppInterface):
             default=False,
             help="Input file is in TSV format (rather than NetCDF).",
         )
-        parser.add_argument("--verbose", "-v", action="store_true", default=False)
         parser.add_argument("inpath")
         add_optimization_arguments(parser)
 
@@ -242,7 +241,6 @@ class FitComplex(AppInterface):
             default=False,
             help="Input file is in TSV format (rather than NetCDF).",
         )
-        parser.add_argument("--verbose", "-v", action="store_true", default=False)
         parser.add_argument("--history-outpath")
         parser.add_argument("inpath")
         parser.add_argument("outpath")
@@ -404,7 +402,6 @@ class FitComplex2(AppInterface):
             default=False,
             help="Input file is in TSV format (rather than NetCDF).",
         )
-        parser.add_argument("--verbose", "-v", action="store_true", default=False)
         # parser.add_argument("--history-outpath")
         parser.add_argument("inpath")
         parser.add_argument("--outpath0", required=True)
@@ -505,6 +502,14 @@ class FitComplex2(AppInterface):
         num_positions_ss = min(args.num_positions, metagenotypes.sizes["position"])
         metagenotypes_ss = metagenotypes.random_sample(position=num_positions_ss)
 
+        if args.debug:
+            sf.logging_util.info("\n\n")
+            sf.logging_util.info(
+                dict(
+                    hyperparameters=args.hyperparameters,
+                    anneal_hyperparameters=args.anneal_hyperparameters,
+                )
+            )
         est0, *_ = sf.workflow.fit_metagenotypes_complex(
             structure=args.model_structure,
             metagenotypes=metagenotypes_ss,
@@ -586,7 +591,6 @@ class Fit(AppInterface):
             default=False,
             help="Input file is in TSV format (rather than NetCDF).",
         )
-        parser.add_argument("--verbose", "-v", action="store_true", default=False)
         # parser.add_argument("--history-outpath")
         parser.add_argument("inpath")
         parser.add_argument("outpath")
@@ -665,6 +669,14 @@ class Fit(AppInterface):
         num_positions_ss = min(args.num_positions, metagenotypes.sizes["position"])
         metagenotypes_ss = metagenotypes.random_sample(position=num_positions_ss)
 
+        if args.debug:
+            sf.logging_util.info("\n\n")
+            sf.logging_util.info(
+                dict(
+                    hyperparameters=args.hyperparameters,
+                    anneal_hyperparameters=args.anneal_hyperparameters,
+                )
+            )
         est0, *_ = sf.workflow.fit_metagenotypes_complex(
             structure=args.model_structure,
             metagenotypes=metagenotypes_ss,
@@ -719,7 +731,6 @@ class FitCommunitiesAndCollapse(AppInterface):
             default=False,
             help="Input file is in TSV format (rather than NetCDF).",
         )
-        parser.add_argument("--verbose", "-v", action="store_true", default=False)
         # parser.add_argument("--history-outpath")
         parser.add_argument("inpath")
         parser.add_argument("outpath")
@@ -857,7 +868,6 @@ class CollapseGenotypes(AppInterface):
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument("--verbose", "-v", action="store_true", default=False)
         # parser.add_argument("--history-outpath")
         parser.add_argument(
             "--collapse",
@@ -913,7 +923,6 @@ class FitGenotypes(AppInterface):
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
-        parser.add_argument("--verbose", "-v", action="store_true", default=False)
         # parser.add_argument("--history-outpath")
         parser.add_argument("community")
         parser.add_argument("metagenotype")
@@ -975,7 +984,6 @@ class ConcatGenotypes(AppInterface):
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument("--verbose", "-v", action="store_true", default=False)
         parser.add_argument("--community")
         parser.add_argument("--metagenotype")
         parser.add_argument("--outpath", required=True)
