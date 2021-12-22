@@ -465,7 +465,7 @@ class FitComplex2(AppInterface):
         _refinement_hyperparameters = parse_hyperparameter_strings(
             args.refinement_hyperparameters
         )
-        args.refinement_hyperparameters = args.hyperparameters
+        args.refinement_hyperparameters = args.hyperparameters.copy()
         args.refinement_hyperparameters.update(_refinement_hyperparameters)
         return args
 
@@ -793,7 +793,7 @@ class FitCommunitiesAndCollapse(AppInterface):
         _refinement_hyperparameters = parse_hyperparameter_strings(
             args.refinement_hyperparameters
         )
-        args.refinement_hyperparameters = args.hyperparameters
+        args.refinement_hyperparameters = args.hyperparameters.copy()
         args.refinement_hyperparameters.update(_refinement_hyperparameters)
         return args
 
