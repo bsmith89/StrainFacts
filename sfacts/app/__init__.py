@@ -366,8 +366,8 @@ class FitComplex(AppInterface):
                     print(elbo, file=f)
 
 
-class FitComplex(AppInterface):
-    app_name = "fit_complex"
+class FitComplex2(AppInterface):
+    app_name = "fit_complex2"
     description = "Fit data using some tricky tactics."
 
     @classmethod
@@ -1006,6 +1006,7 @@ SUBCOMMANDS = [
     FilterMetagenotypes,
     Simulate,
     # FitComplex,
+    FitComplex2,
     FitComplex,
     Fit,
     FitCommunitiesAndCollapse,
