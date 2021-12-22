@@ -94,10 +94,11 @@ class SetupDummyModel(AppInterface):
 
         if args.strains_per_sample:
             num_strains = int(
-                np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
+                max(np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample), 2)
             )
         else:
             num_strains = args.num_strains
+        assert num_strains > 1
 
         np.random.seed(args.random_seed)
         num_positions_ss = min(args.num_positions, metagenotypes.sizes["position"])
@@ -327,10 +328,12 @@ class FitComplex(AppInterface):
 
         if args.strains_per_sample:
             num_strains = int(
-                np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
+                max(np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample), 2)
             )
         else:
             num_strains = args.num_strains
+        assert num_strains > 1
+
 
         (
             est,
@@ -493,10 +496,11 @@ class FitComplex2(AppInterface):
 
         if args.strains_per_sample:
             num_strains = int(
-                np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
+                max(np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample), 2)
             )
         else:
             num_strains = args.num_strains
+        assert num_strains > 1
 
         np.random.seed(args.random_seed)
         num_positions_ss = min(args.num_positions, metagenotypes.sizes["position"])
@@ -660,10 +664,11 @@ class Fit(AppInterface):
 
         if args.strains_per_sample:
             num_strains = int(
-                np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
+                max(np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample), 2)
             )
         else:
             num_strains = args.num_strains
+        assert num_strains > 1
 
         np.random.seed(args.random_seed)
         num_positions_ss = min(args.num_positions, metagenotypes.sizes["position"])
@@ -821,10 +826,11 @@ class FitCommunitiesAndCollapse(AppInterface):
 
         if args.strains_per_sample:
             num_strains = int(
-                np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample)
+                max(np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample), 2)
             )
         else:
             num_strains = args.num_strains
+        assert num_strains > 1
 
         np.random.seed(args.random_seed)
         num_positions_ss = min(args.num_positions, metagenotypes.sizes["position"])
