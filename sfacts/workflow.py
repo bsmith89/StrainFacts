@@ -5,6 +5,14 @@ import xarray as xr
 import numpy as np
 
 
+DEFAULT_NMF_KWARGS = dict(
+    alpha=0.0,
+    solver="cd",
+    tol=1e-3,
+    eps=1e-4,
+)
+
+
 def _chunk_start_end_iterator(total, per):
     for i in range(total // per):
         yield (per * i), (per * (i + 1))
@@ -173,13 +181,7 @@ def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
     _info(f"Fitting {nstrain} strains with data shape {metagenotypes.sizes}.")
     start_time = time.time()
     if nmf_init:
-        _info("Initializing with NMF (this may take a while if the data dimensions are large).")
-        nmf_kwargs = dict(
-            alpha=0.0,
-            solver="cd",
-            tol=1e-3,
-            eps=1e-5,
-        )
+        nmf_kwargs = DEFAULT_NMF_KWARGS.copy()
         nmf_kwargs.update(nmf_init_kwargs)
         approx = sf.estimation.nmf_approximation(
             metagenotypes.to_world(),
@@ -335,12 +337,7 @@ def fit_metagenotypes_complex(
         if nmf_init:
             with _phase_info("Initializing with NMF."):
                 _info("(This may take a while if data dimensions are large.)")
-                nmf_kwargs = dict(
-                    alpha=0.0,
-                    solver="cd",
-                    tol=1e-2,
-                    eps=1e-5,
-                )
+                nmf_kwargs = DEFAULT_NMF_KWARGS.copy()
                 nmf_kwargs.update(nmf_init_kwargs)
                 approx = sf.estimation.nmf_approximation(
                     metagenotypes.to_world(),
