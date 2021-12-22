@@ -92,6 +92,6 @@ class AppInterface:
     def _add_app_subparser(cls, app_subparsers):
         subparser = app_subparsers.add_parser(cls.app_name, help=cls.description)
         subparser.set_defaults(_subcommand=cls)
-        subparser.add_argument("--verbose", "-v", action='store_true', default=False)
-        subparser.add_argument("--debug", action='store_true', default=False)
+        subparser.add_argument("--verbose", "-v", action="store_true", default=False)
+        subparser.add_argument("--debug", action="store_true", default=False)
         cls.add_subparser_arguments(subparser)

@@ -153,9 +153,9 @@ class WrappedDataArrayMixin:
             d = data[name].data
             out_data.append(d)
             if rename:
-                prefix=f"{name}_"
+                prefix = f"{name}_"
             else:
-                prefix=""
+                prefix = ""
             new_coords.extend([f"{prefix}{i}" for i in d[dim].values])
         out_data = xr.concat(out_data, dim)
         out_data[dim] = new_coords
@@ -204,7 +204,6 @@ class Metagenotypes(WrappedDataArrayMixin):
         data.close()
         return sizes
 
-
     @classmethod
     def from_counts_and_totals(cls, y, m, coords=None):
         if coords is None:
@@ -214,7 +213,7 @@ class Metagenotypes(WrappedDataArrayMixin):
         x = np.stack([y, m - y], axis=-1)
         return cls.from_ndarray(x, coords=coords)
 
-    def dump(self, path, int_type='uint32', validate=True):
+    def dump(self, path, int_type="uint32", validate=True):
         if validate:
             self.validate_constraints()
         assert np.iinfo(int_type).max > self.data.values.max()

@@ -159,20 +159,22 @@ def metagenotype_error(reference, estimate):
     mean_sample_error = err.mean("position") / reference.data.mu
     return float(err.sum() / reference.data.m.sum()), mean_sample_error.to_series()
 
+
 def metagenotype_error2(world, discretized=False):
     if discretized:
         g = world.genotypes.discretized().data
     else:
         g = world.genotypes.data
-    p = world.data['communities'].data @ g.values
+    p = world.data["communities"].data @ g.values
     mgen = world.metagenotypes
     m = mgen.total_counts()
     mu = m.mean("position")
-    x = mgen.data.sel(allele='alt')
+    x = mgen.data.sel(allele="alt")
     predict = p * m
     err = np.abs(predict - x)
     mean_sample_error = err.mean("position") / mu
     return float(err.sum() / m.sum()), mean_sample_error.to_series()
+
 
 def rank_abundance_error(reference, estimate, p=1):
     reference_num_strains = len(reference.strain)

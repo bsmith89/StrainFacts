@@ -334,7 +334,6 @@ class FitComplex(AppInterface):
             num_strains = args.num_strains
         assert num_strains > 1
 
-
         (
             est,
             est_list,
@@ -866,11 +865,10 @@ class FitCommunitiesAndCollapse(AppInterface):
         )
         est1.dump(args.outpath)
 
+
 class CollapseGenotypes(AppInterface):
     app_name = "collapse_genotypes"
-    description = (
-        "Collapse low-abundance and highly similar genotypes."
-    )
+    description = "Collapse low-abundance and highly similar genotypes."
 
     @classmethod
     def add_subparser_arguments(cls, parser):
@@ -903,7 +901,6 @@ class CollapseGenotypes(AppInterface):
             diss_thresh=args.collapse,
             frac_thresh=args.cull,
             quiet=(not args.verbose),
-
         )
         out_world.dump(args.outpath)
 
@@ -1019,7 +1016,6 @@ SUBCOMMANDS = [
     SetupDummyModel,  # FIXME: Untested
     FilterMetagenotypes,
     Simulate,
-    # FitComplex,
     FitComplex2,
     FitComplex,
     Fit,

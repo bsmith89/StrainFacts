@@ -59,12 +59,16 @@ def setup_model_but_do_nothing(
     dtype=torch.float32,
 ):
     _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
-    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(*args, quiet=quiet, **kwargs)
+    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(
+        *args, quiet=quiet, **kwargs
+    )
 
     _info(
         f"START: NOT fitting {nstrain} strains with data shape {metagenotypes.sizes}. (This workflow is a no-op.)",
     )
-    with _phase_info(f"NOT fitting {nstrain} strains with data shape {metagenotypes.sizes}."):
+    with _phase_info(
+        f"NOT fitting {nstrain} strains with data shape {metagenotypes.sizes}."
+    ):
         _info("(This workflow is a no-op for testing purposes.)")
         pmodel = sf.model.ParameterizedModel(
             structure,
@@ -308,6 +312,7 @@ def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
     _info(f"END: Fit in {delta_time} seconds.")
     return est_curr, est_list, history_list
 
+
 def fit_metagenotypes_complex(
     structure,
     metagenotypes,
@@ -326,7 +331,9 @@ def fit_metagenotypes_complex(
 ):
 
     _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
-    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(*args, quiet=quiet, **kwargs)
+    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(
+        *args, quiet=quiet, **kwargs
+    )
 
     if estimation_kwargs is None:
         estimation_kwargs = {}
@@ -336,7 +343,9 @@ def fit_metagenotypes_complex(
     est_list = []
     history_list = []
 
-    with _phase_info(f"Fitting {nstrain} strains with data shape {metagenotypes.sizes}."):
+    with _phase_info(
+        f"Fitting {nstrain} strains with data shape {metagenotypes.sizes}."
+    ):
         if nmf_init:
             with _phase_info("Initializing with NMF."):
                 _info("(This may take a while if data dimensions are large.)")
@@ -389,6 +398,7 @@ def fit_metagenotypes_complex(
         )
 
     return est_curr, est_list, history_list
+
 
 def fit_genotypes_conditioned_on_communities_then_collapse(
     structure,
@@ -467,6 +477,7 @@ def fit_genotypes_conditioned_on_communities_then_collapse(
     _info(f"END: Fit in {delta_time} seconds.")
     return est_curr, est_list, history_list
 
+
 def collapse_genotypes(
     world,
     diss_thresh,
@@ -475,7 +486,9 @@ def collapse_genotypes(
 ):
 
     _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
-    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(*args, quiet=quiet, **kwargs)
+    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(
+        *args, quiet=quiet, **kwargs
+    )
 
     with _phase_info(
         f"Collapsing initial {world.sizes['strain']} strains "
@@ -506,7 +519,9 @@ def iteratively_fit_genotypes_conditioned_on_communities(
 ):
 
     _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
-    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(*args, quiet=quiet, **kwargs)
+    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(
+        *args, quiet=quiet, **kwargs
+    )
 
     if estimation_kwargs is None:
         estimation_kwargs = {}
@@ -518,7 +533,9 @@ def iteratively_fit_genotypes_conditioned_on_communities(
     nsample = len(communities.sample)
     nposition_full = len(metagenotypes.position)
     with _phase_info(f"Fitting genotypes for {nposition_full} positions."):
-        _info(f"Conditioned on provided communities with {nstrain} strains and {nsample} samples.")
+        _info(
+            f"Conditioned on provided communities with {nstrain} strains and {nsample} samples."
+        )
         nposition = min(nposition, nposition_full)
 
         metagenotypes_full = metagenotypes

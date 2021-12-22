@@ -58,7 +58,9 @@ def NegativeBinomialReparam(mu, r, validate_args=True):
     logits = torch.logit(p)
     #     p = torch.clamp(p, eps, 1 - eps)
     return dist.NegativeBinomial(
-        total_count=r, logits=logits, validate_args=validate_args,
+        total_count=r,
+        logits=logits,
+        validate_args=validate_args,
     )
 
 

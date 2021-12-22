@@ -23,7 +23,7 @@ def genotype_dissimilarity(x, y, q=2):
 
     dist = np.abs((x - y) / 2) ** q
     weight = np.abs(x * y)
-    wmean_dist = (((weight * dist).sum()) / ((weight.sum())))
+    wmean_dist = ((weight * dist).sum()) / ((weight.sum()))
     # Why not finish up by powering it by (1 / q)?
     # I don't do this part because it loses the city-block distance
     # interpretation when x and y are both discrete (i.e. one of {0, 1}).

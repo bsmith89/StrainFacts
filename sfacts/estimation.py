@@ -352,8 +352,7 @@ def nmf_approximation(
     d = (
         world.metagenotypes
         # .frequencies(pseudo=pseudo)
-        .to_series()
-        .unstack("sample")
+        .to_series().unstack("sample")
     )
     columns = d.columns
     index = d.index
