@@ -328,9 +328,9 @@ class Metagenotypes(WrappedDataArrayMixin):
             over = "position"
         elif dim == "position":
             over = "sample"
-        p = self.dominant_allele_fraction()
-        ent = sf.math.binary_entropy(p)
-        return ent.sum(over).rename("entropy")
+
+        ent_scaled = sf.math.entropy(self.frequencies(), "allele") * self.total_counts()
+        return (ent_scaled.sum(over) / self.total_counts().sum(over)).rename("entropy")
 
 
 class Genotypes(WrappedDataArrayMixin):
