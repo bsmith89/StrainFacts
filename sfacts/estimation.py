@@ -34,6 +34,7 @@ for _name, _default_optimizer_kwargs in [
     ("Adagrad", dict(lr=0.1)),
     ("AdamW", dict(lr=0.1)),
     ("RMSprop", dict(lr=0.1)),
+    ("SGD", dict(lr=0.1)),
 ]:
     OPTIMIZERS[_name] = torch.optim.__dict__[_name], _default_optimizer_kwargs
 
