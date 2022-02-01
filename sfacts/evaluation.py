@@ -136,7 +136,7 @@ def community_entropy_error(reference, estimate):
     est_community_entropy = entropy(estimate.communities.values)
     diff = est_community_entropy - ref_community_entropy
     return (
-        np.mean(diff),
+        np.mean(np.abs(diff)),
         diff,
     )
 
