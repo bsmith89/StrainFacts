@@ -257,12 +257,15 @@ class Metagenotypes(WrappedDataArrayMixin):
     def alt_allele_fraction(self, pseudo=0.0):
         return self.frequencies(pseudo=pseudo).sel(allele="alt")
 
-    def to_estimated_genotypes(self, pseudo=1.0):
-        return Genotypes(
+    def to_estimated_genotypes(self, pseudo=0.0, fillna=True):
+        frac = (
             self.alt_allele_fraction(pseudo=pseudo)
             .rename({"sample": "strain"})
             .reset_coords(drop=True)
         )
+        if fillna:
+            frac = frac.fillna(0.5)
+        return Genotypes(frac)
 
     def total_counts(self):
         return self.data.sum("allele")
@@ -283,7 +286,7 @@ class Metagenotypes(WrappedDataArrayMixin):
             m=self.total_counts().values,
         )
 
-    def pdist(self, dim="sample", pseudo=1.0, **kwargs):
+    def pdist(self, dim="sample", pseudo=0.0, **kwargs):
         if dim == "sample":
             _dim = "strain"
         else:
@@ -302,7 +305,7 @@ class Metagenotypes(WrappedDataArrayMixin):
             squareform(pdist(d.values, metric="cosine")), index=d.index, columns=d.index
         )
 
-    def linkage(self, dim="sample", pseudo=1.0, **kwargs):
+    def linkage(self, dim="sample", pseudo=0.0, **kwargs):
         if dim == "sample":
             _dim = "strain"
         else:
@@ -361,16 +364,18 @@ class Genotypes(WrappedDataArrayMixin):
     def fuzzed(self, eps=1e-5):
         return self.lift(lambda x: (x + eps) / (1 + 2 * eps))
 
-    def pdist(self, dim="strain", quiet=True):
+    def pdist(self, dim="strain", quiet=True, **kwargs):
         index = getattr(self, dim)
         if dim == "strain":
             unwrapped_values = self.values
-            cdmat = sf.math.genotype_pdist(unwrapped_values, quiet=quiet)
+            _kwargs = dict()
+            _kwargs.update(kwargs)
+            cdmat = sf.math.genotype_pdist(unwrapped_values, quiet=quiet, **_kwargs)
         elif dim == "position":
             unwrapped_values = self.values.T
-            cdmat = pdist(
-                sf.math.genotype_binary_to_sign(self.values.T), metric="cosine"
-            )
+            _kwargs = dict(metric="cosine")
+            _kwargs.update(kwargs)
+            cdmat = pdist(sf.math.genotype_binary_to_sign(self.values.T), **_kwargs)
         # Reboxing
         dmat = pd.DataFrame(squareform(cdmat), index=index, columns=index)
         return dmat
