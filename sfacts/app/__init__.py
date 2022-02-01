@@ -609,6 +609,7 @@ class Fit(AppInterface):
         parser.add_argument(
             "--anneal-hyperparameters", nargs="+", action="append", default=[]
         )
+        parser.add_argument("--history-outpath")
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
@@ -681,7 +682,7 @@ class Fit(AppInterface):
                     anneal_hyperparameters=args.anneal_hyperparameters,
                 )
             )
-        est0, *_ = sf.workflow.fit_metagenotypes_complex(
+        est0, est_list, history_list = sf.workflow.fit_metagenotypes_complex(
             structure=args.model_structure,
             metagenotypes=metagenotypes_ss,
             nstrain=num_strains,
@@ -696,6 +697,11 @@ class Fit(AppInterface):
             estimation_kwargs=args.estimation_kwargs,
         )
         est0.dump(args.outpath)
+        if args.history_outpath:
+            with open(args.history_outpath, 'w') as f:
+                for v in history_list[0]:
+                    print(v, file=f)
+
 
 
 class FitCommunitiesAndCollapse(AppInterface):
