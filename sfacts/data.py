@@ -280,6 +280,13 @@ class Metagenotypes(WrappedDataArrayMixin):
             over = "sample"
         return self.total_counts().mean(over)
 
+    def horizontal_coverage(self, dim="sample"):
+        if dim == "sample":
+            over = "position"
+        elif dim == "position":
+            over = "sample"
+        return (self.total_counts() > 1).mean(over)
+
     def to_counts_and_totals(self, binary_allele="alt"):
         return dict(
             y=self.allele_counts(allele=binary_allele).values,
