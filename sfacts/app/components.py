@@ -36,6 +36,7 @@ def add_optimization_arguments(parser):
         default=1e-6,
         help="Learning rate threshold to stop reduction 'schedule'.",
     )
+    parser.add_argument("--optimizer-clip-norm", type=float)
 
 
 def transform_optimization_parameter_inputs(args):
@@ -54,6 +55,7 @@ def transform_optimization_parameter_inputs(args):
         lagB=args.lag2,
         optimizer_name=args.optimizer,
         optimizer_kwargs=optimizer_kwargs,
+        optimizer_clip_kwargs=dict(clip_norm=args.optimizer_clip_norm),
         minimum_lr=args.min_optimizer_learning_rate,
     )
     return args

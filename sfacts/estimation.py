@@ -103,10 +103,11 @@ def get_scheduled_optimization_stepper(
     cooldown,
     factor=0.5,
     optimizer_kwargs=None,
+    optimizer_clip_kwargs=None,
     quiet=False,
 ):
     optimizer, default_optimizer_kwargs = OPTIMIZERS[optimizer_name]
-    _optimizer_kwargs = default_optimizer_kwargs
+    _optimizer_kwargs = default_optimizer_kwargs.copy()
     if optimizer_kwargs is not None:
         _optimizer_kwargs.update(optimizer_kwargs)
 
@@ -121,7 +122,8 @@ def get_scheduled_optimization_stepper(
             threshold=0,
             min_lr=0,
             eps=0,
-        )
+        ),
+        clip_args=optimizer_clip_kwargs,  # FIXME: This is just for testing purposes.
     )
     svi = pyro.infer.SVI(model, guide, scheduler, loss=loss)
     return svi, scheduler
@@ -138,6 +140,7 @@ def estimate_parameters(
     lagB=100,
     optimizer_name="Adamax",
     optimizer_kwargs=None,
+    optimizer_clip_kwargs=None,
     quiet=False,
     ignore_jit_warnings=False,
     seed=None,
@@ -193,6 +196,7 @@ def estimate_parameters(
         patience=lagB,
         cooldown=lagB,
         optimizer_kwargs=optimizer_kwargs,
+        optimizer_clip_kwargs=optimizer_clip_kwargs,
         quiet=quiet,
     )
 
