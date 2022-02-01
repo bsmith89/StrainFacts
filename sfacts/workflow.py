@@ -233,7 +233,7 @@ def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
     _info("Finished initial fitting.")
     _info(
         "Average metagenotype error: {}".format(
-            sf.evaluation.metagenotype_error(est_curr, est_curr)[0]
+            sf.evaluation.metagenotype_error2(est_curr, metagenotypes)[0]
         )
     )
 
@@ -255,7 +255,7 @@ def fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes(
     est_list.append(est_curr)
     _info(
         "Average metagenotype error: {}".format(
-            sf.evaluation.metagenotype_error(est_curr, est_curr)[0]
+            sf.evaluation.metagenotype_error2(est_curr, metagenotypes)[0]
         )
     )
 
@@ -393,7 +393,7 @@ def fit_metagenotypes_complex(
             est_list.append(est_curr)
         _info(
             "Average metagenotype error: {}".format(
-                sf.evaluation.metagenotype_error(est_curr, est_curr)[0]
+            sf.evaluation.metagenotype_error2(est_curr, metagenotypes)[0]
             )
         )
 
@@ -456,7 +456,7 @@ def fit_genotypes_conditioned_on_communities_then_collapse(
     _info("Finished model fitting.")
     _info(
         "Average metagenotype error: {}".format(
-            sf.evaluation.metagenotype_error(est_curr, est_curr)[0]
+            sf.evaluation.metagenotype_error2(est_curr, metagenotypes)[0]
         )
     )
 
