@@ -201,13 +201,16 @@ def rank_abundance_error(reference, estimate, p=1):
     )
 
 
-def unifrac_error(reference, estimate, coef=1e6):
+def unifrac_error(reference, estimate, coef=1e6, discretized=False):
     from skbio import DistanceMatrix
     from skbio.diversity.beta import weighted_unifrac
 
     concat_genotypes = Genotypes.concat(
         {"ref": reference.genotypes, "est": estimate.genotypes}, dim="strain"
     )
+    if discretized:
+        concat_genotypes = concat_genotypes.discretized()
+
     dm = concat_genotypes.pdist()
     dm = DistanceMatrix(dm, dm.index.astype(str))
     tree = neighbor_joining(dm).root_at_midpoint()
