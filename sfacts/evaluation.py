@@ -160,16 +160,17 @@ def metagenotype_error(reference, estimate):
     return float(err.sum() / reference.data.m.sum()), mean_sample_error.to_series()
 
 
-def metagenotype_error2(world, discretized=False):
+def metagenotype_error2(world, metagenotypes=None, discretized=False):
+    if metagenotypes is None:
+        metagenotypes = world.metagenotypes
     if discretized:
         g = world.genotypes.discretized().data
     else:
         g = world.genotypes.data
     p = world.data["communities"].data @ g.values
-    mgen = world.metagenotypes
-    m = mgen.total_counts()
+    m = metagenotypes.total_counts()
     mu = m.mean("position")
-    x = mgen.data.sel(allele="alt")
+    x = metagenotypes.data.sel(allele="alt")
     predict = p * m
     err = np.abs(predict - x)
     mean_sample_error = err.mean("position") / mu
