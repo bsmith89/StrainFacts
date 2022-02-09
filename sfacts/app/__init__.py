@@ -41,7 +41,7 @@ class SetupDummyModel(AppInterface):
         parser.add_argument(
             "--model-structure",
             "-m",
-            default="full_metagenotype",
+            default="default",
             help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
             choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
         )
@@ -159,7 +159,7 @@ class Simulate(AppInterface):
         parser.add_argument(
             "--model-structure",
             "-m",
-            default="full_metagenotype",
+            default="default_simulation",
             help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
             choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
         )
@@ -566,7 +566,7 @@ class Fit(AppInterface):
         parser.add_argument(
             "--model-structure",
             "-m",
-            default="full_metagenotype",
+            default="default",
             help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
             choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
         )
@@ -922,7 +922,7 @@ class FitGenotypes(AppInterface):
         parser.add_argument(
             "--model-structure",
             "-m",
-            default="full_metagenotype",
+            default="default",
             help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
             choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
         )
