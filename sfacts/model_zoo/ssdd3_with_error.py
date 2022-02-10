@@ -116,7 +116,9 @@ def model(
     y = pyro.sample(
         "y",
         dist.BetaBinomial(
-            concentration1=alpha * p, concentration0=alpha * (1 - p), total_count=m,
+            concentration1=alpha * p,
+            concentration0=alpha * (1 - p),
+            total_count=m,
         ).to_event(),
     )
     pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
