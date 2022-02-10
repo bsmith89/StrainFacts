@@ -1,7 +1,13 @@
 # StrainFacts
 
-StrainFacts is a tool "strain deconvolution", inferring genotypes and their
-relative abundance across samples from metagenotype data.
+StrainFacts is a "strain deconvolution" tool, inferring strain genotypes and
+their relative abundance across samples directly from metagenotype data[^metagenotype-meaning].
+
+[^metagenotype-meaning]: A "metagenotype" is a data matrix of counts of how
+many reads in a shotgun metagenomic sequence library contained each allele at a
+set of polymorphic sites.
+Metagenotypes from multiple (maybe _many_) samples stacked together form
+the main input data-type analyzed by StrainFacts.
 
 For detailed information, check out the manuscript:
 
