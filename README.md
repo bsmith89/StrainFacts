@@ -5,7 +5,7 @@ relative abundance across samples from metagenotype data.
 
 For detailed information, check out the manuscript:
 
-> Scalable microbial strain inference in metagenomic data using StrainFacts
+> Scalable microbial strain inference in metagenomic data using StrainFacts.
 B.J. Smith, X. Li, A. Abate, Z.J. Shi, K.S. Pollard
 _bioRxiv_ doi: https://doi.org/10.1101/2022.02.01.478746
 
