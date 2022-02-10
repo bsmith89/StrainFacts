@@ -36,6 +36,6 @@ from sfacts.evaluation import (
 )
 from sfacts.workflow import (
     simulate_world,
-    fit_metagenotypes_simple,
-    fit_subsampled_metagenotypes_then_collapse_and_iteratively_refit_genotypes,
+    fit_metagenotypes_complex,
+    iteratively_fit_genotypes_conditioned_on_communities,
 )
