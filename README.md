@@ -25,7 +25,11 @@ _bioRxiv_ doi: https://doi.org/10.1101/2022.02.01.478746
 - tqdm
 - scikit-bio
 
-2. Install StrainFacts: `pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts`
+2. Install StrainFacts:
+
+```
+pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts`
+```
 
 
 ## Usage
