@@ -227,7 +227,7 @@ class Fit(AppInterface):
             "-s",
             type=int,
             help=(
-                "Fix initial strain number. "
+                "Fix strain number. "
                 "(Only one of --num-strains or --strains-per-sample may be set)"
             ),
         )
