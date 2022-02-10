@@ -18,18 +18,15 @@ _bioRxiv_ doi: https://doi.org/10.1101/2022.02.01.478746
 
 ## Installation
 
-1. Install pre-requisite python packages
+1. Install pre-requisite python packages[^pyro-install]
 
-- pytorch
-- pyro-ppl
-- xarray
-- pandas
-- matplotlib
-- numpy
-- scipy
-- scikit-learn
-- tqdm
-- scikit-bio
+```
+pip install -r requirements.pip
+```
+
+[^pyro-install]: Installing PyTorch/Pyro with GPU support may be more challenging.
+Consider using a Docker/Singularity container like
+[this one](https://hub.docker.com/repository/docker/bsmith89/compbio).
 
 2. Install StrainFacts:
 
