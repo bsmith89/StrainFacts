@@ -25,19 +25,23 @@ _bioRxiv_ doi: https://doi.org/10.1101/2022.02.01.478746
 - tqdm
 - scikit-bio
 
-2. Install StrainFacts: `pip insall git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts`
+2. Install StrainFacts: `pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts`
 
 
 ## Usage
 
 Get CLI help:
 
-`sfacts --help  # List subcommands`
-`sfacts fit --help  # Subcommand specific CLI help`
+```
+sfacts --help  # List subcommands
+sfacts fit --help  # Subcommand specific CLI help
+```
 
 Convert tabular metagenotype to XArray/NetCDF format:
 
-`sfacts load_mgen input_metagenotype.tsv input_metagenotype.nc  # TODO: Implement this subcommand`
+```
+sfacts load_mgen input_metagenotype.tsv input_metagenotype.nc  # TODO: Implement this subcommand
+```
 
 Where `input_metagenotype.tsv` looks something like:
 
@@ -57,7 +61,9 @@ TODO: Add an `example/` directory with e.g. `input_metagenotype.tsv`
 
 Fit metagenotype data with default everything:
 
-`sfacts fit --num-strains <S> input_metagenotype.nc output_fit.nc`
+```
+sfacts fit --num-strains <S> input_metagenotype.nc output_fit.nc
+```
 
 Fit metagenotype data with the same parameters used in the manuscript:
 
