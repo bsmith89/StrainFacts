@@ -44,8 +44,10 @@ sfacts fit --help  # Subcommand specific CLI help
 Convert tabular metagenotype to XArray/NetCDF format:
 
 ```
-sfacts load_mgen input_metagenotype.tsv input_metagenotype.nc  # TODO: Implement this subcommand
+sfacts load_mgen input_metagenotype.tsv input_metagenotype.nc
 ```
+
+TODO: Implement this subcommand
 
 Where `input_metagenotype.tsv` looks something like:
 
