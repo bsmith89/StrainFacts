@@ -1,7 +1,8 @@
 # StrainFacts
 
-StrainFacts is a "strain deconvolution" tool, inferring strain genotypes and
-their relative abundance across samples directly from metagenotype data[^metagenotype-meaning].
+StrainFacts is a "strain deconvolution" tool, which infers both strain
+genotypes and their relative abundance across samples directly from
+metagenotype data[^metagenotype-meaning].
 
 [^metagenotype-meaning]: A "metagenotype" is a data matrix of counts of how
 many reads in a shotgun metagenomic sequence library contained each allele at a
@@ -13,7 +14,7 @@ For detailed information, check out the manuscript:
 
 > Scalable microbial strain inference in metagenomic data using StrainFacts.
 B.J. Smith, X. Li, A. Abate, Z.J. Shi, K.S. Pollard
-_bioRxiv_ doi: https://doi.org/10.1101/2022.02.01.478746
+_bioRxiv_ doi:[10.1101/2022.02.01.478746](https://doi.org/10.1101/2022.02.01.478746)
 
 
 ## Installation
@@ -31,42 +32,18 @@ Consider using a Docker/Singularity container like
 2. Install StrainFacts:
 
 ```
-pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts`
+pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts
 ```
 
 
 ## Usage
 
-Get CLI help:
+Get CLI usage information:
 
 ```
 sfacts --help  # List subcommands
-sfacts fit --help  # Subcommand specific CLI help
+sfacts fit --help  # Subcommand specific CLI usage
 ```
-
-Convert tabular metagenotype to XArray/NetCDF format:
-
-```
-sfacts load_mgen input_metagenotype.tsv input_metagenotype.nc
-```
-
-TODO: Implement this subcommand
-
-Where `input_metagenotype.tsv` looks something like:
-
-```
-sample	position	allele	tally
-sample1	1	alt	1
-sample1	2	ref	1
-sample1	2	alt	1
-sample2	2	ref	3
-sample2	2	alt	1
-[...continued...]
-```
-
-(NOTE: The "sample" and "position" IDs can be anything, but "allele" should be `alt` or `ref`.)
-
-TODO: Add an `example/` directory with e.g. `input_metagenotype.tsv`
 
 Fit metagenotype data with default everything:
 
@@ -97,13 +74,44 @@ sfacts fit -m ssdd3_with_error  \
     --optimizer-learning-rate 0.05 \
     --min-optimizer-learning-rate 1e-06 \
     --max-iter 1_000_000 --lag1 50 --lag2 100 \
-    input_data.nc \
+    --tsv-input \
+    input_metagenotype.tsv \
     output_fit.nc
 ```
 
+TODO: Implement `--tsv-input` flag.
+
+Where `input_metagenotype.tsv` looks something like:
+
+```
+sample	position	allele	tally
+sample1	1	alt	1
+sample1	2	ref	1
+sample1	2	alt	1
+sample2	2	ref	3
+sample2	2	alt	1
+[...continued...]
+```
+
+(NOTE: The "sample" and "position" IDs can be anything, but "allele" should be `alt` or `ref`.)
+
+TODO: Add an `example/` directory with e.g. `input_metagenotype.tsv`
+
+Export text relative abundance and genotypes tables from `output_fit.nc`:
+
+```
+sfacts export output_fit.nc community.tsv genotype.tsv
+```
+
+TODO: Implement this subcommand.
+
 ## See Also
 
+### Metagenotypers
 - [GT-Pro](https://github.com/zjshi/gt-pro)
 - [MIDAS / IGGtools](https://github.com/czbiohub/iggtools)
+
+### Species reference databases
+
 - [UHGG v1.0](http://ftp.ebi.ac.uk/pub/databases/metagenomics/mgnify_genomes/human-gut/v1.0/)
 - [MGnify / UHGG v2.0](https://www.ebi.ac.uk/metagenomics/genome-catalogues/human-gut-v2-0)
