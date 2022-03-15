@@ -26,8 +26,9 @@ _bioRxiv_ doi:[10.1101/2022.02.01.478746](https://doi.org/10.1101/2022.02.01.478
       environment specification)
 - [ ] Example data with a tutorial/vignette for running StrainFacts and
       interpreting the output
-- [ ] The parameters selected for use in this paper (which we have found to be
+- [x] The parameters selected for use in this paper (which we have found to be
       applicable across a range of datasets) will be set as the default.
+    - Caveat: The initial values for hyperparameter annealing should be set by the user
 - [ ] We will document some useful approaches for hyperparameter tuning.
 
 ## Installation

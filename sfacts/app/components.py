@@ -21,9 +21,9 @@ def add_optimization_arguments(parser):
         help="Float precision.",
     )
     parser.add_argument("--device", default="cpu")
-    parser.add_argument("--max-iter", default=int(1e5), type=int)
+    parser.add_argument("--max-iter", default=int(1e6), type=int)
     parser.add_argument("--random-seed", "--seed", "-r", type=int)
-    parser.add_argument("--lag1", default=20, type=int)
+    parser.add_argument("--lag1", default=50, type=int)
     parser.add_argument("--lag2", default=100, type=int)
     parser.add_argument("--nojit", dest="jit", action="store_false", default=True)
     parser.add_argument(

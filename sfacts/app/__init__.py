@@ -248,11 +248,16 @@ class Fit(AppInterface):
         parser.add_argument(
             "--nmf-init",
             action="store_true",
-            default=False,
+            default=True,
             help="Use NMF to select starting parameters.",
         )
-        parser.add_argument("--anneal-wait", type=int, default=0)
-        parser.add_argument("--anneal-steps", type=int, default=0)
+        parser.add_argument(
+            "--no-nmf-init",
+            action="store_false",
+            help="Don't use NMF to select starting parameters.",
+        )
+        parser.add_argument("--anneal-wait", type=int, default=2000)
+        parser.add_argument("--anneal-steps", type=int, default=10000)
         parser.add_argument(
             "--anneal-hyperparameters", nargs="+", action="append", default=[]
         )

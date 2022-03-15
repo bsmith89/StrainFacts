@@ -28,13 +28,13 @@ def _tqdm_format_num(n):
 
 OPTIMIZERS = dict()
 for _name, _default_optimizer_kwargs in [
-    ("Adam", dict(lr=0.1)),
-    ("Adamax", dict(lr=0.1)),
-    ("Adadelta", dict(lr=0.1)),
-    ("Adagrad", dict(lr=0.1)),
-    ("AdamW", dict(lr=0.1)),
-    ("RMSprop", dict(lr=0.1)),
-    ("SGD", dict(lr=0.1)),
+    ("Adam", dict(lr=0.05)),
+    ("Adamax", dict(lr=0.05)),
+    ("Adadelta", dict(lr=0.05)),
+    ("Adagrad", dict(lr=0.05)),
+    ("AdamW", dict(lr=0.05)),
+    ("RMSprop", dict(lr=0.05)),
+    ("SGD", dict(lr=0.05)),
 ]:
     OPTIMIZERS[_name] = torch.optim.__dict__[_name], _default_optimizer_kwargs
 

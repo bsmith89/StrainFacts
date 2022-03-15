@@ -31,16 +31,16 @@ import pyro.distributions as dist
         ],
     ),
     default_hyperparameters=dict(
-        gamma_hyper=0.01,
-        rho_hyper=5.0,
-        pi_hyper=0.2,
+        gamma_hyper=1e-10,
+        rho_hyper=0.5,
+        pi_hyper=0.3,
         mu_hyper_mean=1.0,
         mu_hyper_scale=1.0,
         m_hyper_concentration=1.0,
         epsilon_hyper_mode=0.01,
         epsilon_hyper_spread=1.5,
-        alpha_hyper_mean=200,
-        alpha_hyper_scale=1,
+        alpha_hyper_mean=10,
+        alpha_hyper_scale=1e-6,
     ),
 )
 def model(
