@@ -17,6 +17,19 @@ B.J. Smith, X. Li, A. Abate, Z.J. Shi, K.S. Pollard
 _bioRxiv_ doi:[10.1101/2022.02.01.478746](https://doi.org/10.1101/2022.02.01.478746)
 
 
+## TODO
+
+- [ ] A script for converting GT-Pro output TSVs to StrainFacts input data
+- [ ] A script for extracting estimates from StrainFacts files to TSVs
+- [ ] Complete installation instructions, as well as a robust artifact for
+      running StrainFacts on various platforms (e.g. a Dockerfile or Conda
+      environment specification)
+- [ ] Example data with a tutorial/vignette for running StrainFacts and
+      interpreting the output
+- [ ] The parameters selected for use in this paper (which we have found to be
+      applicable across a range of datasets) will be set as the default.
+- [ ] We will document some useful approaches for hyperparameter tuning.
+
 ## Installation
 
 1. Install pre-requisite python packages[^pyro-install]
