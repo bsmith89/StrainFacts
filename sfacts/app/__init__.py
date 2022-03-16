@@ -114,6 +114,23 @@ class SetupDummyModel(AppInterface):
         )
 
 
+class LoadGTProMetagenotype(AppInterface):
+    app_name = "load_gtpro"
+    description = "Read in GT-Pro output and convert it into a StrainFacts NetCDF metagenotype file."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument("inpath")
+        parser.add_argument("outpath")
+        # TODO: Int-type for output? Can help with super large datasets.
+
+    @classmethod
+    def run(cls, args):
+        # TODO: Check that load_from_tsv is appropriate for GT-Pro output.
+        mgen = sf.data.Metagenotype.load_from_tsv(args.inpath)
+        mgen.dump(args.outpath)
+
+
 class FilterMetagenotypes(AppInterface):
     app_name = "filter_mgen"
     description = (
@@ -443,10 +460,6 @@ class ConcatGenotypes(AppInterface):
         parser.add_argument("genotypes", nargs="+")
 
     @classmethod
-    def transform_app_parameter_inputs(cls, args):
-        return args
-
-    @classmethod
     def run(cls, args):
         communities = sf.data.World.load(args.community).communities
         metagenotypes = sf.data.Metagenotypes.load(args.metagenotype)
@@ -461,14 +474,33 @@ class ConcatGenotypes(AppInterface):
         world.dump(args.outpath)
 
 
+class DumpInferences(AppInterface):
+    app_name = "dump_inferences"
+    description = "Export StrainFacts parameters to TSVs"
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument("inpath")
+        parser.add_argument("communities_outpath")
+        parser.add_argument("genotypes_outpath")
+
+    @classmethod
+    def run(cls, args):
+        world = sf.data.World.load(args.inpath)
+        world.genotypes.data.to_series().to_csv(args.genotypes_outpath, sep='\t')
+        world.communities.data.to_series().to_csv(args.communities_outpath, sep='\t')
+
+
 SUBCOMMANDS = [
     NoOp,
     SetupDummyModel,  # FIXME: Untested
+    LoadGTProMetagenotype,  # FIXME: Untested
     FilterMetagenotypes,
     Simulate,
     Fit,
     FitGenotypes,
     ConcatGenotypes,
+    DumpParameterTSVs,  # FIXME: Untested
 ]
 
 

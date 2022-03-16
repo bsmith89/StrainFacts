@@ -73,9 +73,7 @@ class AppInterface:
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
-        raise NotImplementedError(
-            "Subclasses of AppInterface must implement a `finalize_input_arguments` method."
-        )
+        return args
 
     @classmethod
     def run(cls, args):
