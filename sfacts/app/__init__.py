@@ -126,8 +126,7 @@ class LoadGTProMetagenotype(AppInterface):
 
     @classmethod
     def run(cls, args):
-        # TODO: Check that load_from_tsv is appropriate for GT-Pro output.
-        mgen = sf.data.Metagenotype.load_from_tsv(args.inpath)
+        mgen = sf.data.Metagenotypes.load_from_merged_gtpro(args.inpath)
         mgen.dump(args.outpath)
 
 
@@ -474,7 +473,7 @@ class ConcatGenotypes(AppInterface):
         world.dump(args.outpath)
 
 
-class DumpInferences(AppInterface):
+class DumpParameterTSVs(AppInterface):
     app_name = "dump_inferences"
     description = "Export StrainFacts parameters to TSVs"
 
@@ -487,14 +486,14 @@ class DumpInferences(AppInterface):
     @classmethod
     def run(cls, args):
         world = sf.data.World.load(args.inpath)
-        world.genotypes.data.to_series().to_csv(args.genotypes_outpath, sep='\t')
-        world.communities.data.to_series().to_csv(args.communities_outpath, sep='\t')
+        world.genotypes.data.to_series().to_csv(args.genotypes_outpath, sep="\t")
+        world.communities.data.to_series().to_csv(args.communities_outpath, sep="\t")
 
 
 SUBCOMMANDS = [
     NoOp,
     SetupDummyModel,  # FIXME: Untested
-    LoadGTProMetagenotype,  # FIXME: Untested
+    LoadGTProMetagenotype,
     FilterMetagenotypes,
     Simulate,
     Fit,

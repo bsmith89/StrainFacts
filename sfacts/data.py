@@ -198,6 +198,41 @@ class Metagenotypes(WrappedDataArrayMixin):
         return cls._post_load(data)
 
     @classmethod
+    def load_from_merged_gtpro(cls, path, validate=True, **kwargs):
+        data = pd.read_table(
+            path,
+            names=[
+                "sample_id",
+                "species_id",
+                "global_pos",
+                "contig",
+                "local_pos",
+                "ref_allele",
+                "alt_allele",
+                "ref_count",
+                "alt_count",
+            ],
+            **kwargs,
+        ).rename(
+            columns={
+                "sample_id": "sample",
+                "global_pos": "position",
+                "ref_count": "ref",
+                "alt_count": "alt",
+            }
+        )
+        assert len(data.species_id.unique()) == 1
+        data = (
+            data[["sample", "position", "ref", "alt"]]
+            .set_index(["sample", "position"])
+            .rename_axis(columns='allele')
+            .stack()
+            .squeeze()
+        )
+        data = data.astype(int).reorder_levels(cls.dims).sort_index().to_xarray().fillna(0)
+        return cls._post_load(data)
+
+    @classmethod
     def peak_netcdf_sizes(cls, filename_or_obj):
         data = xr.open_dataarray(filename_or_obj)
         sizes = data.sizes
