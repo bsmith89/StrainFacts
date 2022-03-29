@@ -272,8 +272,8 @@ class Fit(AppInterface):
             action="store_false",
             help="Don't use NMF to select starting parameters.",
         )
-        parser.add_argument("--anneal-wait", type=int, default=2000)
-        parser.add_argument("--anneal-steps", type=int, default=10000)
+        parser.add_argument("--anneal-wait", type=int, default=0)
+        parser.add_argument("--anneal-steps", type=int, default=0)
         parser.add_argument(
             "--anneal-hyperparameters", nargs="+", action="append", default=[]
         )
@@ -286,6 +286,8 @@ class Fit(AppInterface):
         args.anneal_hyperparameters = parse_hyperparameter_strings(
             args.anneal_hyperparameters
         )
+        if args.anneal_hyperparameters:
+            assert args.anneal_steps > 0, "Annealing for 0 steps is like no annealing at all."
         if args.num_strains and args.strains_per_sample:
             raise Exception(
                 "Only one of --num-strains or --strains-per-sample may be set."
