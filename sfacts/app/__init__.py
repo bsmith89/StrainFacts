@@ -263,12 +263,14 @@ class Fit(AppInterface):
         add_optimization_arguments(parser)
         parser.add_argument(
             "--nmf-init",
+            dest='nmf_init',
             action="store_true",
             default=True,
             help="Use NMF to select starting parameters.",
         )
         parser.add_argument(
             "--no-nmf-init",
+            dest='nmf_init',
             action="store_false",
             help="Don't use NMF to select starting parameters.",
         )
