@@ -225,11 +225,13 @@ class Metagenotypes(WrappedDataArrayMixin):
         data = (
             data[["sample", "position", "ref", "alt"]]
             .set_index(["sample", "position"])
-            .rename_axis(columns='allele')
+            .rename_axis(columns="allele")
             .stack()
             .squeeze()
         )
-        data = data.astype(int).reorder_levels(cls.dims).sort_index().to_xarray().fillna(0)
+        data = (
+            data.astype(int).reorder_levels(cls.dims).sort_index().to_xarray().fillna(0)
+        )
         return cls._post_load(data)
 
     @classmethod
@@ -655,6 +657,13 @@ class World:
         )
         out_data[dim] = new_coords
         return cls(out_data)
+
+    def unifrac_pdist(self, **kwargs):
+        return pd.DataFrame(
+            squareform(sf.unifrac.unifrac_pdist(self, **kwargs)),
+            index=self.sample,
+            columns=self.sample,
+        )
 
 
 def latent_metagenotypes_pdist(world, dim="sample"):
