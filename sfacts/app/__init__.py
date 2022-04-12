@@ -32,88 +32,6 @@ class NoOp(AppInterface):
         print(args)
 
 
-class SetupDummyModel(AppInterface):
-    app_name = "setup_dummy_model"
-    description = "Setup a model, but do nothing else (for benchmarking purposes)."
-
-    @classmethod
-    def add_subparser_arguments(cls, parser):
-        parser.add_argument(
-            "--model-structure",
-            "-m",
-            default="default",
-            help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
-            choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
-        )
-        parser.add_argument(
-            "--strains-per-sample",
-            type=float,
-            help="Dynamically set strain number as a fraction of sample number.",
-        )
-        parser.add_argument(
-            "--num-strains",
-            "-s",
-            type=int,
-            help=(
-                "Fix initial strain number. "
-                "(Only one of --num-strains or --strains-per-sample may be set)"
-            ),
-        )
-        parser.add_argument("--num-positions", "-g", type=int)
-        parser.add_argument(
-            "--tsv",
-            action="store_true",
-            default=False,
-            help="Input file is in TSV format (rather than NetCDF).",
-        )
-        parser.add_argument("inpath")
-        add_optimization_arguments(parser)
-
-    @classmethod
-    def transform_app_parameter_inputs(cls, args):
-        args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
-        if args.num_strains and args.strains_per_sample:
-            raise Exception(
-                "Only one of --num-strains or --strains-per-sample may be set."
-            )
-        elif (args.num_strains is None) and (args.strains_per_sample is None):
-            raise Exception(
-                "One of either --num-strains or --strains-per-sample must be set."
-            )
-        if args.num_positions is None:
-            args.num_positions = int(1e20)
-        return args
-
-    @classmethod
-    def run(cls, args):
-
-        if args.tsv:
-            metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
-        else:
-            metagenotypes = sf.data.Metagenotypes.load(args.inpath)
-
-        if args.strains_per_sample:
-            num_strains = int(
-                max(np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample), 2)
-            )
-        else:
-            num_strains = args.num_strains
-        assert num_strains > 1
-
-        np.random.seed(args.random_seed)
-        num_positions_ss = min(args.num_positions, metagenotypes.sizes["position"])
-        metagenotypes_ss = metagenotypes.random_sample(position=num_positions_ss)
-
-        sf.workflow.setup_model_but_do_nothing(
-            structure=args.model_structure,
-            metagenotypes=metagenotypes_ss,
-            nstrain=num_strains,
-            device=args.device,
-            dtype=args.dtype,
-            quiet=(not args.verbose),
-        )
-
-
 class LoadGTProMetagenotype(AppInterface):
     app_name = "load_gtpro"
     description = "Read in GT-Pro output and convert it into a StrainFacts NetCDF metagenotype file."
@@ -375,7 +293,7 @@ class Fit(AppInterface):
                     print(v, file=f)
 
 
-class FitGenotypes(AppInterface):
+class FitGenotypeBlock(AppInterface):
     app_name = "fit_genotype"
     description = (
         "Fit strain genotypes based on fixed community compositions and metagenotypes."
@@ -451,7 +369,7 @@ class FitGenotypes(AppInterface):
         est.genotypes.to_world().dump(args.outpath)
 
 
-class ConcatGenotypes(AppInterface):
+class ConcatGenotypeBlocks(AppInterface):
     app_name = "concatenate_genotype_chunks"
     description = "Combine step of a split-apply-combine workflow."
 
@@ -477,33 +395,104 @@ class ConcatGenotypes(AppInterface):
         world.dump(args.outpath)
 
 
-class DumpParameterTSVs(AppInterface):
-    app_name = "dump_inferences"
+class DebugModelHyperparameters(AppInterface):
+    app_name = "debug_hypers"
+    description = (
+        "List the hyperparameters of the model and their set (or default) values."
+    )
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "model_structure",
+            help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
+            choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
+        )
+        parser.add_argument(
+            "--hyperparameters", "-p", nargs="+", action="append", default=[]
+        )
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
+        args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
+        return args
+
+    @classmethod
+    def run(cls, args):
+        model = sf.model.ParameterizedModel(
+            structure=args.model_structure,
+            coords=dict(
+                strain=2,
+                sample=2,
+                position=2,
+                allele=["alt", "ref"],
+            ),
+            hyperparameters=args.hyperparameters,
+        )
+        print(model.hyperparameters)
+
+
+class SplitWorld(AppInterface):
+    app_name = "split"
+    description = "Export individual StrainFacts parameters"
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument("inpath")
+        parser.add_argument("--genotype")
+        parser.add_argument("--community")
+        parser.add_argument("--metagenotype")
+
+    @classmethod
+    def run(cls, args):
+        world = sf.data.World.load(args.inpath)
+        if args.genotype:
+            world.genotypes.dump(args.genotype)
+        if args.metagenotype:
+            world.metagenotypes.dump(args.metagenotype)
+        if args.community:
+            world.communities.dump(args.community)
+
+
+class Dump(AppInterface):
+    app_name = "dump"
     description = "Export StrainFacts parameters to TSVs"
 
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument("inpath")
-        parser.add_argument("communities_outpath")
-        parser.add_argument("genotypes_outpath")
+        parser.add_argument("--tsv", action="store_true")
+        parser.add_argument("--genotype")
+        parser.add_argument("--community")
+        parser.add_argument("--metagenotype")
 
     @classmethod
     def run(cls, args):
         world = sf.data.World.load(args.inpath)
-        world.genotypes.data.to_series().to_csv(args.genotypes_outpath, sep="\t")
-        world.communities.data.to_series().to_csv(args.communities_outpath, sep="\t")
+        if args.tsv:
+            _export = lambda var, path: var.data.to_series().to_csv(path, sep="\t")
+        else:
+            _export = lambda var, path: var.dump(path)
+
+        if args.genotype:
+            _export(world.genotypes, args.genotype)
+        if args.metagenotype:
+            _export(world.metagenotypes, args.metagenotype)
+        if args.community:
+            _export(world.communities, args.community)
 
 
 SUBCOMMANDS = [
     NoOp,
-    SetupDummyModel,  # FIXME: Untested
     LoadGTProMetagenotype,
     FilterMetagenotypes,
     Simulate,
     Fit,
-    FitGenotypes,
-    ConcatGenotypes,
-    DumpParameterTSVs,  # FIXME: Untested
+    FitGenotypeBlock,
+    ConcatGenotypeBlocks,
+    Dump,
+    DebugModelHyperparameters,
 ]
 
 
