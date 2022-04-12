@@ -1,0 +1,16 @@
+name: sfacts-dev
+channels:
+  - defaults
+dependencies:
+  - xarray
+  - pytorch
+  - numpy
+  - tqdm
+  - pandas
+  - scipy
+  - scikit-learn
+  - pyro-ppl
+  - seaborn
+  - ca-certificates
+  - jupyter
+  - jupyterlab
