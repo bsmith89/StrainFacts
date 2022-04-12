@@ -533,7 +533,6 @@ def plot_metagenotype_frequency_spectrum(
         bins = np.linspace(0.5, 1.0, num=21)
 
     frequencies = world.metagenotypes.mlift("sel", sample=sample_list).frequencies()
-    frequencies_predict = world.data["p"].sel(sample=sample_list)
     for sample_i, row in zip(sample_list, axs):
         for sample_j, ax in zip(sample_list, row):
             domfreq_ij = (
@@ -543,6 +542,7 @@ def plot_metagenotype_frequency_spectrum(
             )
             ax.hist(domfreq_ij, bins=bins, color="black", **hist_kwargs)
             if show_predict:
+                frequencies_predict = world.data["p"].sel(sample=sample_list)
                 freq_predict_ij = frequencies_predict.sel(
                     sample=[sample_i, sample_j]
                 ).mean("sample")
