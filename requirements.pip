@@ -1,6 +1,7 @@
 pytorch
 pyro-ppl
 xarray
+netcdf4
 pandas
 matplotlib
 numpy
