@@ -181,14 +181,14 @@ class Fit(AppInterface):
         add_optimization_arguments(parser)
         parser.add_argument(
             "--nmf-init",
-            dest='nmf_init',
+            dest="nmf_init",
             action="store_true",
             default=True,
             help="Use NMF to select starting parameters.",
         )
         parser.add_argument(
             "--no-nmf-init",
-            dest='nmf_init',
+            dest="nmf_init",
             action="store_false",
             help="Don't use NMF to select starting parameters.",
         )
@@ -207,7 +207,9 @@ class Fit(AppInterface):
             args.anneal_hyperparameters
         )
         if args.anneal_hyperparameters:
-            assert args.anneal_steps > 0, "Annealing for 0 steps is like no annealing at all."
+            assert (
+                args.anneal_steps > 0
+            ), "Annealing for 0 steps is like no annealing at all."
         if args.num_strains and args.strains_per_sample:
             raise Exception(
                 "Only one of --num-strains or --strains-per-sample may be set."
