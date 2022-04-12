@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial.distance import pdist, squareform
 from scipy.cluster.hierarchy import linkage
+from sklearn.cluster import AgglomerativeClustering
 import scipy as sp
 from functools import partial
 from warnings import warn
@@ -473,6 +474,18 @@ class Genotypes(WrappedDataArrayMixin):
         )
         return ent.mean(over).rename("entropy")
 
+    def clusters(self, thresh, linkage="average", **kwargs):
+        dist = self.pdist("strain", **kwargs)
+        return pd.Series(
+            AgglomerativeClustering(
+                distance_threshold=thresh,
+                n_clusters=None,
+                affinity="precomputed",
+                linkage=linkage,
+            ).fit_predict(dist),
+            index=dist.columns,
+        )
+
 
 class Missingness(WrappedDataArrayMixin):
     dims = ("strain", "position")
@@ -664,6 +677,32 @@ class World:
             index=self.sample,
             columns=self.sample,
         )
+
+    def collapse_strains(self, thresh, **kwargs):
+        clust = self.genotypes.clusters(thresh=thresh, **kwargs)
+        genotypes = Genotypes(
+            self.genotypes.to_series()
+            .unstack("strain")
+            .groupby(clust, axis="columns")
+            .mean()
+            .rename_axis(columns="strain")
+            .T.stack()
+            .to_xarray()
+        )
+        communities = Communities(
+            self.communities.to_series()
+            .unstack("strain")
+            .groupby(clust, axis="columns")
+            .sum()
+            .rename_axis(columns="strain")
+            .stack()
+            .to_xarray()
+        )
+        if "metagenotypes" in self.data:
+            world = World.from_combined(genotypes, communities, self.metagenotypes)
+        else:
+            world = World.from_combined(genotypes, communities)
+        return world
 
 
 def latent_metagenotypes_pdist(world, dim="sample"):
