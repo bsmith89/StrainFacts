@@ -1,8 +1,4 @@
-from sfacts.model_zoo import (
-    simplest_simulation,
-    ssdd3_with_error,
-    new_model_1
-)
+from sfacts.model_zoo import simplest_simulation, ssdd3_with_error, new_model_1
 
 NAMED_STRUCTURES = dict(
     default=ssdd3_with_error.model,
