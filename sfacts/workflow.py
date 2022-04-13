@@ -271,11 +271,13 @@ def evaluate_fit_against_simulation(sim, fit):
     unifrac_error = sf.evaluation.unifrac_error(sim, fit)
     entropy_error = sf.evaluation.community_entropy_error(sim, fit)
 
-    return pd.Series(dict(
-        mgen_error=mgen_error[0],
-        fwd_genotype_error=fwd_genotype_error[0],
-        rev_genotype_error=rev_genotype_error[0],
-        bc_error=bc_error[0],
-        unifrac_error=unifrac_error[0],
-        entropy_error=entropy_error[0],
-    ))
+    return pd.Series(
+        dict(
+            mgen_error=mgen_error[0],
+            fwd_genotype_error=fwd_genotype_error[0],
+            rev_genotype_error=rev_genotype_error[0],
+            bc_error=bc_error[0],
+            unifrac_error=unifrac_error[0],
+            entropy_error=entropy_error[0],
+        )
+    )

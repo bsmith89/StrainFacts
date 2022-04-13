@@ -20,7 +20,6 @@ class NoOp(AppInterface):
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
         )
-        pass
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
@@ -39,7 +38,7 @@ class LoadMetagenotype(AppInterface):
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument("inpath")
-        parser.add_argument("--gtpro", action='store_true')
+        parser.add_argument("--gtpro", action="store_true")
         parser.add_argument("outpath")
 
     @classmethod
@@ -523,26 +522,22 @@ class EvaluateFitAgainstSimulation(AppInterface):
         sim = sf.World.load(args.simulation)
 
         errors = sf.workflow.evaluate_fit_against_simulation(sim, fit)
-        errors.to_csv(args.outpath, sep='\t', index=True, header=False)
+        errors.to_csv(args.outpath, sep="\t", index=True, header=False)
 
 
 SUBCOMMANDS = [
     # Debugging
     NoOp,
     DebugModelHyperparameters,
-
     # Input/Output
     LoadMetagenotype,
     DumpMetagenotype,
     Dump,
-
     # DataProcessing
     FilterMetagenotypes,
     ConcatGenotypeBlocks,
-
     # Simulation
     Simulate,
-
     # Fitting
     Fit,
     FitGenotypeBlock,
