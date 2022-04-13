@@ -71,7 +71,7 @@ cd StrainFacts
 Initialize the conda environment:
 
 ```
-make initialize_dev_env
+make .conda
 # runs: conda env create -n sfacts-dev -f envs/sfacts-dev.yaml
 ```
 
@@ -147,7 +147,7 @@ as well as to extract key inferrences (see `sfacts dump`).
 Export text relative abundance and genotypes tables from `output_fit.nc`:
 
 ```
-sfacts export output_fit.nc community.tsv genotype.tsv
+sfacts dump output_fit.nc community.tsv genotype.tsv
 ```
 
 ## See Also

@@ -110,7 +110,7 @@ class Simulate(AppInterface):
         parser.add_argument("--fix-from-template", default="")
         parser.add_argument("--random-seed", "--seed", "-r", type=int)
 
-        parser.add_argument("--outpath", "-o", required=True)
+        parser.add_argument("outpath")
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
@@ -488,6 +488,44 @@ class Dump(AppInterface):
             _export(world.communities, args.community)
 
 
+class DumpMetagenotype(AppInterface):
+    app_name = "dump_mgen"
+    description = "Export metagenotype to TSV"
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument("inpath")
+        parser.add_argument("outpath")
+
+    @classmethod
+    def run(cls, args):
+        mgen = sf.data.Metagenotypes.load(args.inpath)
+        _export = lambda var, path: var.data.to_series().to_csv(path, sep="\t")
+        _export(mgen, args.outpath)
+
+
+class EvaluateFitAgainstSimulation(AppInterface):
+    app_name = "evaluate_fit"
+    description = "TODO"
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument("simulation")
+        parser.add_argument("fit")
+        parser.add_argument("outpath")
+
+    @classmethod
+    def run(cls, args):
+        fit = sf.World.load(args.fit)
+        # FIXME: dtype of the coordinates changes from int to 'object' (string) at some point during processing.
+        # NOTE: This fix is just a hack and is probably fairly brittle.
+        fit = sf.World(fit.data.assign_coords(position=fit.position.astype(int)))
+        sim = sf.World.load(args.simulation)
+
+        errors = sf.workflow.evaluate_fit_against_simulation(sim, fit)
+        errors.to_csv(args.outpath, sep='\t', index=True, header=False)
+
+
 SUBCOMMANDS = [
     # Debugging
     NoOp,
@@ -495,6 +533,7 @@ SUBCOMMANDS = [
 
     # Input/Output
     LoadMetagenotype,
+    DumpMetagenotype,
     Dump,
 
     # DataProcessing
@@ -507,6 +546,8 @@ SUBCOMMANDS = [
     # Fitting
     Fit,
     FitGenotypeBlock,
+    # Evaluation
+    EvaluateFitAgainstSimulation,
 ]
 
 
