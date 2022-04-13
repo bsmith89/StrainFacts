@@ -256,7 +256,7 @@ class Metagenotypes(WrappedDataArrayMixin):
             self.validate_constraints()
         assert np.iinfo(int_type).max > self.data.values.max()
         self.data.astype(int_type).to_dataset(name="tally").to_netcdf(
-            path, encoding=dict(tally=dict(zlib=True, complevel=6))
+            path, engine="netcdf4", encoding=dict(tally=dict(zlib=True, complevel=6))
         )
 
     def to_csv(self, *args, **kwargs):
@@ -588,11 +588,11 @@ class World:
     def dump(self, path, validate=True):
         if validate:
             self.validate_constraints()
-        self.data.to_netcdf(path)
+        self.data.to_netcdf(path, engine="netcdf4")
 
     @classmethod
     def load(cls, filename_or_obj, validate=True):
-        data = xr.load_dataset(filename_or_obj)
+        data = xr.load_dataset(filename_or_obj, engine="netcdf4")
         world = cls(data)
         if validate:
             world.validate_constraints()
