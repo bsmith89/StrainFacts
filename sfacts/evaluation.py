@@ -129,8 +129,12 @@ def integrated_community_error(reference, estimate):
 
 
 def community_entropy_error(reference, estimate):
-    ref_community_entropy = entropy(reference.communities.values)
-    est_community_entropy = entropy(estimate.communities.values)
+    ref_community_entropy = pd.Series(
+        entropy(reference.communities.values), index=reference.sample
+    ).rename_axis(index="sample")
+    est_community_entropy = pd.Series(
+        entropy(estimate.communities.values), index=reference.sample
+    ).rename_axis(index="sample")
     diff = est_community_entropy - ref_community_entropy
     return (
         np.mean(np.abs(diff)),
