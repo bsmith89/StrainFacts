@@ -32,19 +32,22 @@ class NoOp(AppInterface):
         print(args)
 
 
-class LoadGTProMetagenotype(AppInterface):
-    app_name = "load_gtpro"
-    description = "Read in GT-Pro output and convert it into a StrainFacts NetCDF metagenotype file."
+class LoadMetagenotype(AppInterface):
+    app_name = "load_mgen"
+    description = "Read in metagentype TSV and convert it into a StrainFacts NetCDF metagenotype file."
 
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument("inpath")
+        parser.add_argument("--gtpro", action='store_true')
         parser.add_argument("outpath")
-        # TODO: Int-type for output? Can help with super large datasets.
 
     @classmethod
     def run(cls, args):
-        mgen = sf.data.Metagenotypes.load_from_merged_gtpro(args.inpath)
+        if args.gtpro:
+            mgen = sf.data.Metagenotypes.load_from_merged_gtpro(args.inpath)
+        else:
+            mgen = sf.data.Metagenotypes.load_from_tsv(args.inpath)
         mgen.dump(args.outpath)
 
 
@@ -459,7 +462,7 @@ class SplitWorld(AppInterface):
 
 class Dump(AppInterface):
     app_name = "dump"
-    description = "Export StrainFacts parameters to TSVs"
+    description = "Export StrainFacts parameters to individual files"
 
     @classmethod
     def add_subparser_arguments(cls, parser):
@@ -486,15 +489,24 @@ class Dump(AppInterface):
 
 
 SUBCOMMANDS = [
+    # Debugging
     NoOp,
-    LoadGTProMetagenotype,
+    DebugModelHyperparameters,
+
+    # Input/Output
+    LoadMetagenotype,
+    Dump,
+
+    # DataProcessing
     FilterMetagenotypes,
+    ConcatGenotypeBlocks,
+
+    # Simulation
     Simulate,
+
+    # Fitting
     Fit,
     FitGenotypeBlock,
-    ConcatGenotypeBlocks,
-    Dump,
-    DebugModelHyperparameters,
 ]
 
 
