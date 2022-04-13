@@ -1,24 +1,60 @@
-.PHONY: initialize_git start_jupyter
+.PHONY: .init .conda .example start_jupyter clean
+.SECONDARY:
 
-initialize_git:
+CLEANUP := examples/*.sim.*
+
+clean:
+	rm -f ${CLEANUP}
+
+.init:
 	git config --local filter.dropoutput_ipynb.clean scripts/ipynb_output_filter.py
 	git config --local filter.dropoutput_ipynb.smudge cat
 
-initialize_dev_env:
+.conda:
 	conda env create -n sfacts-dev -f envs/sfacts-dev.yaml
+
+.example: examples/example0.sim.mgen.tsv
 
 start_jupyter:
 	jupyter lab --port=8888 --notebook-dir examples
 
-build_example_data: examples/example.mgen.tsv
-
-examples/example.sim.nc:
-	sfacts simulate \
-	    --model-structure simplest_simulation \
-	    --num-strains 10 --num-samples 50 --num-positions 500 \
-	    --hyperparameters pi_hyper=0.4 mu_hyper_mean=10.0 epsilon_hyper_mode=0.01 \
-	    --random-seed 0 \
+%.sim.world.nc: %.params
+	sfacts simulate @$< \
 	    --outpath $@
 
-examples/example.mgen.tsv: examples/example.sim.nc
-	sfacts dump $< --tsv --metagenotype $@
+%.mgen.nc: %.world.nc
+	sfacts dump $< --metagenotype $@
+
+%.filt.mgen.nc: %.mgen.nc
+	sfacts filter_mgen --min-minor-allele-freq 0.05 --min-horizontal-cvrg 0.1 --random-seed 0 $< $@
+
+%.mgen.tsv: %.mgen.nc
+	sfacts dump_mgen $< $@
+
+%.fit.world.nc: %.mgen.nc
+	sfacts fit \
+	    --verbose \
+	    --model-structure ssdd3_with_error \
+	    --num-strains 15 --num-positions 500 \
+	    --random-seed 0 \
+	    $< $@
+
+%.fit.refit.geno.nc: %.fit.world.nc %.mgen.nc
+	sfacts fit_genotype \
+	    --verbose \
+	    --model-structure ssdd3_with_error \
+	    --num-positionsB 1000 \
+	    --hyperparameters gamma_hyper=1.0 \
+	    --block-number 0 \
+	    --random-seed=0 \
+	    $^ $@
+
+%.fit.refit.world.nc: %.fit.world.nc %.mgen.nc %.fit.refit.geno.nc
+	sfacts concatenate_genotype_chunks \
+	    --metagenotype $*.mgen.nc \
+	    --community $*.fit.world.nc \
+	    --outpath $@ \
+	    $*.fit.refit.geno.nc
+
+%.sim.filt.fit.refit.eval.tsv: %.sim.world.nc %.sim.filt.fit.refit.world.nc
+	sfacts evaluate_fit $^ $@
