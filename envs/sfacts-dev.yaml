@@ -9,9 +9,9 @@ dependencies:
   - pandas
   - scipy
   - scikit-learn
+  - scikit-bio
   - pyro-ppl
   - seaborn
-  - ca-certificates
   - jupyter
   - jupyterlab
   - netcdf4
