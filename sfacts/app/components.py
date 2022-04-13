@@ -1,6 +1,7 @@
 import sfacts as sf
 import itertools
 from copy import deepcopy
+import argparse
 
 
 def parse_hyperparameter_strings(list_of_lists_of_pairs):
@@ -90,7 +91,11 @@ class AppInterface:
 
     @classmethod
     def _add_app_subparser(cls, app_subparsers):
-        subparser = app_subparsers.add_parser(cls.app_name, help=cls.description)
+        subparser = app_subparsers.add_parser(
+            cls.app_name,
+            help=cls.description,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        )
         subparser.set_defaults(_subcommand=cls)
         subparser.add_argument("--verbose", "-v", action="store_true", default=False)
         subparser.add_argument("--debug", action="store_true", default=False)

@@ -58,8 +58,10 @@ class FilterMetagenotypes(AppInterface):
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument("--min-minor-allele-freq", type=float, default=0.05)
-        parser.add_argument("--min-horizontal-cvrg", type=float, default=0.1)
+        parser.add_argument(
+            "--min-minor-allele-freq", type=float, default=0.05, help=" "
+        )
+        parser.add_argument("--min-horizontal-cvrg", type=float, default=0.1, help=" ")
         parser.add_argument("--num-positions", type=int)
         parser.add_argument("--random-seed", type=int)
         parser.add_argument("inpath")
