@@ -59,24 +59,28 @@ def discretized_genotype_error(reference, estimate, **kwargs):
 
 def weighted_genotype_error(reference, estimate, weight_func=None, **kwargs):
     if weight_func is None:
-        weight_func = lambda w: (w.data.mu * w.data.communities).sum("sample")
+        weight_func = lambda w: (
+            w.metagenotypes.mean("sample") * w.data.communities
+        ).sum("sample")
 
     weight = weight_func(reference)
 
     _, error = genotype_error(reference, estimate, **kwargs)
-    return float((weight * error).sum() / weight.sum())
+    return float((weight * error).sum() / weight.sum()), error
 
 
 def discretized_weighted_genotype_error(
     reference, estimate, weight_func=None, **kwargs
 ):
     if weight_func is None:
-        weight_func = lambda w: (w.data.mu * w.data.communities).sum("sample")
+        weight_func = lambda w: (w.metagenotypes.mean_depth() * w.data.communities).sum(
+            "sample"
+        )
 
     weight = weight_func(reference)
 
     _, error = discretized_genotype_error(reference, estimate, **kwargs)
-    return float((weight * error).sum() / weight.sum())
+    return float((weight * error).sum() / weight.sum()), error
 
 
 def braycurtis_error(reference, estimate):
