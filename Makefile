@@ -1,25 +1,31 @@
-.PHONY: .init .conda .example start_jupyter clean
-.SECONDARY:
+test: examples/example0.sim.filt.fit.refit.eval.tsv
 
 CLEANUP := examples/*.sim.*
-
 clean:
 	rm -f ${CLEANUP}
 
-.init:
+.git_init:
 	git config --local filter.dropoutput_ipynb.clean scripts/ipynb_output_filter.py
 	git config --local filter.dropoutput_ipynb.smudge cat
 
 .conda:
 	conda env create -n sfacts-dev -f envs/sfacts-dev.yaml
 
-.example: examples/example0.sim.mgen.tsv
-
 start_jupyter:
 	jupyter lab --port=8888 --notebook-dir examples
 
-%.sim.world.nc: %.params
-	sfacts simulate @$< \
+.PHONY: .git_init .conda test start_jupyter clean
+.SECONDARY:
+
+examples/example0.sim.world.nc:
+	sfacts simulate \
+	    --model-structure=ssdd3_with_error \
+	    --num-strains=10 --num-samples=50 --num-positions=5000 \
+	    --hyperparameters
+	        gamma_hyper=1e-5 rho_hyper=10.0 pi_hyper=0.1 \
+	        mu_hyper_mean=10.0 mu_hyper_scale=3.0 m_hyper_concentration=3.0 \
+	        epsilon_hyper_mode=0.01 epsilon_hyper_spread=1.5 alpha_hyper_mean=100 alpha_hyper_scale=0.5 \
+	    --random-seed=0 \
 	    --outpath $@
 
 %.mgen.nc: %.world.nc
