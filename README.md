@@ -40,9 +40,9 @@ _bioRxiv_ doi:[10.1101/2022.02.01.478746](https://doi.org/10.1101/2022.02.01.478
 - [ ] Refactor for the best looking code
     - [ ] De-pluralize core datatypes (community not communities)
 
-## Installation
+## Installation[^GPU]
 
-### With Pip[^GPU]
+The simplest possible installation directly from GitHub
 
 ```
 pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts
@@ -55,14 +55,14 @@ necessary prerequisites (but excluding StrainFacts itself).
 
 ### For development
 
-Clone the repository:
+First, clone the repository:
 
 ```
 git clone https://github.com/bsmith89/StrainFacts.git
 cd StrainFacts
 ```
 
-#### With `conda`
+#### Install StrainFacts with `conda`
 
 Build the environment:
 
@@ -71,17 +71,18 @@ conda env create -n sfacts-dev -f envs/sfacts-dev.yaml
 # Also see `make .conda` to run this command automatically.
 ```
 
-This includes `pip install --editable` for StrainFacts from the cloned repo.
+This includes an embedded `pip install --editable` for StrainFacts from the
+cloned repo.
 
 
-#### Without `conda`
+#### Install StrainFacts with `pip`
 
 ```
 pip install -r requirements.pip
 pip install -e .
 ```
 
-## Quick Start
+## Examples
 
 Short vignettes explaining how to use StrainFacts for data processing,
 visualization, and evaluation are provided as Jupyter Notebooks:
@@ -145,12 +146,12 @@ sfacts fit -m ssdd3_with_error  \
 
 Intermediate files generated
 by StrainFacts use a NetCDF-based file format, and harness the
-[xarray library](https://docs.xarray.dev/en/stable/) for reading and writing [^why-netcdf].
+[xarray library](https://docs.xarray.dev/en/stable/) for reading and writing[^why-netcdf].
 Such files include input metagenotypes (suggested file extension `*.mgen.nc`),
 as well as more complex collections of both latent and observed variables
 aligned over their strain/sample/position axes (`*.world.nc`).
 All of these files are designed to be loaded and worked with using the `sfacts`
-Python library [^netcdf].
+Python library[^netcdf].
 
 [^why-netcdf]: This has benefits for both computational and programmer efficiency.
 [^netcdf]: It should be fairly straight-forward to load these NetCDF formatted
