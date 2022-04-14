@@ -145,14 +145,14 @@ sfacts fit -m ssdd3_with_error  \
 
 Intermediate files generated
 by StrainFacts use a NetCDF-based file format, and harness the
-[xarray library](https://docs.xarray.dev/en/stable/) for reading and writing
-[^This has benefits for both computational and programmer efficiency].
+[xarray library](https://docs.xarray.dev/en/stable/) for reading and writing [^why-netcdf].
 Such files include input metagenotypes (suggested file extension `*.mgen.nc`),
 as well as more complex collections of both latent and observed variables
 aligned over their strain/sample/position axes (`*.world.nc`).
 All of these files are designed to be loaded and worked with using the `sfacts`
 Python library [^netcdf].
 
+[^why-netcdf]: This has benefits for both computational and programmer efficiency.
 [^netcdf]: It should be fairly straight-forward to load these NetCDF formatted
 files in other programming environments, but this has not been tested.
 
