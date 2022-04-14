@@ -1,6 +1,6 @@
-test: examples/example0.sim.filt.fit.refit.eval.tsv
+test: examples/sim.filt.fit.refit.eval.tsv
 
-CLEANUP := examples/*.sim.*
+CLEANUP := examples/sim.*
 clean:
 	rm -f ${CLEANUP}
 
@@ -17,22 +17,29 @@ start_jupyter:
 .PHONY: .git_init .conda test start_jupyter clean
 .SECONDARY:
 
-examples/example0.sim.world.nc:
+examples/sim.world.nc:
 	sfacts simulate \
 	    --model-structure=ssdd3_with_error \
 	    --num-strains=10 --num-samples=50 --num-positions=5000 \
 	    --hyperparameters
 	        gamma_hyper=1e-5 rho_hyper=10.0 pi_hyper=0.1 \
 	        mu_hyper_mean=10.0 mu_hyper_scale=3.0 m_hyper_concentration=3.0 \
-	        epsilon_hyper_mode=0.01 epsilon_hyper_spread=1.5 alpha_hyper_mean=100 alpha_hyper_scale=0.5 \
+	        epsilon_hyper_mode=0.01 epsilon_hyper_spread=1.5 \
+	        alpha_hyper_mean=100 alpha_hyper_scale=0.5 \
 	    --random-seed=0 \
 	    --outpath $@
 
-%.mgen.nc: %.world.nc
-	sfacts dump $< --metagenotype $@
+%.mgen.tsv: %.world.nc
+	sfacts dump --tsv $< --metagenotype $@
+
+%.mgen.nc: %.mgen.tsv
+	sfacts load_mgen $< $@
 
 %.filt.mgen.nc: %.mgen.nc
-	sfacts filter_mgen --min-minor-allele-freq 0.05 --min-horizontal-cvrg 0.1 --random-seed 0 $< $@
+	sfacts filter_mgen \
+	    --min-minor-allele-freq 0.05 \
+	    --min-horizontal-cvrg 0.1 \
+	    --random-seed 0 $< $@
 
 %.mgen.tsv: %.mgen.nc
 	sfacts dump_mgen $< $@
@@ -62,5 +69,5 @@ examples/example0.sim.world.nc:
 	    --outpath $@ \
 	    $*.fit.refit.geno.nc
 
-%.sim.filt.fit.refit.eval.tsv: %.sim.world.nc %.sim.filt.fit.refit.world.nc
+%.filt.fit.refit.eval.tsv: %.world.nc %.filt.fit.refit.world.nc
 	sfacts evaluate_fit $^ $@
