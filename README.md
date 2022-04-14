@@ -18,27 +18,6 @@ B.J. Smith, X. Li, A. Abate, Z.J. Shi, K.S. Pollard
 _bioRxiv_ doi:[10.1101/2022.02.01.478746](https://doi.org/10.1101/2022.02.01.478746)
 
 
-## TODO
-
-- [x] A script for converting GT-Pro output TSVs to StrainFacts input data
-- [x] A script for extracting estimates from StrainFacts files to TSVs
-- [x] Complete installation instructions, as well as a robust artifact for
-      running StrainFacts on various platforms (e.g. a Dockerfile or Conda
-      environment specification)
-- [ ] Example data with a tutorial/vignette for running StrainFacts and
-      interpreting the output.
-    - [x] Simple example fitting a metagenotype
-    - [ ] Flesh out the example with an explanation of all of the steps.
-    - [ ] Example data from SRA with a GT-Pro step, instead of simulated
-- [x] The parameters selected for use in this paper (which we have found to be
-      applicable across a range of datasets) will be set as the default.
-    - Caveat: All of the hyperparameter annealing parameters should still be set by the user
-- [ ] We will document some useful approaches for hyperparameter tuning.
-- [ ] Improve the CLI documentation.
-- [ ] Refactor for the best looking code
-    - [ ] De-pluralize core datatypes (community not communities)
-    - [ ] Remove unused CLI apps/workflows/plotting code
-
 ## Installation[^GPU]
 
 The simplest possible installation directly from GitHub
@@ -51,35 +30,6 @@ pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts
 Consider using a Docker/Singularity container like
 [this one](https://hub.docker.com/r/bsmith89/sfacts_dev), which has many of the
 necessary prerequisites (but excluding StrainFacts itself).
-
-### For development
-
-First, clone the repository:
-
-```
-git clone https://github.com/bsmith89/StrainFacts.git
-cd StrainFacts
-```
-
-#### Install StrainFacts with `conda`
-
-Build the environment:
-
-```
-conda env create -n sfacts-dev -f envs/sfacts-dev.yaml
-# Also see `make .conda` to run this command automatically.
-```
-
-This includes an embedded `pip install --editable` for StrainFacts from the
-cloned repo.
-
-
-#### Install StrainFacts with `pip`
-
-```
-pip install -r requirements.pip
-pip install -e .
-```
 
 ## Examples
 
@@ -235,3 +185,82 @@ This is a subset of the recently updated
 [MGnify / UHGG v2.0](https://www.ebi.ac.uk/metagenomics/genome-catalogues/human-gut-v2-0)
 database.
 The MGnify website provides a convenient way to browse this reference.
+
+## How to hack
+
+### Editable Installation
+
+First, clone the repository:
+
+```
+git clone https://github.com/bsmith89/StrainFacts.git
+cd StrainFacts
+```
+
+If you want to modify the example notebooks, configure the clean/smudge filter:
+
+`make .git_init`
+
+Then install with either conda or pip:
+
+#### With `conda`
+
+Build the environment:
+
+```
+conda env create -n sfacts-dev -f envs/sfacts-dev.yaml
+# Also see `make .conda` to run this command automatically.
+```
+
+This includes an embedded `pip install --editable` for StrainFacts from the
+cloned repo.
+
+
+#### With `pip`
+
+```
+pip install -r requirements.pip
+pip install -e .
+```
+
+### Integration Testing
+
+```
+make clean
+make test
+```
+
+This runs a complex workflow, including
+
+- simulation
+- data conversion
+- initial fitting
+- genotype refitting
+- evaluation of estimates against the simulated ground-truth
+
+### Prototyping in Jupyter
+
+```
+make start_jupyter
+```
+
+## TODO
+
+- [x] A script for converting GT-Pro output TSVs to StrainFacts input data
+- [x] A script for extracting estimates from StrainFacts files to TSVs
+- [x] Complete installation instructions, as well as a robust artifact for
+      running StrainFacts on various platforms (e.g. a Dockerfile or Conda
+      environment specification)
+- [ ] Example data with a tutorial/vignette for running StrainFacts and
+      interpreting the output.
+    - [x] Simple example fitting a metagenotype
+    - [ ] Flesh out the example with an explanation of all of the steps.
+    - [ ] Example data from SRA with a GT-Pro step, instead of simulated
+- [x] The parameters selected for use in this paper (which we have found to be
+      applicable across a range of datasets) will be set as the default.
+    - Caveat: All of the hyperparameter annealing parameters should still be set by the user
+- [ ] We will document some useful approaches for hyperparameter tuning.
+- [ ] Improve the CLI documentation.
+- [ ] Refactor for the best looking code
+    - [ ] De-pluralize core datatypes (community not communities)
+    - [ ] Remove unused CLI apps/workflows/plotting code
