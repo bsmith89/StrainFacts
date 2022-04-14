@@ -1,6 +1,8 @@
+CLEANUP := examples/sim.*
+EXAMPLES_IN_ORDER := examples/simulate_data examples/fit_metagenotype examples/evaluate_simulation_fit
+
 test: examples/sim.filt.fit.refit.eval.tsv
 
-CLEANUP := examples/sim.*
 clean:
 	rm -f ${CLEANUP}
 
@@ -14,7 +16,18 @@ clean:
 start_jupyter:
 	jupyter lab --port=8888 --notebook-dir examples
 
-.PHONY: .git_init .conda test start_jupyter clean
+
+%.html: %.ipynb
+	jupyter nbconvert $${example}.ipynb --execute --to=html --stdout > $${example}.html
+
+.compile_examples: ${addsuffix .ipynb,${EXAMPLES}}
+	for example in ${EXAMPLES_IN_ORDER} ; \
+	    do \
+	        ${MAKE} $${example}.html
+	    done
+
+
+.PHONY: .git_init .conda test start_jupyter clean .compile_examples
 .SECONDARY:
 
 examples/sim.world.nc:
