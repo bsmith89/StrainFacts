@@ -28,7 +28,6 @@ _bioRxiv_ doi:[10.1101/2022.02.01.478746](https://doi.org/10.1101/2022.02.01.478
 - [ ] Example data with a tutorial/vignette for running StrainFacts and
       interpreting the output.
     - [x] Simple example fitting a metagenotype
-    - [ ] Put example data on Zenodo so that users don't need to build it themselves.
     - [ ] Flesh out the example with an explanation of all of the steps.
     - [ ] Example data from SRA with a GT-Pro step, instead of simulated
 - [x] The parameters selected for use in this paper (which we have found to be
@@ -36,9 +35,9 @@ _bioRxiv_ doi:[10.1101/2022.02.01.478746](https://doi.org/10.1101/2022.02.01.478
     - Caveat: All of the hyperparameter annealing parameters should still be set by the user
 - [ ] We will document some useful approaches for hyperparameter tuning.
 - [ ] Improve the CLI documentation.
-- [ ] Remove unused CLI apps/workflows/plotting code
 - [ ] Refactor for the best looking code
     - [ ] De-pluralize core datatypes (community not communities)
+    - [ ] Remove unused CLI apps/workflows/plotting code
 
 ## Installation[^GPU]
 
