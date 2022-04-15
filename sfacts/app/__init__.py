@@ -314,8 +314,8 @@ class FitGenotypeBlock(AppInterface):
             help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
             choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
         )
-        parser.add_argument("--num-positions", "-g", type=int)
-        parser.add_argument("--num-positionsB", type=int)
+        parser.add_argument("--block-size", "-g", type=int)
+        parser.add_argument("--chunk-size", type=int)
         parser.add_argument("--block-number", "-i", type=int)
         parser.add_argument(
             "--hyperparameters", "-p", nargs="+", action="append", default=[]
@@ -330,10 +330,11 @@ class FitGenotypeBlock(AppInterface):
     def transform_app_parameter_inputs(cls, args):
         args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
         args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
-        if args.num_positions is None:
-            args.num_positions = int(1e20)
-        if args.num_positionsB is None:
-            args.num_positionsB = args.num_positions
+        if args.block_size is None:
+            args.block_size = int(1e20)
+            args.block_number = 0
+        if args.chunk_size is None:
+            args.chunk_size = args.block_size
         args = transform_optimization_parameter_inputs(args)
         return args
 
@@ -343,10 +344,10 @@ class FitGenotypeBlock(AppInterface):
         metagenotypes = sf.data.Metagenotypes.load(args.metagenotype)
 
         total_num_positions = metagenotypes.sizes["position"]
-        num_positions = min(args.num_positions, metagenotypes.sizes["position"])
-        num_positionsB = min(args.num_positionsB, metagenotypes.sizes["position"])
-        block_start = args.block_number * num_positions
-        block_stop = min((args.block_number + 1) * num_positions, total_num_positions)
+        block_positions = min(args.block_size, total_num_positions)
+        chunk_positions = min(args.chunk_size, total_num_positions)
+        block_start = args.block_number * block_positions
+        block_stop = min((args.block_number + 1) * block_positions, total_num_positions)
         assert total_num_positions >= block_start
         sf.logging_util.info(
             (
@@ -365,7 +366,7 @@ class FitGenotypeBlock(AppInterface):
             structure=args.model_structure,
             metagenotypes=metagenotypes,
             communities=communities,
-            nposition=num_positionsB,
+            nposition=chunk_positions,
             hyperparameters=args.hyperparameters,
             device=args.device,
             dtype=args.dtype,
