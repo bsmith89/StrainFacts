@@ -18,13 +18,14 @@ start_jupyter:
 
 
 %.html: %.ipynb
-	jupyter nbconvert $${example}.ipynb --execute --to=html --stdout > $${example}.html
+	jupyter nbconvert $< --execute --to=html --stdout > $@
 
-.compile_examples: ${addsuffix .ipynb,${EXAMPLES}}
+.compile_examples: ${addsuffix .ipynb,${EXAMPLES_IN_ORDER}}
 	for example in ${EXAMPLES_IN_ORDER} ; \
-	    do \
-	        ${MAKE} $${example}.html
-	    done
+	do \
+	    echo $${example} ; \
+	    ${MAKE} $${example}.html ; \
+	done
 
 
 .PHONY: .git_init .conda test start_jupyter clean .compile_examples
