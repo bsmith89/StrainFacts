@@ -31,23 +31,44 @@ class NoOp(AppInterface):
         print(args)
 
 
-class LoadMetagenotype(AppInterface):
-    app_name = "load_mgen"
-    description = "Read in metagentype TSV and convert it into a StrainFacts NetCDF metagenotype file."
+class Load(AppInterface):
+    app_name = "load"
+    description = "Build StrainFacts files from input data."
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument("inpath")
-        parser.add_argument("--gtpro", action="store_true")
+        parser.add_argument("--gtpro-metagenotype")
+        parser.add_argument("--metagenotype")
+        parser.add_argument("--community")
+        parser.add_argument("--genotype")
         parser.add_argument("outpath")
 
     @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        if args.gtpro_metagenotype and args.metagenotype:
+            raise argparse.ArgumentError(
+                "gtpro_metagenotype",
+                "Only one of --num-strains or --strains-per-sample may be set.",
+            )
+        return args
+
+    @classmethod
     def run(cls, args):
-        if args.gtpro:
-            mgen = sf.data.Metagenotypes.load_from_merged_gtpro(args.inpath)
-        else:
-            mgen = sf.data.Metagenotypes.load_from_tsv(args.inpath)
-        mgen.dump(args.outpath)
+        values = []
+        # Only one of gtpro_metagenotype and metagenotype is allowed.
+        if args.gtpro_metagenotype:
+            values.append(
+                sf.data.Metagenotypes.load_from_merged_gtpro(args.gtpro_metagenotype)
+            )
+        if args.metagenotype:
+            values.append(sf.data.Metagenotypes.load_from_tsv(args.metagenotype))
+
+        if args.community:
+            values.append(sf.data.Communities.load_from_tsv(args.community))
+        if args.genotype:
+            values.append(sf.data.Genotypes.load_from_tsv(args.genotype))
+        world = sf.data.World.from_combined(*values)
+        world.dump(args.outpath)
 
 
 class FilterMetagenotypes(AppInterface):
@@ -377,8 +398,8 @@ class FitGenotypeBlock(AppInterface):
 
 
 class ConcatGenotypeBlocks(AppInterface):
-    app_name = "concatenate_genotype_chunks"
-    description = "Combine step of a split-apply-combine workflow."
+    app_name = "concat_geno"
+    description = "Combine separately fit genotype blocks."
 
     @classmethod
     def add_subparser_arguments(cls, parser):
@@ -440,36 +461,18 @@ class DebugModelHyperparameters(AppInterface):
         print(model.hyperparameters)
 
 
-class SplitWorld(AppInterface):
-    app_name = "split"
-    description = "Export individual StrainFacts parameters"
-
-    @classmethod
-    def add_subparser_arguments(cls, parser):
-        parser.add_argument("inpath")
-        parser.add_argument("--genotype")
-        parser.add_argument("--community")
-        parser.add_argument("--metagenotype")
-
-    @classmethod
-    def run(cls, args):
-        world = sf.data.World.load(args.inpath)
-        if args.genotype:
-            world.genotypes.dump(args.genotype)
-        if args.metagenotype:
-            world.metagenotypes.dump(args.metagenotype)
-        if args.community:
-            world.communities.dump(args.community)
-
-
 class Dump(AppInterface):
     app_name = "dump"
-    description = "Export StrainFacts parameters to individual files"
+    description = "Extract output data from StrainFacts files"
 
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument("inpath")
-        parser.add_argument("--tsv", action="store_true")
+        parser.add_argument(
+            "--nc",
+            action="store_true",
+            help="write output to NetCDF files; otherwise TSVs",
+        )
         parser.add_argument("--genotype")
         parser.add_argument("--community")
         parser.add_argument("--metagenotype")
@@ -477,10 +480,10 @@ class Dump(AppInterface):
     @classmethod
     def run(cls, args):
         world = sf.data.World.load(args.inpath)
-        if args.tsv:
-            _export = lambda var, path: var.data.to_series().to_csv(path, sep="\t")
-        else:
+        if args.nc:
             _export = lambda var, path: var.dump(path)
+        else:
+            _export = lambda var, path: var.data.to_series().to_csv(path, sep="\t")
 
         if args.genotype:
             _export(world.genotypes, args.genotype)
@@ -490,20 +493,6 @@ class Dump(AppInterface):
             _export(world.communities, args.community)
 
 
-class DumpMetagenotype(AppInterface):
-    app_name = "dump_mgen"
-    description = "Export metagenotype to TSV"
-
-    @classmethod
-    def add_subparser_arguments(cls, parser):
-        parser.add_argument("inpath")
-        parser.add_argument("outpath")
-
-    @classmethod
-    def run(cls, args):
-        mgen = sf.data.Metagenotypes.load(args.inpath)
-        _export = lambda var, path: var.data.to_series().to_csv(path, sep="\t")
-        _export(mgen, args.outpath)
 
 
 class EvaluateFitAgainstSimulation(AppInterface):
@@ -533,10 +522,9 @@ SUBCOMMANDS = [
     NoOp,
     DebugModelHyperparameters,
     # Input/Output
-    LoadMetagenotype,
-    DumpMetagenotype,
+    Load,
     Dump,
-    # DataProcessing
+    # Data Processing
     FilterMetagenotypes,
     ConcatGenotypeBlocks,
     # Simulation

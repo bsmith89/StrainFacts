@@ -78,6 +78,14 @@ class WrappedDataArrayMixin:
     variable_name = None
 
     @classmethod
+    def load(cls, filename_or_obj, validate=True):
+        world = World.load(filename_or_obj=filename_or_obj, validate=validate)
+        return getattr(world, cls.variable_name)
+
+    def dump(self, path, validate=True, **kwargs):
+        self.to_world().dump(path=path, validate=validate, **kwargs)
+
+    @classmethod
     def _post_load(cls, data, validate=True):
         result = cls(data)
         if validate:
@@ -90,6 +98,10 @@ class WrappedDataArrayMixin:
         data = data.squeeze().to_xarray()
         data.name = cls.variable_name
         return cls._post_load(data)
+
+    def dump_to_tsv(self, path, validate=True):
+        self.validate_constraints()
+        self.data.to_series().to_csv(path, sep="\t")
 
     @classmethod
     def from_ndarray(cls, x, coords=None):
@@ -213,19 +225,6 @@ class Metagenotypes(WrappedDataArrayMixin):
     constraints = [POSITIVE_COUNTS]
     variable_name = "metagenotypes"
 
-    @classmethod
-    def load(cls, filename_or_obj, validate=True):
-        data = xr.load_dataarray(filename_or_obj)
-        if "library_id" in data.dims:
-            warn("Converting 'library_id' dimension to 'sample'.")
-            data = data.rename({"library_id": "sample"})
-        if "species_id" in data.dims:
-            warn("Dropping 'species_id' from dims.")
-            # FIXME: This is a hack because one of my data inputs includes the
-            # species_id even though it shouldn't.
-            data = data.squeeze(dim=("species_id",))
-        data = data.astype(int)
-        return cls._post_load(data)
 
     @classmethod
     def load_from_merged_gtpro(cls, path, validate=True, **kwargs):
@@ -280,13 +279,6 @@ class Metagenotypes(WrappedDataArrayMixin):
         x = np.stack([y, m - y], axis=-1)
         return cls.from_ndarray(x, coords=coords)
 
-    def dump(self, path, int_type="uint32", validate=True):
-        if validate:
-            self.validate_constraints()
-        assert np.iinfo(int_type).max > self.data.values.max()
-        self.data.astype(int_type).to_dataset(name="tally").to_netcdf(
-            path, engine="netcdf4", encoding=dict(tally=dict(zlib=True, complevel=6))
-        )
 
     def to_csv(self, *args, **kwargs):
         self.data.to_series().to_csv(*args, **kwargs)
@@ -616,10 +608,10 @@ class World:
                 wrapped_variable = getattr(self, variable_name)
                 wrapped_variable.validate_constraints()
 
-    def dump(self, path, validate=True):
+    def dump(self, path, validate=True, **kwargs):
         if validate:
             self.validate_constraints()
-        self.data.to_netcdf(path, engine="netcdf4")
+        self.data.to_netcdf(path, engine="netcdf4", **kwargs)
 
     @classmethod
     def load(cls, filename_or_obj, validate=True):
