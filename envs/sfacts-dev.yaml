@@ -10,7 +10,7 @@ dependencies:
   - scipy
   - scikit-learn
   - scikit-bio
-  - pyro-ppl
+  - conda-forge::pyro-ppl
   - seaborn
   - jupyter
   - jupyterlab
