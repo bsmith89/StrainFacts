@@ -13,6 +13,7 @@ SHARED_DESCRIPTIONS = dict(
     gamma=("strain", "position"),
     delta=("strain", "position"),
     rho=("strain",),
+    pi_hyper_sample=("sample",),
     pi=("sample", "strain"),
     epsilon=("sample",),
     epsilon_hyper=(),
@@ -163,3 +164,52 @@ class ShiftedScaledDirichlet(TorchDistribution):
         return shifted_scaled_dirichlet_loglik(
             self.alpha, self.p, self.a, value
         ).squeeze(dim=-1)
+
+
+def logit_laplace_loglik(loc, scale, x):
+    return (
+        -torch.log(scale)
+        - torch.log(2 * x)
+        - torch.log1p(-x)
+        - torch.abs(torch.log(x) - torch.log1p(-x) - loc) / scale
+    )
+
+
+class LogitLaplace(TorchDistribution):
+    support = pyro.distributions.Beta.support
+    has_rsample = False
+    arg_constraints = {
+        "mu": constraints.real,
+        "b": constraints.positive,
+    }
+
+    def __init__(self, mu, b, validate_args=None):
+        mu, b = torch.distributions.utils.broadcast_all(
+            mu,
+            b,
+        )
+        self._laplace = pyro.distributions.Laplace(loc=mu, scale=b)
+        super(TorchDistribution, self).__init__(
+            self._laplace.batch_shape,
+            self._laplace.event_shape,
+            validate_args=validate_args,
+        )
+
+    @property
+    def mu(self):
+        return self._laplace.loc
+
+    @property
+    def b(self):
+        return self._laplace.scale
+
+    def sample(self, sample_shape=torch.Size()):
+        y = self._laplace.sample(sample_shape)
+        return torch.special.expit(y)
+
+    def log_prob(self, value):
+        return logit_laplace_loglik(
+            self.mu,
+            self.b,
+            value,
+        )
