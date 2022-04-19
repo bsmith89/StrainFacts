@@ -10,16 +10,42 @@ from functools import partial
 from warnings import warn
 
 
-def _on_2_simplex(d):
-    return (d.min() >= 0) and (d.max() <= 1.0)
+class Error(Exception):
+    pass
 
 
-def _strictly_positive(d):
-    return d.min() > 0
+class DataConstraintError(Error):
+    pass
 
 
-def _positive_counts(d):
-    return (d.astype(int) == d).all()
+class DataDimensionsError(Error):
+    pass
+
+
+class DataConstraint:
+    def __init__(self, name, test_func):
+        self.name = name
+        self.test_func = test_func
+
+    def __call__(self, data):
+        return self.test_func(data)
+
+    def raise_error(self, data):
+        raise DataConstraintError(f"Failed constraint: {constraint.name}")
+
+
+ON_2_SIMPLEX = DataConstraint(
+    "on_2_simplex",
+    lambda d: (d.min() >= 0) and (d.max() <= 1.0),
+)
+STRICTLY_POSITIVE = DataConstraint(
+    "strictly_positive",
+    lambda d: d.min() > 0,
+)
+POSITIVE_COUNTS = DataConstraint(
+    "positive_counts",
+    lambda d: (d.astype(int) == d).all() and (d.min() >= 0),
+)
 
 
 class WrappedDataArrayMixin:
@@ -128,13 +154,16 @@ class WrappedDataArrayMixin:
             )
 
     def validate_fast(self):
-        assert len(self.data.shape) == len(self.dims)
-        assert self.data.dims == self.dims
+        if not (
+            (len(self.data.shape) == len(self.dims)) and (self.data.dims == self.dims)
+        ):
+            raise DataDimensionsError(self.data.dims, self.dims)
 
     def validate_constraints(self):
         self.validate_fast()
-        for name in self.constraints:
-            assert self.constraints[name](self.data), f"Failed constraint: {name}"
+        for constraint in self.constraints:
+            if not constraint(self.data):
+                constraint.raise_error(self.data)
 
     def lift(self, func, *args, **kwargs):
         return self.__class__(func(self.data, *args, **kwargs))
@@ -181,7 +210,7 @@ class Metagenotypes(WrappedDataArrayMixin):
     """Counts of alleles across samples and positions."""
 
     dims = ("sample", "position", "allele")
-    constraints = dict(positive_counts=_positive_counts)
+    constraints = [POSITIVE_COUNTS]
     variable_name = "metagenotypes"
 
     @classmethod
@@ -382,7 +411,7 @@ class Metagenotypes(WrappedDataArrayMixin):
 
 class Genotypes(WrappedDataArrayMixin):
     dims = ("strain", "position")
-    constraints = dict(on_2_simplex=_on_2_simplex)
+    constraints = [ON_2_SIMPLEX]
     variable_name = "genotypes"
 
     @classmethod
@@ -489,15 +518,18 @@ class Genotypes(WrappedDataArrayMixin):
 
 class Missingness(WrappedDataArrayMixin):
     dims = ("strain", "position")
-    constraints = dict(on_2_simplex=_on_2_simplex)
+    constraints = [ON_2_SIMPLEX]
     variable_name = "missingness"
 
 
 class Communities(WrappedDataArrayMixin):
     dims = ("sample", "strain")
-    constraints = dict(
-        strains_sum_to_1=lambda d: np.allclose(d.sum("strain"), 1.0, atol=1e-4)
-    )
+    constraints = [
+        DataConstraint(
+            "strains_sum_to_1",
+            lambda d: np.allclose(d.sum("strain"), 1.0, atol=1e-4),
+        )
+    ]
     variable_name = "communities"
 
     def fuzzed(self, eps=1e-5):
@@ -541,16 +573,16 @@ class Communities(WrappedDataArrayMixin):
         return pd.Series(ent, index=getattr(p, dim)).rename_axis(index=dim).to_xarray()
 
 
-class Overdispersion(WrappedDataArrayMixin):
-    dims = ("sample",)
-    constraints = dict(strictly_positive=_strictly_positive)
-    variable_name = "overdispersion"
-
-
-class ErrorRate(WrappedDataArrayMixin):
-    dims = ("sample",)
-    constraints = dict(on_2_simplex=_on_2_simplex)
-    variable_name = "error_rate"
+# class Overdispersion(WrappedDataArrayMixin):
+#     dims = ("sample",)
+#     constraints = dict(strictly_positive=_strictly_positive)
+#     variable_name = "overdispersion"
+#
+#
+# class ErrorRate(WrappedDataArrayMixin):
+#     dims = ("sample",)
+#     constraints = dict(on_2_simplex=_on_2_simplex)
+#     variable_name = "error_rate"
 
 
 class World:
@@ -574,9 +606,8 @@ class World:
         return cls(xr.Dataset({v.variable_name: v.data for v in args}))
 
     def validate_fast(self):
-        assert not (
-            set(self.data.dims) - set(self.dims)
-        ), f"Found data dims that shouldn't exist: {self.data.dims}"
+        if (set(self.data.dims) - set(self.dims)):
+            raise DataDimensionsError(self.data.dims, self.dims)
 
     def validate_constraints(self):
         self.validate_fast()
