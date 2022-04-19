@@ -4,6 +4,17 @@ from copy import deepcopy
 import argparse
 
 
+def add_hyperparameters_cli_argument(parser):
+    parser.add_argument(
+        "--hyperparameters",
+        "-p",
+        nargs="+",
+        action="append",
+        default=[],
+        help="list of model hyperparameters to override default in format 'NAME=FLOAT'",
+    )
+
+
 def parse_hyperparameter_strings(list_of_lists_of_pairs):
     list_of_pairs = itertools.chain.from_iterable(list_of_lists_of_pairs)
     hyperparameters = {}
@@ -11,6 +22,20 @@ def parse_hyperparameter_strings(list_of_lists_of_pairs):
         key, value = pair.split("=", 2)
         hyperparameters[key] = float(value)
     return hyperparameters
+
+
+def add_model_structure_cli_argument(parser):
+    parser.add_argument(
+        "--model-structure",
+        "-m",
+        default="default_simulation",
+        help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
+        choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
+    )
+
+
+def parse_model_structure_string(model_structure):
+    return sf.model_zoo.NAMED_STRUCTURES[model_structure]
 
 
 def add_optimization_arguments(parser):

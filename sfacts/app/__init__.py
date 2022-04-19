@@ -1,9 +1,13 @@
 import argparse
+import sys
 import warnings
 import sfacts as sf
 import numpy as np
 from sfacts.app.components import (
+    add_hyperparameters_cli_argument,
     parse_hyperparameter_strings,
+    add_model_structure_cli_argument,
+    parse_model_structure_string,
     add_optimization_arguments,
     transform_optimization_parameter_inputs,
     AppInterface,
@@ -12,14 +16,14 @@ from sfacts.app.components import (
 
 class NoOp(AppInterface):
     app_name = "do_nothing"
-    description = "dummy subcommand that does nothing"
+    description = "Do nothing (dummy subcommand)."
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument("--dummy", type=int, default=1)
         parser.add_argument(
-            "--hyperparameters", "-p", nargs="+", action="append", default=[]
+            "--dummy", type=int, default=1, help="test option; does nothing"
         )
+        add_hyperparameters_cli_argument(parser)
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
@@ -90,8 +94,16 @@ class FilterMetagenotypes(AppInterface):
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
-        assert 0 < args.min_minor_allele_freq < 1
-        assert 0 < args.min_horizontal_cvrg < 1
+        if not (0 < args.min_minor_allele_freq < 1):
+            raise argparse.ArgumentError(
+                "min_minor_allele_freq",
+                "Argument min_minor_allele_freq must be between 0 and 1.",
+            )
+        if not (0 < args.min_horizontal_cvrg < 1):
+            raise argparse.ArgumentError(
+                "min_horizontal_cvrg",
+                "Argument min_horizontal_cvrg must be between 0 and 1.",
+            )
         if args.num_positions is None:
             args.num_positions = int(1e20)
         return args
@@ -100,8 +112,8 @@ class FilterMetagenotypes(AppInterface):
     def run(cls, args):
         mgen_all = sf.data.Metagenotypes.load(args.inpath)
         mgen_filt = mgen_all.select_variable_positions(
-            thresh=0.05
-        ).select_samples_with_coverage(0.05)
+            thresh=args.min_minor_allele_freq
+        ).select_samples_with_coverage(args.min_horizontal_cvrg)
 
         nposition = min(mgen_filt.sizes["position"], args.num_positions)
         np.random.seed(args.random_seed)
@@ -115,19 +127,11 @@ class Simulate(AppInterface):
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument(
-            "--model-structure",
-            "-m",
-            default="default_simulation",
-            help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
-            choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
-        )
+        add_model_structure_cli_argument(parser)
         parser.add_argument("--num-strains", "-s", type=int, required=True)
         parser.add_argument("--num-samples", "-n", type=int, required=True)
         parser.add_argument("--num-positions", "-g", type=int, required=True)
-        parser.add_argument(
-            "--hyperparameters", "-p", nargs="+", action="append", default=[]
-        )
+        add_hyperparameters_cli_argument(parser)
         parser.add_argument("--template", "-w")
         parser.add_argument("--fix-from-template", default="")
         parser.add_argument("--random-seed", "--seed", "-r", type=int)
@@ -136,7 +140,7 @@ class Simulate(AppInterface):
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
-        args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
+        args.model_structure = parse_model_structure_string(args.model_structure)
         args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
         args.fix_from_template = args.fix_from_template.split(",")
         return args
@@ -169,13 +173,7 @@ class Fit(AppInterface):
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument(
-            "--model-structure",
-            "-m",
-            default="default",
-            help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
-            choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
-        )
+        add_model_structure_cli_argument(parser)
         parser.add_argument(
             "--strains-per-sample",
             type=float,
@@ -191,9 +189,7 @@ class Fit(AppInterface):
             ),
         )
         parser.add_argument("--num-positions", "-g", type=int)
-        parser.add_argument(
-            "--hyperparameters", "-p", nargs="+", action="append", default=[]
-        )
+        add_hyperparameters_cli_argument(parser)
         parser.add_argument(
             "--tsv",
             action="store_true",
@@ -205,17 +201,11 @@ class Fit(AppInterface):
         parser.add_argument("outpath")
         add_optimization_arguments(parser)
         parser.add_argument(
-            "--nmf-init",
-            dest="nmf_init",
-            action="store_true",
-            default=True,
-            help="Use NMF to select starting parameters.",
-        )
-        parser.add_argument(
             "--no-nmf-init",
             dest="nmf_init",
             action="store_false",
-            help="Don't use NMF to select starting parameters.",
+            default=True,
+            help="don't use NMF to select starting parameters (do use NMF by default)",
         )
         parser.add_argument("--anneal-wait", type=int, default=0)
         parser.add_argument("--anneal-steps", type=int, default=0)
@@ -226,22 +216,28 @@ class Fit(AppInterface):
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
-        args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
+        args.model_structure = parse_model_structure_string(args.model_structure)
         args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
         args.anneal_hyperparameters = parse_hyperparameter_strings(
             args.anneal_hyperparameters
         )
-        if args.anneal_hyperparameters:
-            assert (
-                args.anneal_steps > 0
-            ), "Annealing for 0 steps is like no annealing at all."
-        if args.num_strains and args.strains_per_sample:
-            raise Exception(
-                "Only one of --num-strains or --strains-per-sample may be set."
+        if args.anneal_hyperparameters and (args.anneal_steps <= 0):
+            raise argparse.ArgumentError(
+                "anneal_steps", "Annealing for 0 steps is like no annealing at all."
             )
-        elif (args.num_strains is None) and (args.strains_per_sample is None):
-            raise Exception(
-                "One of either --num-strains or --strains-per-sample must be set."
+        if args.num_strains and args.strains_per_sample:
+            raise argparse.ArgumentError(
+                "strains_per_sample",
+                "Only one of --num-strains or --strains-per-sample may be set.",
+            )
+        if (args.num_strains is None) and (args.strains_per_sample is None):
+            raise argparse.ArgumentError(
+                "num_strains",
+                "One of either --num-strains or --strains-per-sample must be set.",
+            )
+        if args.num_strains and (args.num_strains < 2):
+            raise argparse.ArgumentError(
+                "num_strains", "num_strains must be 2 or more."
             )
         if args.num_positions is None:
             args.num_positions = int(1e20)
@@ -285,7 +281,6 @@ class Fit(AppInterface):
             )
         else:
             num_strains = args.num_strains
-        assert num_strains > 1
 
         np.random.seed(args.random_seed)
         num_positions_ss = min(args.num_positions, metagenotypes.sizes["position"])
@@ -321,26 +316,18 @@ class Fit(AppInterface):
 
 
 class FitGenotypeBlock(AppInterface):
-    app_name = "fit_genotype"
+    app_name = "fit_geno"
     description = (
         "Fit strain genotypes based on fixed community compositions and metagenotypes."
     )
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument(
-            "--model-structure",
-            "-m",
-            default="default",
-            help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
-            choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
-        )
+        add_model_structure_cli_argument(parser)
         parser.add_argument("--block-size", "-g", type=int)
         parser.add_argument("--chunk-size", type=int)
         parser.add_argument("--block-number", "-i", type=int)
-        parser.add_argument(
-            "--hyperparameters", "-p", nargs="+", action="append", default=[]
-        )
+        add_hyperparameters_cli_argument(parser)
         # parser.add_argument("--history-outpath")
         parser.add_argument("community")
         parser.add_argument("metagenotype")
@@ -349,7 +336,7 @@ class FitGenotypeBlock(AppInterface):
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
-        args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
+        args.model_structure = parse_model_structure_string(args.model_structure)
         args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
         if args.block_size is None:
             args.block_size = int(1e20)
@@ -423,10 +410,10 @@ class ConcatGenotypeBlocks(AppInterface):
         world.dump(args.outpath)
 
 
-class DebugModelHyperparameters(AppInterface):
-    app_name = "debug_hypers"
+class DebugModel(AppInterface):
+    app_name = "describe"
     description = (
-        "List the hyperparameters of the model and their set (or default) values."
+        "List the hyperparameters of the model and their default (or CLI set) values."
     )
 
     @classmethod
@@ -436,13 +423,11 @@ class DebugModelHyperparameters(AppInterface):
             help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
             choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
         )
-        parser.add_argument(
-            "--hyperparameters", "-p", nargs="+", action="append", default=[]
-        )
+        add_hyperparameters_cli_argument(parser)
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
-        args.model_structure = sf.model_zoo.NAMED_STRUCTURES[args.model_structure]
+        args.model_structure = parse_model_structure_string(args.model_structure)
         args.hyperparameters = parse_hyperparameter_strings(args.hyperparameters)
         return args
 
@@ -451,14 +436,15 @@ class DebugModelHyperparameters(AppInterface):
         model = sf.model.ParameterizedModel(
             structure=args.model_structure,
             coords=dict(
-                strain=2,
-                sample=2,
-                position=2,
+                strain=3,
+                sample=4,
+                position=5,
                 allele=["alt", "ref"],
             ),
             hyperparameters=args.hyperparameters,
         )
-        print(model.hyperparameters)
+        sf.pyro_util.shape_info(model)
+        sf.logging_util.info(model.hyperparameters)
 
 
 class Dump(AppInterface):
@@ -493,17 +479,33 @@ class Dump(AppInterface):
             _export(world.communities, args.community)
 
 
+# class DumpMetagenotype(AppInterface):
+#     app_name = "dump_mgen"
+#     description = "Export metagenotype to TSV"
+#
+#     @classmethod
+#     def add_subparser_arguments(cls, parser):
+#         parser.add_argument("inpath")
+#         parser.add_argument("outpath")
+#
+#     @classmethod
+#     def run(cls, args):
+#         mgen = sf.data.Metagenotypes.load(args.inpath)
+#         _export = lambda var, path: var.data.to_series().to_csv(path, sep="\t")
+#         _export(mgen, args.outpath)
 
 
 class EvaluateFitAgainstSimulation(AppInterface):
     app_name = "evaluate_fit"
-    description = "TODO"
+    description = "Calculate goodness-of-fit scores between estimates and ground-truth."
 
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument("simulation")
         parser.add_argument("fit")
-        parser.add_argument("outpath")
+        parser.add_argument(
+            "--outpath", help="Write evaluation scores to file; otherwise STDOUT"
+        )
 
     @classmethod
     def run(cls, args):
@@ -514,25 +516,31 @@ class EvaluateFitAgainstSimulation(AppInterface):
         sim = sf.World.load(args.simulation)
 
         errors = sf.workflow.evaluate_fit_against_simulation(sim, fit)
-        errors.to_csv(args.outpath, sep="\t", index=True, header=False)
+
+        if args.outpath:
+            outpath_or_handle = args.outpath
+        else:
+            outpath_or_handle = sys.stdout
+
+        errors.to_csv(outpath_or_handle, sep="\t", index=True, header=False)
 
 
 SUBCOMMANDS = [
     # Debugging
     NoOp,
-    DebugModelHyperparameters,
+    DebugModel,
     # Input/Output
     Load,
     Dump,
     # Data Processing
     FilterMetagenotypes,
     ConcatGenotypeBlocks,
-    # Simulation
+    # Simulation:
     Simulate,
-    # Fitting
+    # Fitting:
     Fit,
     FitGenotypeBlock,
-    # Evaluation
+    # Evaluation:
     EvaluateFitAgainstSimulation,
 ]
 
@@ -543,7 +551,7 @@ def main():
         fromfile_prefix_chars="@",
     )
 
-    app_subparsers = parser.add_subparsers()
+    app_subparsers = parser.add_subparsers(metavar="COMMAND")
     for subcommand in SUBCOMMANDS:
         subcommand._add_app_subparser(app_subparsers)
 
