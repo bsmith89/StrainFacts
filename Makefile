@@ -33,55 +33,56 @@ start_jupyter:
 
 examples/sim.world.nc:
 	sfacts simulate \
-	    --model-structure=ssdd3_with_error \
-	    --num-strains=10 --num-samples=50 --num-positions=5000 \
-	    --hyperparameters
-	        gamma_hyper=1e-5 rho_hyper=10.0 pi_hyper=0.1 \
-	        mu_hyper_mean=10.0 mu_hyper_scale=3.0 m_hyper_concentration=3.0 \
-	        epsilon_hyper_mode=0.01 epsilon_hyper_spread=1.5 \
-	        alpha_hyper_mean=100 alpha_hyper_scale=0.5 \
+	    --num-strains=10 --num-samples=50 --num-positions=500 \
+	    --hyperparameters pi_hyper=0.1 mu_hyper_mean=10.0 epsilon_hyper_mode=0.01 \
 	    --random-seed=0 \
-	    --outpath $@
+	    $@
 
 %.mgen.tsv: %.world.nc
-	sfacts dump --tsv $< --metagenotype $@
+	sfacts dump $< --metagenotype $@
 
 %.mgen.nc: %.mgen.tsv
-	sfacts load_mgen $< $@
+	sfacts load --metagenotype $< $@
 
 %.filt.mgen.nc: %.mgen.nc
 	sfacts filter_mgen \
 	    --min-minor-allele-freq 0.05 \
-	    --min-horizontal-cvrg 0.1 \
-	    --random-seed 0 $< $@
-
-%.mgen.tsv: %.mgen.nc
-	sfacts dump_mgen $< $@
+	    --min-horizontal-cvrg 0.15 \
+	    --random-seed 0 \
+	    $< $@
 
 %.fit.world.nc: %.mgen.nc
 	sfacts fit \
 	    --verbose \
-	    --model-structure ssdd3_with_error \
-	    --num-strains 15 --num-positions 500 \
+	    --model-structure model2 \
+	    --num-strains 15 --num-positions 200 \
+	    --hyperparameters pi_hyper=0.5 rho_hyper=0.2 \
 	    --random-seed 0 \
 	    $< $@
 
-%.fit.refit.geno.nc: %.fit.world.nc %.mgen.nc
-	sfacts fit_genotype \
+%.fit.refit.geno-0.nc: %.fit.world.nc %.mgen.nc
+	sfacts fit_geno \
 	    --verbose \
-	    --model-structure ssdd3_with_error \
-	    --num-positionsB 1000 \
+	    --model-structure model2 \
 	    --hyperparameters gamma_hyper=1.0 \
-	    --block-number 0 \
+	    --block-size=500 \
+	    --chunk-size=500 \
+	    --block-number=0 \
 	    --random-seed=0 \
 	    $^ $@
 
-%.fit.refit.world.nc: %.fit.world.nc %.mgen.nc %.fit.refit.geno.nc
-	sfacts concatenate_genotype_chunks \
+%.fit.refit.world.nc: %.fit.world.nc %.mgen.nc %.fit.refit.geno-0.nc
+	sfacts concat_geno \
 	    --metagenotype $*.mgen.nc \
 	    --community $*.fit.world.nc \
-	    --outpath $@ \
-	    $*.fit.refit.geno.nc
+	    --outpath $*.fit.refit.world.nc \
+	    $*.fit.refit.geno-0.nc
 
 %.filt.fit.refit.eval.tsv: %.world.nc %.filt.fit.refit.world.nc
-	sfacts evaluate_fit $^ $@
+	sfacts evaluate_fit $^ | tee $@
+
+%.geno.tsv: %.world.nc
+	sfacts dump --genotype $@ $<
+
+%.comm.tsv: %.world.nc
+	sfacts dump --community $@ $<
