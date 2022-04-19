@@ -423,6 +423,14 @@ class DebugModel(AppInterface):
             help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
             choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
         )
+        parser.add_argument("--num-strains", "-s", type=int, default=3)
+        parser.add_argument("--num-samples", "-n", type=int, default=4)
+        parser.add_argument("--num-positions", "-g", type=int, default=5)
+        parser.add_argument(
+            "--shapes",
+            action="store_true",
+            help="Describe shapes of all model variables.",
+        )
         add_hyperparameters_cli_argument(parser)
 
     @classmethod
@@ -436,15 +444,16 @@ class DebugModel(AppInterface):
         model = sf.model.ParameterizedModel(
             structure=args.model_structure,
             coords=dict(
-                strain=3,
-                sample=4,
-                position=5,
+                strain=args.num_strains,
+                sample=args.num_samples,
+                position=args.num_positions,
                 allele=["alt", "ref"],
             ),
             hyperparameters=args.hyperparameters,
         )
-        sf.pyro_util.shape_info(model)
         sf.logging_util.info(model.hyperparameters)
+        if args.shapes:
+            sf.pyro_util.shape_info(model)
 
 
 class Dump(AppInterface):
