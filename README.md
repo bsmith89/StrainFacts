@@ -2,9 +2,9 @@
 
 StrainFacts is a "strain deconvolution" tool, which infers both strain
 genotypes and their relative abundance across samples directly from
-metagenotype data[^metagenotype-meaning].
+metagenotype data.
 
-[^metagenotype-meaning]: A "metagenotype" is a data matrix of counts of how
+A "metagenotype" is a data matrix of counts of how
 many reads in a shotgun metagenomic sequence library contained each allele at a
 set of polymorphic sites.
 Metagenotypes from multiple (maybe _many_) samples stacked together form
@@ -43,7 +43,7 @@ visualization, and evaluation are provided as Jupyter Notebooks:
 - [`examples/fit_metagenotype.ipynb`](https://byronjsmith.com/StrainFacts/fit_metagenotype.html)
 - [`examples/evaluate_simulation_fit.ipynb`](https://byronjsmith.com/StrainFacts/evaluate_simulation_fit.html)
 
-## Usage[^test-data]
+## Usage
 
 (**NOTE**: All of the files described in those notebooks and the usage
 examples below can be built automatically with Make
