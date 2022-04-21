@@ -4,9 +4,11 @@ StrainFacts is a "strain deconvolution" tool, which infers both strain
 genotypes and their relative abundance across samples directly from
 metagenotype data.
 
-A "metagenotype" is a data matrix of counts of how
-many reads in a shotgun metagenomic sequence library contained each allele at a
-set of polymorphic sites.
+A "metagenotype" for a particular species in a particular sample is an
+multidimensional array
+counting the number of reads (from shotgun metagenomic sequencing, usually)
+that contained a particular allele at
+polymorphic sites in that species's genome.
 Metagenotypes from multiple (maybe _many_) samples stacked together form
 the main input data-type analyzed by StrainFacts.
 
@@ -27,7 +29,7 @@ pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts
 ```
 
 However, installing as a conda environment (described below) is probably
-the better option.
+the more robust option.
 
 Installing PyTorch/Pyro with GPU support may be more challenging.
 Consider using a Docker/Singularity container like
