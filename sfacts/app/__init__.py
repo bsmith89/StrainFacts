@@ -3,6 +3,7 @@ import sys
 import warnings
 import sfacts as sf
 import numpy as np
+import pandas as pd
 from sfacts.app.components import (
     add_hyperparameters_cli_argument,
     parse_hyperparameter_strings,
@@ -511,33 +512,38 @@ class EvaluateFitAgainstSimulation(AppInterface):
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument("simulation")
-        parser.add_argument("fit")
+        parser.add_argument("fit", nargs="+")
         parser.add_argument(
             "--outpath", help="Write evaluation scores to file; otherwise STDOUT"
         )
 
     @classmethod
     def run(cls, args):
-        fit = sf.World.load(args.fit)
-        # FIXME: dtype of the coordinates changes from int to 'object' (string) at some point during processing.
-        # NOTE: This fix is just a hack and is probably fairly brittle.
-        fit = sf.World(fit.data.assign_coords(position=fit.position.astype(int)))
         sim = sf.World.load(args.simulation)
+        results = {}
+        for fit_path in args.fit:
+            fit = sf.World.load(fit_path)
+            # FIXME: dtype of the coordinates changes from int to 'object'
+            # (string) at some point during processing.
+            # NOTE: This fix is just a hack and is probably fairly brittle.
+            fit = sf.World(fit.data.assign_coords(position=fit.position.astype(int)))
+            results[fit_path] = sf.workflow.evaluate_fit_against_simulation(sim, fit)
 
-        errors = sf.workflow.evaluate_fit_against_simulation(sim, fit)
+        results = pd.DataFrame(results).rename_axis(index='score')
 
         if args.outpath:
             outpath_or_handle = args.outpath
         else:
             outpath_or_handle = sys.stdout
-
-        errors.to_csv(outpath_or_handle, sep="\t", index=True, header=False)
+        results.to_csv(
+            outpath_or_handle, sep="\t", index=True, header=True
+        )
 
 
 SUBCOMMANDS = [
     # Debugging
     NoOp,
-    DebugModel,
+    DescribeModel,
     # Input/Output
     Load,
     Dump,
