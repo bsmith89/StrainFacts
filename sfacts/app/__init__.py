@@ -411,10 +411,10 @@ class ConcatGenotypeBlocks(AppInterface):
         world.dump(args.outpath)
 
 
-class DebugModel(AppInterface):
+class DescribeModel(AppInterface):
     app_name = "describe"
     description = (
-        "List the hyperparameters of the model and their default (or CLI set) values."
+        "Summarize a model and its hyperparameters."
     )
 
     @classmethod
@@ -442,6 +442,13 @@ class DebugModel(AppInterface):
 
     @classmethod
     def run(cls, args):
+        warnings.filterwarnings(
+            "ignore",
+            category=UserWarning,
+            # module="pyro.poutine.trace_struct",
+            lineno=250,
+            message="Encountered +inf"
+        )
         model = sf.model.ParameterizedModel(
             structure=args.model_structure,
             coords=dict(
@@ -452,7 +459,9 @@ class DebugModel(AppInterface):
             ),
             hyperparameters=args.hyperparameters,
         )
-        sf.logging_util.info(model.hyperparameters)
+        sf.logging_util.info("Defined in:", model.structure.generative.__module__)
+        sf.logging_util.info("Summary:", model.structure.text_summary)
+        sf.logging_util.info("Hyperparameters:", model.hyperparameters)
         if args.shapes:
             sf.pyro_util.shape_info(model)
 

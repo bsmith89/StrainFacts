@@ -37,7 +37,7 @@ class Hyperparameters(UserDict):
 
 
 class Structure:
-    def __init__(self, generative, dims, description, default_hyperparameters):
+    def __init__(self, generative, dims, description, default_hyperparameters, text_summary):
         """
 
         *generative* :: Pyro generative model function(shape_dim_0, shape_dim_1, shape_dim_2, ..., **hyper_parameters)
@@ -49,6 +49,7 @@ class Structure:
         self.dims = dims
         self.description = description
         self.default_hyperparameters = default_hyperparameters
+        self.text_summary = text_summary
 
     def __call__(self, shape, data, hyperparameters, unit):
         assert len(shape) == len(self.dims)
@@ -104,12 +105,13 @@ class Structure:
 
 
 # For decorator use.
-def structure(dims, description, default_hyperparameters):
+def structure(dims, description, default_hyperparameters, text_summary=""):
     return partial(
         Structure,
         dims=dims,
         description=description,
         default_hyperparameters=Hyperparameters(**default_hyperparameters),
+        text_summary=text_summary,
     )
 
 

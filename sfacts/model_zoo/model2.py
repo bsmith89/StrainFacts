@@ -12,6 +12,13 @@ import pyro.distributions as dist
 
 
 @sf.model.structure(
+    text_summary="""Metagenotype model intended for inference, designed for simplicity and speed.
+
+No explicit error and no overdispersion of counts.
+
+TODO
+
+    """,
     dims=SHARED_DIMS,
     description=_mapping_subset(
         SHARED_DESCRIPTIONS,
