@@ -498,22 +498,6 @@ class Dump(AppInterface):
             _export(world.communities, args.community)
 
 
-# class DumpMetagenotype(AppInterface):
-#     app_name = "dump_mgen"
-#     description = "Export metagenotype to TSV"
-#
-#     @classmethod
-#     def add_subparser_arguments(cls, parser):
-#         parser.add_argument("inpath")
-#         parser.add_argument("outpath")
-#
-#     @classmethod
-#     def run(cls, args):
-#         mgen = sf.data.Metagenotypes.load(args.inpath)
-#         _export = lambda var, path: var.data.to_series().to_csv(path, sep="\t")
-#         _export(mgen, args.outpath)
-
-
 class EvaluateFitAgainstSimulation(AppInterface):
     app_name = "evaluate_fit"
     description = "Calculate goodness-of-fit scores between estimates and ground-truth."
