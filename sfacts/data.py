@@ -300,7 +300,7 @@ class Metagenotypes(WrappedDataArrayMixin):
     def select_samples_with_coverage(self, cvrg_thresh):
         # TODO: Consider using .lift() to do this.
         x = self.data
-        covered_samples = (x.sum("allele") > 0).mean("position") > cvrg_thresh
+        covered_samples = (x.sum("allele") >= 1).mean("position") >= cvrg_thresh
         return self.mlift("sel", sample=covered_samples)
 
     def frequencies(self, pseudo=0.0):
@@ -339,12 +339,12 @@ class Metagenotypes(WrappedDataArrayMixin):
             over = "sample"
         return self.total_counts().mean(over)
 
-    def horizontal_coverage(self, dim="sample"):
+    def horizontal_coverage(self, min_count=0, dim="sample"):
         if dim == "sample":
             over = "position"
         elif dim == "position":
             over = "sample"
-        return (self.total_counts() > 1).mean(over)
+        return (self.total_counts() >= min_count).mean(over)
 
     def to_counts_and_totals(self, binary_allele="alt"):
         return dict(
