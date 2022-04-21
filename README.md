@@ -26,6 +26,9 @@ The simplest possible installation directly from GitHub
 pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts
 ```
 
+However, installing as a conda environment (described below) is probably
+the better option.
+
 [^GPU]: Installing PyTorch/Pyro with GPU support may be more challenging.
 Consider using a Docker/Singularity container like
 [this one](https://hub.docker.com/r/bsmith89/sfacts_dev), which has many of the
@@ -42,8 +45,8 @@ visualization, and evaluation are provided as Jupyter Notebooks:
 
 ## Usage[^test-data]
 
-[^test-data]: All of the files described in the usage examples below can be
-built automatically with Make
+[^test-data]: All of the files described in those notebooks and the usage
+examples below can be built automatically with Make
 (e.g. try running: `make examples/sim.filt.fit.world.nc`).
 
 ### Get help
@@ -60,8 +63,11 @@ sfacts fit --help  # Subcommand specific CLI usage
 Fit metagenotype data with 15 strains and default everything:
 
 ```
-sfacts fit --num-strains 15 \
-    examples/sim.filt.mgen.nc examples/sim.filt.fit.nc
+sfacts fit \
+    --verbose \
+    --num-strains 15 \
+    --random-seed 0 \
+    sim.filt.mgen.nc sim.filt.fit.world.nc
 ```
 
 For the manuscript, StrainFacts was run with the following hyperparameters set
@@ -74,7 +80,6 @@ sfacts fit -m ssdd3_with_error  \
     --random-seed 0 \
     --strains-per-sample 0.3 \
     --num-positions 5000 \
-    --nmf-init \
     --hyperparameters gamma_hyper=1e-10 \
     --hyperparameters pi_hyper=0.3 \
     --hyperparameters rho_hyper=0.5 \
@@ -87,9 +92,11 @@ sfacts fit -m ssdd3_with_error  \
     --optimizer-learning-rate 0.05 \
     --min-optimizer-learning-rate 1e-06 \
     --max-iter 1_000_000 --lag1 50 --lag2 100 \
-    --tsv \
-    examples/sim.filt.mgen.tsv examples/sim.filt.fit.nc
+    examples/sim.filt.mgen.nc examples/sim.filt.fit.nc
 ```
+
+However, with `--num-positions`, `--precision`, `--random-seed`, `--device` and
+input/output files set as described in the paper.
 
 ### Data Formats
 
@@ -116,7 +123,7 @@ For example, to export tab-delimited relative abundance and genotypes tables
 from `examples/sim.filt.fit.nc`:
 
 ```
-sfacts dump examples/sim.filt.fit.nc --tsv \
+sfacts dump examples/sim.filt.fit.nc \
     --genotype examples/sim.filt.fit.geno.tsv \
     --community examples/sim.filt.fit.comm.tsv
 ```
@@ -186,7 +193,7 @@ This is a subset of the recently updated
 database.
 The MGnify website provides a convenient way to browse this reference.
 
-## How to hack
+## How to Hack
 
 ### Editable Installation
 
@@ -210,6 +217,7 @@ Build the environment:
 ```
 conda env create -n sfacts-dev -f envs/sfacts-dev.yaml
 # Also see `make .conda` to run this command automatically.
+conda activate sfacts-dev
 ```
 
 This includes an embedded `pip install --editable` for StrainFacts from the
@@ -251,16 +259,16 @@ make start_jupyter
 - [x] Complete installation instructions, as well as a robust artifact for
       running StrainFacts on various platforms (e.g. a Dockerfile or Conda
       environment specification)
-- [ ] Example data with a tutorial/vignette for running StrainFacts and
+- [x] Example data with a tutorial/vignette for running StrainFacts and
       interpreting the output.
     - [x] Simple example fitting a metagenotype
-    - [ ] Flesh out the example with an explanation of all of the steps.
-    - [ ] Example data from SRA with a GT-Pro step, instead of simulated
+    - [x] Flesh out the example with an explanation of all of the steps.
+    - [ ] ~Example data from SRA with a GT-Pro step, instead of simulated~
 - [x] The parameters selected for use in this paper (which we have found to be
       applicable across a range of datasets) will be set as the default.
     - Caveat: All of the hyperparameter annealing parameters should still be set by the user
-- [ ] We will document some useful approaches for hyperparameter tuning.
+- [x] We will document some useful approaches for hyperparameter tuning.
 - [ ] Improve the CLI documentation.
 - [ ] Refactor for the best looking code
     - [ ] De-pluralize core datatypes (community not communities)
-    - [ ] Remove unused CLI apps/workflows/plotting code
+    - [x] Remove unused CLI apps/workflows/plotting code

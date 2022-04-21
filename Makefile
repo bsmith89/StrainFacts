@@ -78,8 +78,8 @@ examples/sim.world.nc:
 	    --outpath $*.fit.refit.world.nc \
 	    $*.fit.refit.geno-0.nc
 
-%.filt.fit.refit.eval.tsv: %.world.nc %.filt.fit.refit.world.nc
-	sfacts evaluate_fit $^ | tee $@
+%.filt.fit.refit.eval.tsv: %.world.nc %.filt.fit.world.nc %.filt.fit.refit.world.nc
+	sfacts evaluate_fit $*.world.nc $*.world.nc $*.filt.fit.world.nc $*.filt.fit.refit.world.nc | tee $@ | column -t
 
 %.geno.tsv: %.world.nc
 	sfacts dump --genotype $@ $<
