@@ -268,7 +268,8 @@ make start_jupyter
       applicable across a range of datasets) will be set as the default.
     - Caveat: All of the hyperparameter annealing parameters should still be set by the user
 - [x] We will document some useful approaches for hyperparameter tuning.
-- [ ] Improve the CLI documentation.
+- [x] Improve the CLI documentation.
 - [ ] Refactor for the best looking code
     - [ ] De-pluralize core datatypes (community not communities)
     - [x] Remove unused CLI apps/workflows/plotting code
+    - [ ] Split apps into their own modules?
