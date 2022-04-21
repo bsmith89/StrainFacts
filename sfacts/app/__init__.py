@@ -128,7 +128,7 @@ class Simulate(AppInterface):
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        add_model_structure_cli_argument(parser)
+        add_model_structure_cli_argument(parser, default="default_simulation")
         parser.add_argument("--num-strains", "-s", type=int, required=True)
         parser.add_argument("--num-samples", "-n", type=int, required=True)
         parser.add_argument("--num-positions", "-g", type=int, required=True)

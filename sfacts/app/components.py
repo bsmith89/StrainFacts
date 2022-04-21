@@ -24,11 +24,11 @@ def parse_hyperparameter_strings(list_of_lists_of_pairs):
     return hyperparameters
 
 
-def add_model_structure_cli_argument(parser):
+def add_model_structure_cli_argument(parser, default="default"):
     parser.add_argument(
         "--model-structure",
         "-m",
-        default="default_simulation",
+        default=default,
         help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
         choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
     )
