@@ -18,7 +18,7 @@ B.J. Smith, X. Li, A. Abate, Z.J. Shi, K.S. Pollard
 _bioRxiv_ doi:[10.1101/2022.02.01.478746](https://doi.org/10.1101/2022.02.01.478746)
 
 
-## Installation[^GPU]
+## Installation
 
 The simplest possible installation directly from GitHub
 
@@ -29,7 +29,7 @@ pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts
 However, installing as a conda environment (described below) is probably
 the better option.
 
-[^GPU]: Installing PyTorch/Pyro with GPU support may be more challenging.
+Installing PyTorch/Pyro with GPU support may be more challenging.
 Consider using a Docker/Singularity container like
 [this one](https://hub.docker.com/r/bsmith89/sfacts_dev), which has many of the
 necessary prerequisites (but excluding StrainFacts itself).
@@ -45,9 +45,9 @@ visualization, and evaluation are provided as Jupyter Notebooks:
 
 ## Usage[^test-data]
 
-[^test-data]: All of the files described in those notebooks and the usage
+(**NOTE**: All of the files described in those notebooks and the usage
 examples below can be built automatically with Make
-(e.g. try running: `make examples/sim.filt.fit.world.nc`).
+e.g. try running: `make examples/sim.filt.fit.world.nc`.)
 
 ### Get help
 
@@ -95,8 +95,8 @@ sfacts fit -m ssdd3_with_error  \
     examples/sim.filt.mgen.nc examples/sim.filt.fit.nc
 ```
 
-However, with `--num-positions`, `--precision`, `--random-seed`, `--device` and
-input/output files set as described in the paper.
+In addition, values for `--num-positions`, `--precision`, `--random-seed`, `--device` and
+input/output files were as described in the paper.
 
 ### Data Formats
 
@@ -178,7 +178,7 @@ gets large.
 - [MIDAS / IGGtools](https://github.com/czbiohub/iggtools)
 - [StrainPhlan](https://github.com/biobakery/metaphlan)
 
-GT-Pro is the preferred metagenotyper for Strain Finder.
+GT-Pro is the preferred metagenotyper for StrainFacts.
 While other metagenotypers will also work
 (e.g. MIDAS or StrainPhlan assuming their outputs are formatted correctly),
 only bi-allelic and core genome SNP sites are currently supported.
@@ -193,7 +193,7 @@ This is a subset of the recently updated
 database.
 The MGnify website provides a convenient way to browse this reference.
 
-## How to Hack
+## How to Hack on StrainFacts
 
 ### Editable Installation
 
