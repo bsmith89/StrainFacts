@@ -93,7 +93,10 @@ def model(
         )
         epsilon = pyro.sample(
             "epsilon",
-            dist.Beta(epsilon_hyper_spread, epsilon_hyper_spread / epsilon_hyper_mode),
+            dist.Beta(
+                concentration1=epsilon_hyper_spread,
+                concentration0=epsilon_hyper_spread / epsilon_hyper_mode,
+            ),
         ).unsqueeze(-1)
         alpha = pyro.sample(
             "alpha",
