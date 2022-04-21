@@ -22,7 +22,7 @@ class NoOp(AppInterface):
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument(
-            "--dummy", type=int, default=1, help="test option; does nothing"
+            "--dummy", type=int, default=1, help="Test option; does nothing."
         )
         add_hyperparameters_cli_argument(parser)
 
@@ -42,11 +42,25 @@ class Load(AppInterface):
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument("--gtpro-metagenotype")
-        parser.add_argument("--metagenotype")
-        parser.add_argument("--community")
-        parser.add_argument("--genotype")
-        parser.add_argument("outpath")
+        parser.add_argument(
+            "--gtpro-metagenotype",
+            help="Path of a metagenotype in 'merged' GT-Pro format; this is the same as output from `GT_Pro parse`, but (1) filtered to just one species, (2) with a sample_id column prepended, and (3) concatenated from N samples.",
+        )
+        parser.add_argument(
+            "--metagenotype",
+            help="Path of a metagenotype matrix in standard, StrainFacts TSV format; this is the same as the output of `sfacts dump --metagenotype`.",
+        )
+        parser.add_argument(
+            "--community",
+            help="Path of a community matrix in standard, StrainFacts TSV format; this is the same as the output of `sfacts dump --community`.",
+        )
+        parser.add_argument(
+            "--genotype",
+            help="Path of a genotype matrix in standard, StrainFacts TSV format; this is the same as the output of `sfacts dump --genotype`.",
+        )
+        parser.add_argument(
+            "outpath", help="Path to write the StrainFacts/NetCDF file."
+        )
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
@@ -85,13 +99,32 @@ class FilterMetagenotypes(AppInterface):
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument(
-            "--min-minor-allele-freq", type=float, default=0.05, help=" "
+            "--min-minor-allele-freq",
+            type=float,
+            default=0.05,
+            help="Remove sites where less than this fraction of samples have any hits to the minor allele.",
         )
-        parser.add_argument("--min-horizontal-cvrg", type=float, default=0.1, help=" ")
-        parser.add_argument("--num-positions", type=int)
-        parser.add_argument("--random-seed", type=int)
-        parser.add_argument("inpath")
-        parser.add_argument("outpath")
+        parser.add_argument(
+            "--min-horizontal-cvrg",
+            type=float,
+            default=0.1,
+            help="Remove sample with less than this fraction of sites with non-zero counts.",
+        )
+        parser.add_argument(
+            "--num-positions", type=int, help="Randomly subsample this number of sites."
+        )
+        parser.add_argument(
+            "--random-seed",
+            type=int,
+            help="Seed for random number generator; must be set for reproducible subsampling.",
+        )
+        parser.add_argument(
+            "inpath", help="StrainFacts/NetCDF formatted file to load metagenotype data from."
+        )
+        parser.add_argument(
+            "outpath",
+            help="Path to write StrainFacts/NetCDF formatted file metagenotype data after filtering/subsampling.",
+        )
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
@@ -129,15 +162,47 @@ class Simulate(AppInterface):
     @classmethod
     def add_subparser_arguments(cls, parser):
         add_model_structure_cli_argument(parser, default="default_simulation")
-        parser.add_argument("--num-strains", "-s", type=int, required=True)
-        parser.add_argument("--num-samples", "-n", type=int, required=True)
-        parser.add_argument("--num-positions", "-g", type=int, required=True)
+        parser.add_argument(
+            "--num-strains",
+            "-s",
+            type=int,
+            required=True,
+            help="Number of latent strains to simulate.",
+        )
+        parser.add_argument(
+            "--num-samples",
+            "-n",
+            type=int,
+            required=True,
+            help="Number of samples to simulate.",
+        )
+        parser.add_argument(
+            "--num-positions",
+            "-g",
+            type=int,
+            required=True,
+            help="Number of SNP positions to simulate in (meta)genotypes.",
+        )
         add_hyperparameters_cli_argument(parser)
-        parser.add_argument("--template", "-w")
-        parser.add_argument("--fix-from-template", default="")
-        parser.add_argument("--random-seed", "--seed", "-r", type=int)
-
-        parser.add_argument("outpath")
+        parser.add_argument(
+            "--template",
+            "-w",
+            help="Path to a StrainFacts/NetCDF file with parameter values to be fixed (i.e. conditioning the generative model).",
+        )
+        parser.add_argument(
+            "--fix-from-template",
+            default="Which parameters in the template to fix for the simulation.",
+        )
+        parser.add_argument(
+            "--random-seed",
+            "--seed",
+            "-r",
+            type=int,
+            help="Seed for random number generator; must be set for reproducible simulations.",
+        )
+        parser.add_argument(
+            "outpath", help="Path to write StrainFacts/NetCDF formatted simulated parameters."
+        )
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
@@ -178,42 +243,66 @@ class Fit(AppInterface):
         parser.add_argument(
             "--strains-per-sample",
             type=float,
-            help="Dynamically set strain number as a fraction of sample number.",
+            help="Set number of latent strains to this fixed ratio with the number of samples (only one of --num-strains or --strains-per-sample may be set).",
         )
         parser.add_argument(
             "--num-strains",
             "-s",
             type=int,
             help=(
-                "Fix strain number. "
-                "(Only one of --num-strains or --strains-per-sample may be set)"
+                "Set number of latent strains to fit "
+                "(only one of --num-strains or --strains-per-sample may be set)."
             ),
         )
-        parser.add_argument("--num-positions", "-g", type=int)
+        parser.add_argument(
+            "--num-positions",
+            "-g",
+            type=int,
+            help="Number of randomly subsampled SNP positions from metagenotype to fit.",
+        )
         add_hyperparameters_cli_argument(parser)
         parser.add_argument(
             "--tsv",
             action="store_true",
             default=False,
-            help="Input file is in TSV format (rather than NetCDF).",
+            help="Accept input file in TSV format (rather than StrainFacts/NetCDF).",
         )
         # parser.add_argument("--history-outpath")
-        parser.add_argument("inpath")
-        parser.add_argument("outpath")
+        parser.add_argument("inpath", help="Metagenotype data input path.")
+        parser.add_argument(
+            "outpath", help="Path to write output StrainFacts/NetCDF file with estimated parameters."
+        )
         add_optimization_arguments(parser)
         parser.add_argument(
             "--no-nmf-init",
             dest="nmf_init",
             action="store_false",
             default=True,
-            help="don't use NMF to select starting parameters (do use NMF by default)",
+            help="Don't use NMF to select starting parameters; NMF *is* used by default",
         )
-        parser.add_argument("--anneal-wait", type=int, default=0)
-        parser.add_argument("--anneal-steps", type=int, default=0)
         parser.add_argument(
-            "--anneal-hyperparameters", nargs="+", action="append", default=[]
+            "--anneal-wait",
+            type=int,
+            default=0,
+            help="Number of steps before annealed hyperparameters start stepping.",
         )
-        parser.add_argument("--history-outpath")
+        parser.add_argument(
+            "--anneal-steps",
+            type=int,
+            default=0,
+            help="Number of steps before annealed hyperparameters are at the their final values; includes `--anneal-wait` steps.",
+        )
+        parser.add_argument(
+            "--anneal-hyperparameters",
+            nargs="+",
+            action="append",
+            default=[],
+            help="Values of parameters at the start of optimization, before annealing; arguments are in the form 'NAME=FLOAT'.",
+        )
+        parser.add_argument(
+            "--history-outpath",
+            help="Path to record the NLP (loss) value at each step in optimization.",
+        )
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
@@ -325,14 +414,28 @@ class FitGenotypeBlock(AppInterface):
     @classmethod
     def add_subparser_arguments(cls, parser):
         add_model_structure_cli_argument(parser)
-        parser.add_argument("--block-size", "-g", type=int)
-        parser.add_argument("--chunk-size", type=int)
-        parser.add_argument("--block-number", "-i", type=int)
+        parser.add_argument(
+            "--block-size",
+            "-g",
+            type=int,
+            help="Maximum number of positions fit in each indexed block (independent runs of the program).",
+        )
+        parser.add_argument(
+            "--chunk-size",
+            type=int,
+            help="Maximum number of positions fit in each chunk (fit serially in a single run of the program).",
+        )
+        parser.add_argument(
+            "--block-number", "-i", type=int, help="Block index to fit."
+        )
         add_hyperparameters_cli_argument(parser)
         # parser.add_argument("--history-outpath")
-        parser.add_argument("community")
-        parser.add_argument("metagenotype")
-        parser.add_argument("outpath")
+        parser.add_argument(
+            "community",
+            help="Previously fit community matrix which the model is conditioned on for refitting.",
+        )
+        parser.add_argument("metagenotype", help="Metagenotype data input path.")
+        parser.add_argument("outpath", help="Path to write estimated genotype matrix.")
         add_optimization_arguments(parser)
 
     @classmethod
@@ -391,10 +494,24 @@ class ConcatGenotypeBlocks(AppInterface):
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument("--community")
-        parser.add_argument("--metagenotype")
-        parser.add_argument("--outpath", required=True)
-        parser.add_argument("genotypes", nargs="+")
+        parser.add_argument(
+            "--community",
+            help="Path of a community matrix to recombine with concatenated genotypes.",
+        )
+        parser.add_argument(
+            "--metagenotype",
+            help="Path of a metagenotype matrix to recombine with concatenated genotypes.",
+        )
+        parser.add_argument(
+            "--outpath",
+            required=True,
+            help="Path to write the StrainFacts/NetCDF file with recombined components.",
+        )
+        parser.add_argument(
+            "genotypes",
+            nargs="+",
+            help="One or more genotype matrices to be concatenated and recombined.",
+        )
 
     @classmethod
     def run(cls, args):
@@ -413,20 +530,36 @@ class ConcatGenotypeBlocks(AppInterface):
 
 class DescribeModel(AppInterface):
     app_name = "describe"
-    description = (
-        "Summarize a model and its hyperparameters."
-    )
+    description = "Summarize a model and its hyperparameters."
 
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument(
             "model_structure",
-            help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
+            help="Model name as defined in `sfacts.model_zoo.NAMED_STRUCTURES`.",
             choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
         )
-        parser.add_argument("--num-strains", "-s", type=int, default=3)
-        parser.add_argument("--num-samples", "-n", type=int, default=4)
-        parser.add_argument("--num-positions", "-g", type=int, default=5)
+        parser.add_argument(
+            "--num-strains",
+            "-s",
+            type=int,
+            default=3,
+            help="Number of strains for model shape description; has no effect with `--shapes`.",
+        )
+        parser.add_argument(
+            "--num-samples",
+            "-n",
+            type=int,
+            default=4,
+            help="Number of samples for model shape description; has no effect with `--shapes`.",
+        )
+        parser.add_argument(
+            "--num-positions",
+            "-g",
+            type=int,
+            default=5,
+            help="Number of SNP positions for model shape description; has no effect with `--shapes`.",
+        )
         parser.add_argument(
             "--shapes",
             action="store_true",
@@ -447,7 +580,7 @@ class DescribeModel(AppInterface):
             category=UserWarning,
             # module="pyro.poutine.trace_struct",
             lineno=250,
-            message="Encountered +inf"
+            message="Encountered +inf",
         )
         model = sf.model.ParameterizedModel(
             structure=args.model_structure,
@@ -472,15 +605,27 @@ class Dump(AppInterface):
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument("inpath")
+        parser.add_argument(
+            "inpath", help="Path StrainFacts/NetCDF file with one or more parameters."
+        )
         parser.add_argument(
             "--nc",
             action="store_true",
-            help="write output to NetCDF files; otherwise TSVs",
+            help="Write output to StrainFacts/NetCDF files; otherwise write as TSVs",
         )
-        parser.add_argument("--genotype")
-        parser.add_argument("--community")
-        parser.add_argument("--metagenotype")
+
+        parser.add_argument(
+            "--metagenotype",
+            help="Path to write metagenotype matrix.",
+        )
+        parser.add_argument(
+            "--community",
+            help="Path to write community matrix.",
+        )
+        parser.add_argument(
+            "--genotype",
+            help="Path to write genotype matrix.",
+        )
 
     @classmethod
     def run(cls, args):
@@ -504,10 +649,14 @@ class EvaluateFitAgainstSimulation(AppInterface):
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument("simulation")
-        parser.add_argument("fit", nargs="+")
         parser.add_argument(
-            "--outpath", help="Write evaluation scores to file; otherwise STDOUT"
+            "simulation", help="Path to StrainFacts/NetCDF file with ground-truth parameters."
+        )
+        parser.add_argument(
+            "fit", nargs="+", help="Path(s) to one or more StrainFacts/NetCDF files with estimated parameters."
+        )
+        parser.add_argument(
+            "--outpath", help="Write TSV of evaluation scores to file; otherwise to STDOUT"
         )
 
     @classmethod
@@ -522,15 +671,13 @@ class EvaluateFitAgainstSimulation(AppInterface):
             fit = sf.World(fit.data.assign_coords(position=fit.position.astype(int)))
             results[fit_path] = sf.workflow.evaluate_fit_against_simulation(sim, fit)
 
-        results = pd.DataFrame(results).rename_axis(index='score')
+        results = pd.DataFrame(results).rename_axis(index="score")
 
         if args.outpath:
             outpath_or_handle = args.outpath
         else:
             outpath_or_handle = sys.stdout
-        results.to_csv(
-            outpath_or_handle, sep="\t", index=True, header=True
-        )
+        results.to_csv(outpath_or_handle, sep="\t", index=True, header=True)
 
 
 SUBCOMMANDS = [

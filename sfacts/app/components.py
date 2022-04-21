@@ -11,7 +11,7 @@ def add_hyperparameters_cli_argument(parser):
         nargs="+",
         action="append",
         default=[],
-        help="list of model hyperparameters to override default in format 'NAME=FLOAT'",
+        help="List of model hyperparameters to override defaults; arguments are in the form 'NAME=FLOAT'.",
     )
 
 
@@ -29,7 +29,7 @@ def add_model_structure_cli_argument(parser, default="default"):
         "--model-structure",
         "-m",
         default=default,
-        help="See sfacts.model_zoo.__init__.NAMED_STRUCTURES",
+        help="Model name as defined in `sfacts.model_zoo.NAMED_STRUCTURES`.",
         choices=sf.model_zoo.NAMED_STRUCTURES.keys(),
     )
 
@@ -46,23 +46,65 @@ def add_optimization_arguments(parser):
         choices=sf.pyro_util.PRECISION_MAP.keys(),
         help="Float precision.",
     )
-    parser.add_argument("--device", default="cpu")
-    parser.add_argument("--max-iter", default=int(1e6), type=int)
-    parser.add_argument("--random-seed", "--seed", "-r", type=int)
-    parser.add_argument("--lag1", default=50, type=int)
-    parser.add_argument("--lag2", default=100, type=int)
-    parser.add_argument("--nojit", dest="jit", action="store_false", default=True)
     parser.add_argument(
-        "--optimizer", default="Adamax", choices=sf.estimation.OPTIMIZERS.keys()
+        "--device",
+        default="cpu",
+        help="Load model onto a specific PyTorch device.",
     )
-    parser.add_argument("--optimizer-learning-rate", type=float)
+    parser.add_argument(
+        "--max-iter",
+        default=int(1e6),
+        type=int,
+        help="Maximum number of optimization steps.",
+    )
+    parser.add_argument(
+        "--random-seed",
+        "--seed",
+        "-r",
+        type=int,
+        help="Seed for all random number generators; must be set for reproducible model fitting.",
+    )
+    parser.add_argument(
+        "--lag1",
+        default=50,
+        type=int,
+        help="Setting for `pyro.optim.ReduceLROnPlateau` 'cooldown' argument.",
+    )
+    parser.add_argument(
+        "--lag2",
+        default=100,
+        type=int,
+        help="Setting for `pyro.optim.ReduceLROnPlateau` 'patience' argument.",
+    )
+    parser.add_argument(
+        "--nojit",
+        dest="jit",
+        action="store_false",
+        default=True,
+        help="Don't use the PyTorch JIT; much slower steps, but no warm-up; may be useful for debugging.",
+    )
+    parser.add_argument(
+        "--optimizer",
+        default="Adamax",
+        choices=sf.estimation.OPTIMIZERS.keys(),
+        help="Which Pyro optimizer to use.",
+    )
+    parser.add_argument(
+        "--optimizer-learning-rate",
+        type=float,
+        help="Set the optimizer learning rate; otherwise use the default set in `sfacts.estimation.OPTIMIZERS`.",
+    )
     parser.add_argument(
         "--min-optimizer-learning-rate",
         type=float,
         default=1e-6,
-        help="Learning rate threshold to stop reduction 'schedule'.",
+        help="Learning rate threshold in reduction 'schedule' to terminate optimization.",
     )
-    parser.add_argument("--optimizer-clip-norm", type=float)
+    parser.add_argument(
+        "--optimizer-clip-norm",
+        type=float,
+        help="Set the clip_norm for Pyro optimizer; otherwise default is None",
+    )
 
 
 def transform_optimization_parameter_inputs(args):
@@ -119,9 +161,21 @@ class AppInterface:
         subparser = app_subparsers.add_parser(
             cls.app_name,
             help=cls.description,
+            description=cls.description,
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         )
         subparser.set_defaults(_subcommand=cls)
-        subparser.add_argument("--verbose", "-v", action="store_true", default=False)
-        subparser.add_argument("--debug", action="store_true", default=False)
+        subparser.add_argument(
+            "--verbose",
+            "-v",
+            action="store_true",
+            default=False,
+            help="Print info messages to stderr.",
+        )
+        subparser.add_argument(
+            "--debug",
+            action="store_true",
+            default=False,
+            help="Print debug messages to stderr.",
+        )
         cls.add_subparser_arguments(subparser)
