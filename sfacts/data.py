@@ -298,10 +298,7 @@ class Metagenotypes(WrappedDataArrayMixin):
         )
 
     def select_samples_with_coverage(self, cvrg_thresh):
-        # TODO: Consider using .lift() to do this.
-        x = self.data
-        covered_samples = (x.sum("allele") >= 1).mean("position") >= cvrg_thresh
-        return self.mlift("sel", sample=covered_samples)
+        return self.mlift("sel", sample=(self.horizontal_coverage() >= cvrg_thresh))
 
     def frequencies(self, pseudo=0.0):
         "Convert metagenotype counts to a frequency with optional pseudocount."
