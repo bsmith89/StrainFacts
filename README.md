@@ -39,9 +39,9 @@ necessary prerequisites (but excluding StrainFacts itself).
 Short vignettes explaining how to use StrainFacts for data processing,
 visualization, and evaluation are provided as Jupyter Notebooks:
 
-- `examples/simulate_data.ipynb`
-- `examples/fit_metagenotype.ipynb`
-- `examples/evaluate_simulation_fit.ipynb`
+- [`examples/simulate_data.ipynb`](https://byronjsmith.com/StrainFacts/simulate_data.html)
+- [`examples/fit_metagenotype.ipynb`](https://byronjsmith.com/StrainFacts/fit_metagenotype.html)
+- [`examples/evaluate_simulation_fit.ipynb`](https://byronjsmith.com/StrainFacts/evaluate_simulation_fit.html)
 
 ## Usage[^test-data]
 
