@@ -54,7 +54,7 @@ def simulate_world(
 
 def setup_model_but_do_nothing(
     structure,
-    metagenotypes,
+    metagenotype,
     nstrain,
     device="cpu",
     dtype=torch.float32,
@@ -65,30 +65,30 @@ def setup_model_but_do_nothing(
     )
 
     _info(
-        f"START: NOT fitting {nstrain} strains with data shape {metagenotypes.sizes}. (This workflow is a no-op.)",
+        f"START: NOT fitting {nstrain} strains with data shape {metagenotype.sizes}. (This workflow is a no-op.)",
     )
     with _phase_info(
-        f"NOT fitting {nstrain} strains with data shape {metagenotypes.sizes}."
+        f"NOT fitting {nstrain} strains with data shape {metagenotype.sizes}."
     ):
         _info("(This workflow is a no-op for testing purposes.)")
         pmodel = sf.model.ParameterizedModel(
             structure,
             coords=dict(
-                sample=metagenotypes.sample.values,
-                position=metagenotypes.position.values,
-                allele=metagenotypes.allele.values,
+                sample=metagenotype.sample.values,
+                position=metagenotype.position.values,
+                allele=metagenotype.allele.values,
                 strain=range(nstrain),
             ),
             hyperparameters=hyperparameters,
             data=condition_on,
             device=device,
             dtype=dtype,
-        ).condition(**metagenotypes.to_counts_and_totals())
+        ).condition(**metagenotype.to_counts_and_totals())
 
 
-def fit_metagenotypes_complex(
+def fit_metagenotype_complex(
     structure,
-    metagenotypes,
+    metagenotype,
     nstrain,
     hyperparameters=None,
     anneal_hyperparameters=None,
@@ -117,7 +117,7 @@ def fit_metagenotypes_complex(
     history_list = []
 
     with _phase_info(
-        f"Fitting {nstrain} strains with data shape {metagenotypes.sizes}."
+        f"Fitting {nstrain} strains with data shape {metagenotype.sizes}."
     ):
         if nmf_init:
             with _phase_info("Initializing with NMF."):
@@ -125,14 +125,14 @@ def fit_metagenotypes_complex(
                 nmf_kwargs = DEFAULT_NMF_KWARGS.copy()
                 nmf_kwargs.update(nmf_init_kwargs)
                 approx = sf.estimation.nmf_approximation(
-                    metagenotypes.to_world(),
+                    metagenotype.to_world(),
                     s=nstrain,
                     random_state=nmf_seed,
                     **nmf_kwargs,
                 )
                 initialize_params = dict(
-                    gamma=approx.genotypes.values,
-                    pi=approx.communities.values,
+                    gamma=approx.genotype.values,
+                    pi=approx.community.values,
                 )
         else:
             initialize_params = None
@@ -141,16 +141,16 @@ def fit_metagenotypes_complex(
             pmodel = sf.model.ParameterizedModel(
                 structure,
                 coords=dict(
-                    sample=metagenotypes.sample.values,
-                    position=metagenotypes.position.values,
-                    allele=metagenotypes.allele.values,
+                    sample=metagenotype.sample.values,
+                    position=metagenotype.position.values,
+                    allele=metagenotype.allele.values,
                     strain=range(nstrain),
                 ),
                 hyperparameters=hyperparameters,
                 data=condition_on,
                 device=device,
                 dtype=dtype,
-            ).condition(**metagenotypes.to_counts_and_totals())
+            ).condition(**metagenotype.to_counts_and_totals())
 
             est_curr, history = sf.estimation.estimate_parameters(
                 pmodel,
@@ -166,17 +166,17 @@ def fit_metagenotypes_complex(
             est_list.append(est_curr)
         _info(
             "Average metagenotype error: {}".format(
-                sf.evaluation.metagenotype_error2(est_curr, metagenotypes)[0]
+                sf.evaluation.metagenotype_error2(est_curr, metagenotype)[0]
             )
         )
 
     return est_curr, est_list, history_list
 
 
-def iteratively_fit_genotypes_conditioned_on_communities(
+def iteratively_fit_genotype_conditioned_on_community(
     structure,
-    metagenotypes,
-    communities,
+    metagenotype,
+    community,
     nposition,
     hyperparameters=None,
     condition_on=None,
@@ -197,62 +197,62 @@ def iteratively_fit_genotypes_conditioned_on_communities(
     est_list = []
     history_list = []
 
-    nstrain = len(communities.strain)
-    nsample = len(communities.sample)
-    nposition_full = len(metagenotypes.position)
-    with _phase_info(f"Fitting genotypes for {nposition_full} positions."):
+    nstrain = len(community.strain)
+    nsample = len(community.sample)
+    nposition_full = len(metagenotype.position)
+    with _phase_info(f"Fitting genotype for {nposition_full} positions."):
         _info(
-            f"Conditioned on provided communities with {nstrain} strains and {nsample} samples."
+            f"Conditioned on provided community with {nstrain} strains and {nsample} samples."
         )
         nposition = min(nposition, nposition_full)
 
-        metagenotypes_full = metagenotypes
+        metagenotype_full = metagenotype
         start_time = time.time()
         pmodel = sf.model.ParameterizedModel(
             structure,
             coords=dict(
-                sample=communities.sample.values,
+                sample=community.sample.values,
                 position=range(nposition),
-                allele=metagenotypes_full.allele.values,
-                strain=communities.strain.values,
+                allele=metagenotype_full.allele.values,
+                strain=community.strain.values,
             ),
             hyperparameters=hyperparameters,
             data=dict(
-                pi=communities.values,
+                pi=community.values,
             ),
             device=device,
             dtype=dtype,
         )
 
-        _info("Iteratively fitting genotypes by chunks.")
-        genotypes_chunks = []
+        _info("Iteratively fitting genotype by chunks.")
+        genotype_chunks = []
         for position_start, position_end in _chunk_start_end_iterator(
-            metagenotypes_full.sizes["position"],
+            metagenotype_full.sizes["position"],
             nposition,
         ):
             with _phase_info(f"Chunk [{position_start}, {position_end})."):
-                metagenotypes_chunk = metagenotypes_full.mlift(
+                metagenotype_chunk = metagenotype_full.mlift(
                     "isel", position=slice(position_start, position_end)
                 )
                 est_curr, history = sf.estimation.estimate_parameters(
                     pmodel.with_amended_coords(
-                        position=metagenotypes_chunk.position.values,
-                    ).condition(**metagenotypes_chunk.to_counts_and_totals()),
+                        position=metagenotype_chunk.position.values,
+                    ).condition(**metagenotype_chunk.to_counts_and_totals()),
                     quiet=quiet,
                     device=device,
                     dtype=dtype,
                     **estimation_kwargs,
                 )
-                genotypes_chunks.append(est_curr.genotypes.data)
+                genotype_chunks.append(est_curr.genotype.data)
                 history_list.append(history)
                 est_list.append(est_curr)
 
         with _phase_info(f"Concatenating chunks."):
-            genotypes = sf.data.Genotypes(xr.concat(genotypes_chunks, dim="position"))
+            genotype = sf.data.Genotype(xr.concat(genotype_chunks, dim="position"))
             est_curr = sf.data.World(
                 est_curr.data.drop_dims(["position", "allele"]).assign(
-                    genotypes=genotypes.data,
-                    metagenotypes=metagenotypes_full.data,
+                    genotype=genotype.data,
+                    metagenotype=metagenotype_full.data,
                 )
             )
         est_list.append(est_curr)

@@ -21,7 +21,7 @@ from sfacts.plot import (
     plot_loss_history,
     plot_metagenotype_frequency_spectrum,
 )
-from sfacts.data import Metagenotypes, Genotypes, Communities, World
+from sfacts.data import Metagenotype, Genotype, Community, World
 from sfacts.evaluation import (
     match_genotypes,
     discretized_genotype_error,
@@ -36,6 +36,6 @@ from sfacts.evaluation import (
 )
 from sfacts.workflow import (
     simulate_world,
-    fit_metagenotypes_complex,
-    iteratively_fit_genotypes_conditioned_on_communities,
+    fit_metagenotype_complex,
+    iteratively_fit_genotype_conditioned_on_community,
 )

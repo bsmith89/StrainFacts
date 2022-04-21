@@ -29,9 +29,9 @@ TODO
             "mu",
             "m",
             "y",
-            "genotypes",
-            "communities",
-            "metagenotypes",
+            "genotype",
+            "community",
+            "metagenotype",
             "mu",
         ],
     ),
@@ -71,7 +71,7 @@ def model(
                 ),
             )
             gamma = _gamma[..., 0]
-    pyro.deterministic("genotypes", gamma)
+    pyro.deterministic("genotype", gamma)
 
     # Meta-community composition
     rho = pyro.sample("rho", dist.Dirichlet(rho_hyper.repeat(s)))
@@ -88,7 +88,7 @@ def model(
         mu = pyro.sample(
             "mu", dist.LogNormal(loc=torch.log(mu_hyper_mean), scale=mu_hyper_scale)
         )
-    pyro.deterministic("communities", pi)
+    pyro.deterministic("community", pi)
 
     m = pyro.sample(
         "m",
@@ -111,4 +111,4 @@ def model(
             total_count=m,
         ).to_event(),
     )
-    pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
+    pyro.deterministic("metagenotype", torch.stack([y, m - y], dim=-1))

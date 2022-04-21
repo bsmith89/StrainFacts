@@ -270,6 +270,6 @@ make start_jupyter
 - [x] We will document some useful approaches for hyperparameter tuning.
 - [x] Improve the CLI documentation.
 - [ ] Refactor for the best looking code
-    - [ ] De-pluralize core datatypes (community not communities)
+    - [x] De-pluralize core datatypes (community not communities)
     - [x] Remove unused CLI apps/workflows/plotting code
     - [ ] Split apps into their own modules?

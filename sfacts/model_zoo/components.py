@@ -29,10 +29,10 @@ SHARED_DESCRIPTIONS = dict(
     alpha=("sample",),
     m=("sample", "position"),
     y=("sample", "position"),
-    genotypes=("strain", "position"),
+    genotype=("strain", "position"),
     missingness=("strain", "position"),
-    communities=("sample", "strain"),
-    metagenotypes=("sample", "position", "allele"),
+    community=("sample", "strain"),
+    metagenotype=("sample", "position", "allele"),
 )
 
 

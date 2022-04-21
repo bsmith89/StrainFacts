@@ -26,9 +26,9 @@ TODO
             "mu",
             "epsilon",
             "m",
-            "genotypes",
-            "communities",
-            "metagenotypes",
+            "genotype",
+            "community",
+            "metagenotype",
         ],
     ),
     default_hyperparameters=dict(
@@ -49,12 +49,12 @@ def model(
 ):
     with pyro.plate("position", g, dim=-1):
         with pyro.plate("strain", s, dim=-2):
-            gamma = pyro.sample("genotypes", dist.Bernoulli(_unit * 0.5))
+            gamma = pyro.sample("genotype", dist.Bernoulli(_unit * 0.5))
 
     with pyro.plate("sample", n, dim=-1):
         # Community composition
         pi = pyro.sample("pi", dist.Dirichlet(_unit.repeat(s) / s * pi_hyper))
-    pyro.deterministic("communities", pi)
+    pyro.deterministic("community", pi)
     epsilon = pyro.deterministic("epsilon", _unit.repeat((n, 1)) * epsilon_hyper_mode)
     m = pyro.deterministic("m", _unit.repeat(n, g) * mu_hyper_mean)
 
@@ -72,5 +72,5 @@ def model(
             total_count=m,
         ).to_event(),
     )
-    pyro.deterministic("metagenotypes", torch.stack([y, m - y], dim=-1))
+    pyro.deterministic("metagenotype", torch.stack([y, m - y], dim=-1))
     pyro.deterministic("mu", _unit.repeat(n) * mu_hyper_mean)

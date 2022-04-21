@@ -218,12 +218,12 @@ class WrappedDataArrayMixin:
         return self.__class__(data=self.data.isel(**isel))
 
 
-class Metagenotypes(WrappedDataArrayMixin):
+class Metagenotype(WrappedDataArrayMixin):
     """Counts of alleles across samples and positions."""
 
     dims = ("sample", "position", "allele")
     constraints = [POSITIVE_COUNTS]
-    variable_name = "metagenotypes"
+    variable_name = "metagenotype"
 
 
     @classmethod
@@ -313,7 +313,7 @@ class Metagenotypes(WrappedDataArrayMixin):
     def alt_allele_fraction(self, pseudo=0.0):
         return self.frequencies(pseudo=pseudo).sel(allele="alt")
 
-    def to_estimated_genotypes(self, pseudo=0.0, fillna=True):
+    def to_estimated_genotype(self, pseudo=0.0, fillna=True):
         frac = (
             self.alt_allele_fraction(pseudo=pseudo)
             .rename({"sample": "strain"})
@@ -321,7 +321,7 @@ class Metagenotypes(WrappedDataArrayMixin):
         )
         if fillna:
             frac = frac.fillna(0.5)
-        return Genotypes(frac)
+        return Genotype(frac)
 
     def total_counts(self):
         return self.data.sum("allele")
@@ -355,7 +355,7 @@ class Metagenotypes(WrappedDataArrayMixin):
         else:
             _dim = dim
         return (
-            self.to_estimated_genotypes(pseudo=pseudo)
+            self.to_estimated_genotype(pseudo=pseudo)
             .pdist(dim=_dim, **kwargs)
             .rename_axis(columns=dim, index=dim)
         )
@@ -373,7 +373,7 @@ class Metagenotypes(WrappedDataArrayMixin):
             _dim = "strain"
         else:
             _dim = dim
-        return self.to_estimated_genotypes(pseudo=pseudo).linkage(dim=_dim, **kwargs)
+        return self.to_estimated_genotype(pseudo=pseudo).linkage(dim=_dim, **kwargs)
 
     def cosine_linkage(
         self,
@@ -398,10 +398,10 @@ class Metagenotypes(WrappedDataArrayMixin):
         return (ent_scaled.sum(over) / self.total_counts().sum(over)).rename("entropy")
 
 
-class Genotypes(WrappedDataArrayMixin):
+class Genotype(WrappedDataArrayMixin):
     dims = ("strain", "position")
     constraints = [ON_2_SIMPLEX]
-    variable_name = "genotypes"
+    variable_name = "genotype"
 
     @classmethod
     def load_from_tsv(cls, path, validate=True):
@@ -511,7 +511,7 @@ class Missingness(WrappedDataArrayMixin):
     variable_name = "missingness"
 
 
-class Communities(WrappedDataArrayMixin):
+class Community(WrappedDataArrayMixin):
     dims = ("sample", "strain")
     constraints = [
         DataConstraint(
@@ -519,7 +519,7 @@ class Communities(WrappedDataArrayMixin):
             lambda d: np.allclose(d.sum("strain"), 1.0, atol=1e-4),
         )
     ]
-    variable_name = "communities"
+    variable_name = "community"
 
     def fuzzed(self, eps=1e-5):
         new_data = self.data + eps
@@ -578,7 +578,7 @@ class World:
     safe_lifted = ["isel", "sel"]
     safe_unwrapped = ["sizes"]
     dims = ("sample", "position", "strain", "allele")
-    variables = [Genotypes, Missingness, Communities, Metagenotypes]
+    variables = [Genotype, Missingness, Community, Metagenotype]
     _variable_wrapper_map = {wrapper.variable_name: wrapper for wrapper in variables}
 
     def __init__(self, data):
@@ -638,8 +638,8 @@ class World:
         return self.__class__(data=self.data.isel(**isel))
 
     @property
-    def masked_genotypes(self):
-        return self.genotypes.softmask_missing(self.missingness)
+    def masked_genotype(self):
+        return self.genotype.softmask_missing(self.missingness)
 
     def __getattr__(self, name):
         if name in self.dims:
@@ -699,9 +699,9 @@ class World:
         )
 
     def collapse_strains(self, thresh, **kwargs):
-        clust = self.genotypes.clusters(thresh=thresh, **kwargs)
-        genotypes = Genotypes(
-            self.genotypes.to_series()
+        clust = self.genotype.clusters(thresh=thresh, **kwargs)
+        genotype = Genotype(
+            self.genotype.to_series()
             .unstack("strain")
             .groupby(clust, axis="columns")
             .mean()
@@ -709,8 +709,8 @@ class World:
             .T.stack()
             .to_xarray()
         )
-        communities = Communities(
-            self.communities.to_series()
+        community = Community(
+            self.community.to_series()
             .unstack("strain")
             .groupby(clust, axis="columns")
             .sum()
@@ -718,24 +718,24 @@ class World:
             .stack()
             .to_xarray()
         )
-        if "metagenotypes" in self.data:
-            world = World.from_combined(genotypes, communities, self.metagenotypes)
+        if "metagenotype" in self.data:
+            world = World.from_combined(genotype, community, self.metagenotype)
         else:
-            world = World.from_combined(genotypes, communities)
+            world = World.from_combined(genotype, community)
         return world
 
 
-def latent_metagenotypes_pdist(world, dim="sample"):
+def latent_metagenotype_pdist(world, dim="sample"):
     if dim == "sample":
         dim = "strain"
-    return Genotypes(world.data.p.rename({"sample": "strain"})).pdist(dim=dim)
+    return Genotype(world.data.p.rename({"sample": "strain"})).pdist(dim=dim)
 
 
-def latent_metagenotypes_linkage(
+def latent_metagenotype_linkage(
     world, dim="sample", method="average", optimal_ordering=False
 ):
     return linkage(
-        squareform(latent_metagenotypes_pdist(world, dim=dim)),
+        squareform(latent_metagenotype_pdist(world, dim=dim)),
         method=method,
         optimal_ordering=optimal_ordering,
     )

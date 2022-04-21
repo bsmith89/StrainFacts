@@ -77,23 +77,23 @@ class Load(AppInterface):
         # Only one of gtpro_metagenotype and metagenotype is allowed.
         if args.gtpro_metagenotype:
             values.append(
-                sf.data.Metagenotypes.load_from_merged_gtpro(args.gtpro_metagenotype)
+                sf.data.Metagenotype.load_from_merged_gtpro(args.gtpro_metagenotype)
             )
         if args.metagenotype:
-            values.append(sf.data.Metagenotypes.load_from_tsv(args.metagenotype))
+            values.append(sf.data.Metagenotype.load_from_tsv(args.metagenotype))
 
         if args.community:
-            values.append(sf.data.Communities.load_from_tsv(args.community))
+            values.append(sf.data.Community.load_from_tsv(args.community))
         if args.genotype:
-            values.append(sf.data.Genotypes.load_from_tsv(args.genotype))
+            values.append(sf.data.Genotype.load_from_tsv(args.genotype))
         world = sf.data.World.from_combined(*values)
         world.dump(args.outpath)
 
 
-class FilterMetagenotypes(AppInterface):
+class FilterMetagenotype(AppInterface):
     app_name = "filter_mgen"
     description = (
-        "Filter metagenotypes based on position polymorphism and sample coverage."
+        "Filter metagenotype based on position polymorphism and sample coverage."
     )
 
     @classmethod
@@ -144,7 +144,7 @@ class FilterMetagenotypes(AppInterface):
 
     @classmethod
     def run(cls, args):
-        mgen_all = sf.data.Metagenotypes.load(args.inpath)
+        mgen_all = sf.data.Metagenotype.load(args.inpath)
         mgen_filt = mgen_all.select_variable_positions(
             thresh=args.min_minor_allele_freq
         ).select_samples_with_coverage(args.min_horizontal_cvrg)
@@ -181,7 +181,7 @@ class Simulate(AppInterface):
             "-g",
             type=int,
             required=True,
-            help="Number of SNP positions to simulate in (meta)genotypes.",
+            help="Number of SNP positions to simulate in (meta)genotype.",
         )
         add_hyperparameters_cli_argument(parser)
         parser.add_argument(
@@ -361,20 +361,20 @@ class Fit(AppInterface):
         )
 
         if args.tsv:
-            metagenotypes = sf.data.Metagenotypes.load_from_tsv(args.inpath)
+            metagenotype = sf.data.Metagenotype.load_from_tsv(args.inpath)
         else:
-            metagenotypes = sf.data.Metagenotypes.load(args.inpath)
+            metagenotype = sf.data.Metagenotype.load(args.inpath)
 
         if args.strains_per_sample:
             num_strains = int(
-                max(np.ceil(metagenotypes.sizes["sample"] * args.strains_per_sample), 2)
+                max(np.ceil(metagenotype.sizes["sample"] * args.strains_per_sample), 2)
             )
         else:
             num_strains = args.num_strains
 
         np.random.seed(args.random_seed)
-        num_positions_ss = min(args.num_positions, metagenotypes.sizes["position"])
-        metagenotypes_ss = metagenotypes.random_sample(position=num_positions_ss)
+        num_positions_ss = min(args.num_positions, metagenotype.sizes["position"])
+        metagenotype_ss = metagenotype.random_sample(position=num_positions_ss)
 
         if args.debug:
             sf.logging_util.info("\n\n")
@@ -384,9 +384,9 @@ class Fit(AppInterface):
                     anneal_hyperparameters=args.anneal_hyperparameters,
                 )
             )
-        est0, est_list, history_list = sf.workflow.fit_metagenotypes_complex(
+        est0, est_list, history_list = sf.workflow.fit_metagenotype_complex(
             structure=args.model_structure,
-            metagenotypes=metagenotypes_ss,
+            metagenotype=metagenotype_ss,
             nstrain=num_strains,
             nmf_init=args.nmf_init,
             nmf_seed=args.random_seed,
@@ -408,7 +408,7 @@ class Fit(AppInterface):
 class FitGenotypeBlock(AppInterface):
     app_name = "fit_geno"
     description = (
-        "Fit strain genotypes based on fixed community compositions and metagenotypes."
+        "Fit strain genotypes based on fixed community composition and metagenotype."
     )
 
     @classmethod
@@ -452,10 +452,10 @@ class FitGenotypeBlock(AppInterface):
 
     @classmethod
     def run(cls, args):
-        communities = sf.data.World.load(args.community).communities
-        metagenotypes = sf.data.Metagenotypes.load(args.metagenotype)
+        community = sf.data.World.load(args.community).community
+        metagenotype = sf.data.Metagenotype.load(args.metagenotype)
 
-        total_num_positions = metagenotypes.sizes["position"]
+        total_num_positions = metagenotype.sizes["position"]
         block_positions = min(args.block_size, total_num_positions)
         chunk_positions = min(args.chunk_size, total_num_positions)
         block_start = args.block_number * block_positions
@@ -470,14 +470,14 @@ class FitGenotypeBlock(AppInterface):
             quiet=(not args.verbose),
         )
 
-        metagenotypes = metagenotypes.mlift(
+        metagenotype = metagenotype.mlift(
             "isel", position=slice(block_start, block_stop)
         )
 
-        est, *_ = sf.workflow.iteratively_fit_genotypes_conditioned_on_communities(
+        est, *_ = sf.workflow.iteratively_fit_genotype_conditioned_on_community(
             structure=args.model_structure,
-            metagenotypes=metagenotypes,
-            communities=communities,
+            metagenotype=metagenotype,
+            community=community,
             nposition=chunk_positions,
             hyperparameters=args.hyperparameters,
             device=args.device,
@@ -485,7 +485,7 @@ class FitGenotypeBlock(AppInterface):
             quiet=(not args.verbose),
             estimation_kwargs=args.estimation_kwargs,
         )
-        est.genotypes.to_world().dump(args.outpath)
+        est.genotype.to_world().dump(args.outpath)
 
 
 class ConcatGenotypeBlocks(AppInterface):
@@ -515,15 +515,15 @@ class ConcatGenotypeBlocks(AppInterface):
 
     @classmethod
     def run(cls, args):
-        communities = sf.data.World.load(args.community).communities
-        metagenotypes = sf.data.Metagenotypes.load(args.metagenotype)
-        # FIXME: Not clear why metagenotypes and genotypes have different coordinates (int vs. str).
-        metagenotypes.data["position"] = metagenotypes.data.position.astype(str)
+        community = sf.data.World.load(args.community).community
+        metagenotype = sf.data.Metagenotype.load(args.metagenotype)
+        # FIXME: Not clear why metagenotype and genotype have different coordinates (int vs. str).
+        metagenotype.data["position"] = metagenotype.data.position.astype(str)
         all_genotypes = {}
         for i, gpath in enumerate(args.genotypes):
-            all_genotypes[i] = sf.World.load(gpath).genotypes
-        all_genotypes = sf.Genotypes.concat(all_genotypes, dim="position", rename=False)
-        world = sf.World.from_combined(communities, metagenotypes, all_genotypes)
+            all_genotypes[i] = sf.World.load(gpath).genotype
+        all_genotypes = sf.Genotype.concat(all_genotypes, dim="position", rename=False)
+        world = sf.World.from_combined(community, metagenotype, all_genotypes)
         assert set(world.position.values) == set(all_genotypes.position.values)
         world.dump(args.outpath)
 
@@ -636,11 +636,11 @@ class Dump(AppInterface):
             _export = lambda var, path: var.data.to_series().to_csv(path, sep="\t")
 
         if args.genotype:
-            _export(world.genotypes, args.genotype)
+            _export(world.genotype, args.genotype)
         if args.metagenotype:
-            _export(world.metagenotypes, args.metagenotype)
+            _export(world.metagenotype, args.metagenotype)
         if args.community:
-            _export(world.communities, args.community)
+            _export(world.community, args.community)
 
 
 class EvaluateFitAgainstSimulation(AppInterface):
@@ -688,7 +688,7 @@ SUBCOMMANDS = [
     Load,
     Dump,
     # Data Processing
-    FilterMetagenotypes,
+    FilterMetagenotype,
     ConcatGenotypeBlocks,
     # Simulation:
     Simulate,

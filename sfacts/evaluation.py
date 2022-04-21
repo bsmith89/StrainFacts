@@ -8,7 +8,7 @@ from sfacts.unifrac import (
     neighbor_joining,
     unifrac_pdist,
 )
-from sfacts.data import Genotypes
+from sfacts.data import Genotype
 import pandas as pd
 import numpy as np
 
@@ -32,8 +32,8 @@ def _hmae(x, y):
 def match_genotypes(reference, estimate, cdist=None):
     if cdist is None:
         cdist = genotype_cdist
-    gammaA = reference.genotypes.data.to_pandas()
-    gammaB = estimate.genotypes.data.to_pandas()
+    gammaA = reference.genotype.data.to_pandas()
+    gammaB = estimate.genotype.data.to_pandas()
     dist = pd.DataFrame(cdist(gammaA, gammaB), index=gammaA.index, columns=gammaB.index)
     return (dist.idxmin(axis=1), dist.min(axis=1))
 
@@ -41,8 +41,8 @@ def match_genotypes(reference, estimate, cdist=None):
 def discretized_match_genotypes(reference, estimate, cdist=None):
     if cdist is None:
         cdist = genotype_cdist
-    gammaA = reference.genotypes.discretized().data.to_pandas()
-    gammaB = estimate.genotypes.discretized().data.to_pandas()
+    gammaA = reference.genotype.discretized().data.to_pandas()
+    gammaB = estimate.genotype.discretized().data.to_pandas()
     dist = pd.DataFrame(cdist(gammaA, gammaB), index=gammaA.index, columns=gammaB.index)
     return (dist.idxmin(axis=1), dist.min(axis=1))
 
@@ -60,7 +60,7 @@ def discretized_genotype_error(reference, estimate, **kwargs):
 def weighted_genotype_error(reference, estimate, weight_func=None, **kwargs):
     if weight_func is None:
         weight_func = lambda w: (
-            w.metagenotypes.mean("sample") * w.data.communities
+            w.metagenotype.mean("sample") * w.data.community
         ).sum("sample")
 
     weight = weight_func(reference)
@@ -73,7 +73,7 @@ def discretized_weighted_genotype_error(
     reference, estimate, weight_func=None, **kwargs
 ):
     if weight_func is None:
-        weight_func = lambda w: (w.metagenotypes.mean_depth() * w.data.communities).sum(
+        weight_func = lambda w: (w.metagenotype.mean_depth() * w.data.community).sum(
             "sample"
         )
 
@@ -84,8 +84,8 @@ def discretized_weighted_genotype_error(
 
 
 def braycurtis_error(reference, estimate):
-    bcA = reference.communities.pdist("sample").values
-    bcB = estimate.communities.pdist("sample").values
+    bcA = reference.community.pdist("sample").values
+    bcB = estimate.community.pdist("sample").values
 
     out = []
     for i in range(len(bcA)):
@@ -100,26 +100,26 @@ def braycurtis_error(reference, estimate):
 
 def max_strain_abundance_error(reference, estimate):
     sample_err = np.abs(
-        reference.communities.max("strain") - estimate.communities.max("strain")
+        reference.community.max("strain") - estimate.community.max("strain")
     )
     return float(sample_err.mean()), sample_err
 
 
 def integrated_community_error(reference, estimate):
-    est_genotypes_cdist = genotype_cdist(
-        estimate.genotypes.values, estimate.genotypes.values
+    est_genotype_cdist = genotype_cdist(
+        estimate.genotype.values, estimate.genotype.values
     )
-    ref_genotypes_cdist = genotype_cdist(
-        reference.genotypes.values, reference.genotypes.values
+    ref_genotype_cdist = genotype_cdist(
+        reference.genotype.values, reference.genotype.values
     )
     est_outer = np.einsum(
-        "ab,ac->abc", estimate.communities.values, estimate.communities.values
+        "ab,ac->abc", estimate.community.values, estimate.community.values
     )
     ref_outer = np.einsum(
-        "ab,ac->abc", reference.communities.values, reference.communities.values
+        "ab,ac->abc", reference.community.values, reference.community.values
     )
-    est_expect = (est_outer * est_genotypes_cdist).sum(axis=(1, 2))
-    ref_expect = (ref_outer * ref_genotypes_cdist).sum(axis=(1, 2))
+    est_expect = (est_outer * est_genotype_cdist).sum(axis=(1, 2))
+    ref_expect = (ref_outer * ref_genotype_cdist).sum(axis=(1, 2))
 
     err = np.abs(est_expect - ref_expect)
     return (
@@ -130,10 +130,10 @@ def integrated_community_error(reference, estimate):
 
 def community_entropy_error(reference, estimate):
     ref_community_entropy = pd.Series(
-        entropy(reference.communities.values), index=reference.sample
+        entropy(reference.community.values), index=reference.sample
     ).rename_axis(index="sample")
     est_community_entropy = pd.Series(
-        entropy(estimate.communities.values), index=reference.sample
+        entropy(estimate.community.values), index=reference.sample
     ).rename_axis(index="sample")
     diff = est_community_entropy - ref_community_entropy
     return (
@@ -144,34 +144,34 @@ def community_entropy_error(reference, estimate):
 
 def matched_strain_total_abundance_error(reference, estimate):
     best_match, _ = match_genotypes(reference, estimate, flip=True)
-    out = np.empty_like(reference.communities.values)
+    out = np.empty_like(reference.community.values)
     for i, _ in enumerate(reference.sample):
         for j, _ in enumerate(reference.strain):
-            ref_abund = reference.communities.values[i, j]
-            est_abund = estimate.communities.values[i, best_match == j]
+            ref_abund = reference.community.values[i, j]
+            est_abund = estimate.community.values[i, best_match == j]
             out[i, j] = np.abs(ref_abund - est_abund.sum())
     out = pd.DataFrame(out, index=reference.sample, columns=reference.strain)
     return out, out.sum(1), out.sum(1).mean()
 
 
 def metagenotype_error(reference, estimate):
-    estimated_metagenotypes = estimate.data.p * reference.data.m
-    err = np.abs(estimated_metagenotypes - reference.metagenotypes.sel(allele="alt"))
+    estimated_metagenotype = estimate.data.p * reference.data.m
+    err = np.abs(estimated_metagenotype - reference.metagenotype.sel(allele="alt"))
     mean_sample_error = err.mean("position") / reference.data.mu
     return float(err.sum() / reference.data.m.sum()), mean_sample_error.to_series()
 
 
-def metagenotype_error2(world, metagenotypes=None, discretized=False):
-    if metagenotypes is None:
-        metagenotypes = world.metagenotypes
+def metagenotype_error2(world, metagenotype=None, discretized=False):
+    if metagenotype is None:
+        metagenotype = world.metagenotype
     if discretized:
-        g = world.genotypes.discretized().data
+        g = world.genotype.discretized().data
     else:
-        g = world.genotypes.data
-    p = world.data["communities"].data @ g.values
-    m = metagenotypes.total_counts()
+        g = world.genotype.data
+    p = world.data["community"].data @ g.values
+    m = metagenotype.total_counts()
     mu = m.mean("position")
-    x = metagenotypes.data.sel(allele="alt")
+    x = metagenotype.data.sel(allele="alt")
     predict = p * m
     err = np.abs(predict - x)
     mean_sample_error = err.mean("position") / mu
@@ -183,10 +183,10 @@ def rank_abundance_error(reference, estimate, p=1):
     estimate_num_strains = len(estimate.strain)
     num_strains = max(reference_num_strains, estimate_num_strains)
     reference_padded = np.pad(
-        reference.communities.values, (0, num_strains - reference_num_strains)
+        reference.community.values, (0, num_strains - reference_num_strains)
     )
     estimate_padded = np.pad(
-        estimate.communities.values, (0, num_strains - estimate_num_strains)
+        estimate.community.values, (0, num_strains - estimate_num_strains)
     )
 
     err = []
@@ -206,21 +206,21 @@ def unifrac_error(reference, estimate, coef=1e6, discretized=False):
     from skbio import DistanceMatrix
     from skbio.diversity.beta import weighted_unifrac
 
-    concat_genotypes = Genotypes.concat(
-        {"ref": reference.genotypes, "est": estimate.genotypes}, dim="strain"
+    concat_genotype = Genotype.concat(
+        {"ref": reference.genotype, "est": estimate.genotype}, dim="strain"
     )
     if discretized:
-        concat_genotypes = concat_genotypes.discretized()
+        concat_genotype = concat_genotype.discretized()
 
-    dm = concat_genotypes.pdist()
+    dm = concat_genotype.pdist()
     dm = DistanceMatrix(dm, dm.index.astype(str))
     tree = neighbor_joining(dm).root_at_midpoint()
 
     ref_com_stack = np.pad(
-        reference.communities.values, pad_width=((0, 0), (0, estimate.sizes["strain"]))
+        reference.community.values, pad_width=((0, 0), (0, estimate.sizes["strain"]))
     )
     est_com_stack = np.pad(
-        estimate.communities.values, pad_width=((0, 0), (reference.sizes["strain"], 0))
+        estimate.community.values, pad_width=((0, 0), (reference.sizes["strain"], 0))
     )
     diss = []
     for i in range(reference.sizes["sample"]):
@@ -228,7 +228,7 @@ def unifrac_error(reference, estimate, coef=1e6, discretized=False):
             weighted_unifrac(
                 ref_com_stack[i] * coef,
                 est_com_stack[i] * coef,
-                otu_ids=concat_genotypes.strain.astype(str).values,
+                otu_ids=concat_genotype.strain.astype(str).values,
                 tree=tree,
                 validate=False,
             )

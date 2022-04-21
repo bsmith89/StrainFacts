@@ -20,15 +20,15 @@ def unifrac_pdist(world, coef=1e6, discretized=False):
     from skbio.diversity.beta import weighted_unifrac
 
     if discretized:
-        genotypes = world.genotypes.discretized()
+        genotype = world.genotype.discretized()
     else:
-        genotypes = world.genotypes
+        genotype = world.genotype
 
-    dm = genotypes.pdist()
+    dm = genotype.pdist()
     dm = DistanceMatrix(dm, dm.index.astype(str))
     tree = neighbor_joining(dm).root_at_midpoint()
     return pdist(
-        world.communities.values * coef,
+        world.community.values * coef,
         metric=weighted_unifrac,
         otu_ids=world.strain.values.astype(str),
         tree=tree,

@@ -305,7 +305,7 @@ def estimate_parameters(
 
 def strain_cluster(world, thresh, linkage="complete", pdist_func=None):
     if pdist_func is None:
-        pdist_func = lambda w: w.genotypes.pdist()
+        pdist_func = lambda w: w.genotype.pdist()
 
     clust = pd.Series(
         AgglomerativeClustering(
@@ -322,12 +322,12 @@ def strain_cluster(world, thresh, linkage="complete", pdist_func=None):
 
 
 # TODO: Separate coverage-thresholding from clustering.
-def communities_aggregated_by_strain_cluster(
+def community_aggregated_by_strain_cluster(
     world, diss_thresh, frac_thresh=0.0, **kwargs
 ):
     clust = strain_cluster(world, thresh=diss_thresh, **kwargs)
     comms = (
-        world.communities.to_pandas()
+        world.community.to_pandas()
         .groupby(clust, axis="columns")
         .sum()
         .rename_axis(columns="strain")
@@ -338,7 +338,7 @@ def communities_aggregated_by_strain_cluster(
     comms = comms.drop(columns=low_max_frac_strains)
     comms = comms.stack().to_xarray()
     comms = comms / comms.sum("strain")
-    return sf.data.Communities(comms)
+    return sf.data.Community(comms)
 
 
 def nmf_approximation(
@@ -355,7 +355,7 @@ def nmf_approximation(
     **kwargs,
 ):
     d = (
-        world.metagenotypes
+        world.metagenotype
         # .frequencies(pseudo=pseudo)
         .to_series().unstack("sample")
     )
@@ -403,9 +403,9 @@ def nmf_approximation(
     approx = sf.data.World(
         xr.Dataset(
             dict(
-                communities=pi3.transpose("sample", "strain"),
-                genotypes=gamma3.sel(allele="alt").transpose("strain", "position"),
-                metagenotypes=world.metagenotypes.data,
+                community=pi3.transpose("sample", "strain"),
+                genotype=gamma3.sel(allele="alt").transpose("strain", "position"),
+                metagenotype=world.metagenotype.data,
             )
         )
     )
