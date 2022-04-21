@@ -118,8 +118,8 @@ files in other programming environments, but this has not been tested.
 For users who prefer to interact with StrainFacts via the command-line
 interface (CLI) and plain-text files,
 scripts are provided as subcommands to convert metagenotype TSVs to this format
-(see `sfacts load_mgen`).
-as well as to extract key parameter estimates after fitting (see `sfacts dump`).
+(see `sfacts load --metagenotype`).
+as well as to export key parameter estimates after fitting (see `sfacts dump`).
 
 For example, to export tab-delimited relative abundance and genotypes tables
 from `examples/sim.filt.fit.nc`:
