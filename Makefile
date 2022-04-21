@@ -54,9 +54,7 @@ examples/sim.world.nc:
 %.fit.world.nc: %.mgen.nc
 	sfacts fit \
 	    --verbose \
-	    --model-structure model2 \
-	    --num-strains 15 --num-positions 200 \
-	    --hyperparameters pi_hyper=0.5 rho_hyper=0.2 \
+	    --num-strains 15 \
 	    --random-seed 0 \
 	    $< $@
 
