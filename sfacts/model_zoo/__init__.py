@@ -5,7 +5,7 @@ from sfacts.model_zoo import (
 )
 
 NAMED_STRUCTURES = dict(
-    default=ssdd3_with_error.model,
+    default=model2.model,
     model1=ssdd3_with_error.model,
     default_simulation=simplest_simulation.model,
     ssdd3_with_error=ssdd3_with_error.model,

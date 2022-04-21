@@ -37,8 +37,8 @@ TODO
     ),
     default_hyperparameters=dict(
         gamma_hyper=1e-10,
-        rho_hyper=0.5,
-        pi_hyper=0.3,
+        rho_hyper=0.2,
+        pi_hyper=0.5,
         pi_hyper_scale=0.01,
         mu_hyper_mean=1.0,
         mu_hyper_scale=1.0,
