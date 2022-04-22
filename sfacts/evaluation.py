@@ -59,9 +59,9 @@ def discretized_genotype_error(reference, estimate, **kwargs):
 
 def weighted_genotype_error(reference, estimate, weight_func=None, **kwargs):
     if weight_func is None:
-        weight_func = lambda w: (
-            w.metagenotype.mean("sample") * w.data.community
-        ).sum("sample")
+        weight_func = lambda w: (w.metagenotype.mean("sample") * w.data.community).sum(
+            "sample"
+        )
 
     weight = weight_func(reference)
 

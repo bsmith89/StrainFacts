@@ -154,7 +154,9 @@ def iteratively_fit_genotype_conditioned_on_community(
     nstrain = len(community.strain)
     nsample = len(community.sample)
     nposition_full = len(metagenotype.position)
-    with sf.logging_util.phase_info(f"Fitting genotype for {nposition_full} positions."):
+    with sf.logging_util.phase_info(
+        f"Fitting genotype for {nposition_full} positions."
+    ):
         logging.info(
             f"Conditioned on provided community with {nstrain} strains and {nsample} samples."
         )
@@ -184,7 +186,9 @@ def iteratively_fit_genotype_conditioned_on_community(
             metagenotype_full.sizes["position"],
             nposition,
         ):
-            with sf.logging_util.phase_info(f"Chunk [{position_start}, {position_end})."):
+            with sf.logging_util.phase_info(
+                f"Chunk [{position_start}, {position_end})."
+            ):
                 metagenotype_chunk = metagenotype_full.mlift(
                     "isel", position=slice(position_start, position_end)
                 )

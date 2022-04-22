@@ -225,7 +225,6 @@ class Metagenotype(WrappedDataArrayMixin):
     constraints = [POSITIVE_COUNTS]
     variable_name = "metagenotype"
 
-
     @classmethod
     def load_from_merged_gtpro(cls, path, validate=True, **kwargs):
         data = pd.read_table(
@@ -278,7 +277,6 @@ class Metagenotype(WrappedDataArrayMixin):
             coords["allele"] = ["alt", "ref"]
         x = np.stack([y, m - y], axis=-1)
         return cls.from_ndarray(x, coords=coords)
-
 
     def to_csv(self, *args, **kwargs):
         self.data.to_series().to_csv(*args, **kwargs)
@@ -593,7 +591,7 @@ class World:
         return cls(xr.Dataset({v.variable_name: v.data for v in args}))
 
     def validate_fast(self):
-        if (set(self.data.dims) - set(self.dims)):
+        if set(self.data.dims) - set(self.dims):
             raise DataDimensionsError(self.data.dims, self.dims)
 
     def validate_constraints(self):

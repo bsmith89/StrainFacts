@@ -22,7 +22,7 @@ def all_torch(dtype=None, device=None, **kwargs):
 def shape_info(model, *args, **kwargs):
     _trace = pyro.poutine.trace(model).get_trace(*args, **kwargs)
     _trace.compute_log_prob()
-    return(_trace.format_shapes())
+    return _trace.format_shapes()
 
 
 def set_random_seed(seed):
@@ -30,7 +30,6 @@ def set_random_seed(seed):
         logging.warn("No RNG seed set. Results will not be deterministic.")
     else:
         pyro.set_rng_seed(seed)
-
 
 
 def log1mexp(x):

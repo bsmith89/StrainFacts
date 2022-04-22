@@ -296,9 +296,7 @@ plot_expected_fractions = plot_generic_clustermap_factory(
 )
 
 plot_prediction_error = plot_generic_clustermap_factory(
-    matrix_func=lambda w: (
-        w.data["p"] - w.metagenotype.frequencies().sel(allele="alt")
-    )
+    matrix_func=lambda w: (w.data["p"] - w.metagenotype.frequencies().sel(allele="alt"))
     .fillna(0)
     .T,
     row_linkage_func=lambda w: w.metagenotype.linkage(dim="position"),
