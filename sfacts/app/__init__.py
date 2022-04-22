@@ -4,6 +4,7 @@ import warnings
 import sfacts as sf
 import numpy as np
 import pandas as pd
+import logging
 from sfacts.app.components import (
     add_hyperparameters_cli_argument,
     parse_hyperparameter_strings,
@@ -33,7 +34,8 @@ class NoOp(AppInterface):
 
     @classmethod
     def run(cls, args):
-        print(args)
+        with sf.logging_util.phase_info("Dummy phase"):
+            pass
 
 
 class Load(AppInterface):
@@ -119,7 +121,8 @@ class FilterMetagenotype(AppInterface):
             help="Seed for random number generator; must be set for reproducible subsampling.",
         )
         parser.add_argument(
-            "inpath", help="StrainFacts/NetCDF formatted file to load metagenotype data from."
+            "inpath",
+            help="StrainFacts/NetCDF formatted file to load metagenotype data from.",
         )
         parser.add_argument(
             "outpath",
@@ -201,7 +204,8 @@ class Simulate(AppInterface):
             help="Seed for random number generator; must be set for reproducible simulations.",
         )
         parser.add_argument(
-            "outpath", help="Path to write StrainFacts/NetCDF formatted simulated parameters."
+            "outpath",
+            help="Path to write StrainFacts/NetCDF formatted simulated parameters.",
         )
 
     @classmethod
@@ -270,7 +274,8 @@ class Fit(AppInterface):
         # parser.add_argument("--history-outpath")
         parser.add_argument("inpath", help="Metagenotype data input path.")
         parser.add_argument(
-            "outpath", help="Path to write output StrainFacts/NetCDF file with estimated parameters."
+            "outpath",
+            help="Path to write output StrainFacts/NetCDF file with estimated parameters.",
         )
         add_optimization_arguments(parser)
         parser.add_argument(
@@ -377,8 +382,8 @@ class Fit(AppInterface):
         metagenotype_ss = metagenotype.random_sample(position=num_positions_ss)
 
         if args.debug:
-            sf.logging_util.info("\n\n")
-            sf.logging_util.info(
+            logging.info("\n\n")
+            logging.info(
                 dict(
                     hyperparameters=args.hyperparameters,
                     anneal_hyperparameters=args.anneal_hyperparameters,
@@ -395,7 +400,6 @@ class Fit(AppInterface):
             annealiter=args.anneal_steps,
             device=args.device,
             dtype=args.dtype,
-            quiet=(not args.verbose),
             estimation_kwargs=args.estimation_kwargs,
         )
         est0.dump(args.outpath)
@@ -461,13 +465,12 @@ class FitGenotypeBlock(AppInterface):
         block_start = args.block_number * block_positions
         block_stop = min((args.block_number + 1) * block_positions, total_num_positions)
         assert total_num_positions >= block_start
-        sf.logging_util.info(
+        logging.info(
             (
                 f"Selecting genotype block {args.block_number} "
                 f"as [{block_start}, {block_stop}) "
                 f"from {total_num_positions} positions."
             ),
-            quiet=(not args.verbose),
         )
 
         metagenotype = metagenotype.mlift(
@@ -482,7 +485,6 @@ class FitGenotypeBlock(AppInterface):
             hyperparameters=args.hyperparameters,
             device=args.device,
             dtype=args.dtype,
-            quiet=(not args.verbose),
             estimation_kwargs=args.estimation_kwargs,
         )
         est.genotype.to_world().dump(args.outpath)
@@ -592,11 +594,11 @@ class DescribeModel(AppInterface):
             ),
             hyperparameters=args.hyperparameters,
         )
-        sf.logging_util.info("Defined in:", model.structure.generative.__module__)
-        sf.logging_util.info("Summary:", model.structure.text_summary)
-        sf.logging_util.info("Hyperparameters:", model.hyperparameters)
+        print("Defined in:", model.structure.generative.__module__)
+        print("Summary:", model.structure.text_summary)
+        print("Hyperparameters:", model.hyperparameters)
         if args.shapes:
-            sf.pyro_util.shape_info(model)
+            print(sf.pyro_util.shape_info(model))
 
 
 class Dump(AppInterface):
@@ -650,13 +652,17 @@ class EvaluateFitAgainstSimulation(AppInterface):
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument(
-            "simulation", help="Path to StrainFacts/NetCDF file with ground-truth parameters."
+            "simulation",
+            help="Path to StrainFacts/NetCDF file with ground-truth parameters.",
         )
         parser.add_argument(
-            "fit", nargs="+", help="Path(s) to one or more StrainFacts/NetCDF files with estimated parameters."
+            "fit",
+            nargs="+",
+            help="Path(s) to one or more StrainFacts/NetCDF files with estimated parameters.",
         )
         parser.add_argument(
-            "--outpath", help="Write TSV of evaluation scores to file; otherwise to STDOUT"
+            "--outpath",
+            help="Write TSV of evaluation scores to file; otherwise to STDOUT",
         )
 
     @classmethod
@@ -701,6 +707,7 @@ SUBCOMMANDS = [
 
 
 def main():
+    logging.basicConfig()
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         fromfile_prefix_chars="@",

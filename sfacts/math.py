@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.spatial.distance import cdist, pdist
-import warnings
+import logging
 
 
 def binary_entropy(p):
@@ -78,9 +78,7 @@ def genotype_masked_hamming_cdist(xx, yy):
     return cdist(xx, yy, genotype_masked_hamming_distance)
 
 
-def genotype_pdist(xx, quiet=True, q=2):
-    if not quiet:
-        warnings.warn("Progress bar not implemented for genotype_pdist.")
+def genotype_pdist(xx, q=2):
     return pdist(xx, genotype_dissimilarity, q=q)
 
 

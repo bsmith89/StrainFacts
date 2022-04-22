@@ -7,6 +7,7 @@ from sfacts.pyro_util import all_torch
 from warnings import warn
 from pprint import pformat
 from collections import UserDict
+import logging
 
 
 class Hyperparameters(UserDict):
@@ -37,7 +38,9 @@ class Hyperparameters(UserDict):
 
 
 class Structure:
-    def __init__(self, generative, dims, description, default_hyperparameters, text_summary):
+    def __init__(
+        self, generative, dims, description, default_hyperparameters, text_summary
+    ):
         """
 
         *generative* :: Pyro generative model function(shape_dim_0, shape_dim_1, shape_dim_2, ..., **hyper_parameters)
@@ -61,11 +64,11 @@ class Structure:
         shape = range(1, len(self.dims) + 1)
         return shape
 
-    def explain_shapes(self, shape=None):
-        if shape is None:
-            shape = self._dummy_shape
-        sf.logging_util.info(dict(zip(self.dims, shape)))
-        sf.pyro_util.shape_info(self(shape, **self.default_hyperparameters))
+    # def explain_shapes(self, shape=None):
+    #     if shape is None:
+    #         shape = self._dummy_shape
+    #     print(dict(zip(self.dims, shape)))
+    #     print(sf.pyro_util.shape_info(self(shape, self.default_hyperparameters)))
 
     def __repr__(self):
         return (

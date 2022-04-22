@@ -275,4 +275,4 @@ make start_jupyter
     - [x] De-pluralize core datatypes (community not communities)
     - [x] Remove unused CLI apps/workflows/plotting code
     - [ ] Drop stale code in `sfacts.data`, `sfacts.evaluation`, and `sfacts.plot`
-    - [ ] Use Python `logging` module instead of shoe-string `info()` function.
+    - [x] Use Python `logging` module instead of shoe-string `info()` function.

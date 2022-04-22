@@ -4,6 +4,7 @@ import torch
 import xarray as xr
 import numpy as np
 import pandas as pd
+import logging
 
 
 DEFAULT_NMF_KWARGS = dict(
@@ -96,17 +97,11 @@ def fit_metagenotype_complex(
     condition_on=None,
     device="cpu",
     dtype=torch.float32,
-    quiet=False,
     nmf_init=False,
     nmf_init_kwargs=None,
     nmf_seed=None,
     estimation_kwargs=None,
 ):
-
-    _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
-    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(
-        *args, quiet=quiet, **kwargs
-    )
 
     if estimation_kwargs is None:
         estimation_kwargs = {}
@@ -116,12 +111,12 @@ def fit_metagenotype_complex(
     est_list = []
     history_list = []
 
-    with _phase_info(
+    with sf.logging_util.phase_info(
         f"Fitting {nstrain} strains with data shape {metagenotype.sizes}."
     ):
         if nmf_init:
-            with _phase_info("Initializing with NMF."):
-                _info("(This may take a while if data dimensions are large.)")
+            with sf.logging_util.phase_info("Initializing with NMF."):
+                logging.info("(This may take a while if data dimensions are large.)")
                 nmf_kwargs = DEFAULT_NMF_KWARGS.copy()
                 nmf_kwargs.update(nmf_init_kwargs)
                 approx = sf.estimation.nmf_approximation(
@@ -137,7 +132,7 @@ def fit_metagenotype_complex(
         else:
             initialize_params = None
 
-        with _phase_info(f"Fitting model parameters."):
+        with sf.logging_util.phase_info(f"Fitting model parameters."):
             pmodel = sf.model.ParameterizedModel(
                 structure,
                 coords=dict(
@@ -154,7 +149,6 @@ def fit_metagenotype_complex(
 
             est_curr, history = sf.estimation.estimate_parameters(
                 pmodel,
-                quiet=quiet,
                 device=device,
                 dtype=dtype,
                 anneal_hyperparameters=anneal_hyperparameters,
@@ -164,7 +158,7 @@ def fit_metagenotype_complex(
             )
             history_list.append(history)
             est_list.append(est_curr)
-        _info(
+        logging.info(
             "Average metagenotype error: {}".format(
                 sf.evaluation.metagenotype_error2(est_curr, metagenotype)[0]
             )
@@ -182,14 +176,8 @@ def iteratively_fit_genotype_conditioned_on_community(
     condition_on=None,
     device="cpu",
     dtype=torch.float32,
-    quiet=False,
     estimation_kwargs=None,
 ):
-
-    _info = lambda *args, **kwargs: sf.logging_util.info(*args, quiet=quiet, **kwargs)
-    _phase_info = lambda *args, **kwargs: sf.logging_util.phase_info(
-        *args, quiet=quiet, **kwargs
-    )
 
     if estimation_kwargs is None:
         estimation_kwargs = {}
@@ -200,8 +188,8 @@ def iteratively_fit_genotype_conditioned_on_community(
     nstrain = len(community.strain)
     nsample = len(community.sample)
     nposition_full = len(metagenotype.position)
-    with _phase_info(f"Fitting genotype for {nposition_full} positions."):
-        _info(
+    with sf.logging_util.phase_info(f"Fitting genotype for {nposition_full} positions."):
+        logging.info(
             f"Conditioned on provided community with {nstrain} strains and {nsample} samples."
         )
         nposition = min(nposition, nposition_full)
@@ -224,13 +212,13 @@ def iteratively_fit_genotype_conditioned_on_community(
             dtype=dtype,
         )
 
-        _info("Iteratively fitting genotype by chunks.")
+        logging.info("Iteratively fitting genotype by chunks.")
         genotype_chunks = []
         for position_start, position_end in _chunk_start_end_iterator(
             metagenotype_full.sizes["position"],
             nposition,
         ):
-            with _phase_info(f"Chunk [{position_start}, {position_end})."):
+            with sf.logging_util.phase_info(f"Chunk [{position_start}, {position_end})."):
                 metagenotype_chunk = metagenotype_full.mlift(
                     "isel", position=slice(position_start, position_end)
                 )
@@ -238,7 +226,6 @@ def iteratively_fit_genotype_conditioned_on_community(
                     pmodel.with_amended_coords(
                         position=metagenotype_chunk.position.values,
                     ).condition(**metagenotype_chunk.to_counts_and_totals()),
-                    quiet=quiet,
                     device=device,
                     dtype=dtype,
                     **estimation_kwargs,
@@ -247,7 +234,7 @@ def iteratively_fit_genotype_conditioned_on_community(
                 history_list.append(history)
                 est_list.append(est_curr)
 
-        with _phase_info(f"Concatenating chunks."):
+        with sf.logging_util.phase_info(f"Concatenating chunks."):
             genotype = sf.data.Genotype(xr.concat(genotype_chunks, dim="position"))
             est_curr = sf.data.World(
                 est_curr.data.drop_dims(["position", "allele"]).assign(

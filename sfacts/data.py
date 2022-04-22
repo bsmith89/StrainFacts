@@ -427,13 +427,13 @@ class Genotype(WrappedDataArrayMixin):
     def fuzzed(self, eps=1e-5):
         return self.lift(lambda x: (x + eps) / (1 + 2 * eps))
 
-    def pdist(self, dim="strain", quiet=True, **kwargs):
+    def pdist(self, dim="strain", **kwargs):
         index = getattr(self, dim)
         if dim == "strain":
             unwrapped_values = self.values
             _kwargs = dict()
             _kwargs.update(kwargs)
-            cdmat = sf.math.genotype_pdist(unwrapped_values, quiet=quiet, **_kwargs)
+            cdmat = sf.math.genotype_pdist(unwrapped_values, **_kwargs)
         elif dim == "position":
             unwrapped_values = self.values.T
             _kwargs = dict(metric="cosine")
@@ -446,12 +446,11 @@ class Genotype(WrappedDataArrayMixin):
     def linkage(
         self,
         dim="strain",
-        quiet=True,
         method="complete",
         optimal_ordering=False,
         **kwargs,
     ):
-        dmat = self.pdist(dim=dim, quiet=quiet)
+        dmat = self.pdist(dim=dim)
         cdmat = squareform(dmat)
         return linkage(
             cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
@@ -526,7 +525,7 @@ class Community(WrappedDataArrayMixin):
         new_data = new_data / new_data.sum("strain")
         return self.__class__(new_data)
 
-    def pdist(self, dim="strain", quiet=True):
+    def pdist(self, dim="strain"):
         index = getattr(self, dim)
         if dim == "strain":
             unwrapped_values = self.values.T
@@ -541,12 +540,11 @@ class Community(WrappedDataArrayMixin):
     def linkage(
         self,
         dim="strain",
-        quiet=True,
         method="average",
         optimal_ordering=False,
         **kwargs,
     ):
-        dmat = self.pdist(dim=dim, quiet=quiet)
+        dmat = self.pdist(dim=dim)
         cdmat = squareform(dmat)
         return linkage(
             cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
