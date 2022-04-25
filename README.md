@@ -94,7 +94,7 @@ sfacts fit -m ssdd3_with_error  \
     --optimizer-learning-rate 0.05 \
     --min-optimizer-learning-rate 1e-06 \
     --max-iter 1_000_000 --lag1 50 --lag2 100 \
-    examples/sim.filt.mgen.nc examples/sim.filt.fit.nc
+    examples/sim.filt.mgen.nc examples/sim.filt.fit.world.nc
 ```
 
 In addition, values for `--num-positions`, `--precision`, `--random-seed`, `--device` and
@@ -122,10 +122,10 @@ scripts are provided as subcommands to convert metagenotype TSVs to this format
 as well as to export key parameter estimates after fitting (see `sfacts dump`).
 
 For example, to export tab-delimited relative abundance and genotypes tables
-from `examples/sim.filt.fit.nc`:
+from `examples/sim.filt.fit.world.nc`:
 
 ```
-sfacts dump examples/sim.filt.fit.nc \
+sfacts dump examples/sim.filt.fit.world.nc \
     --genotype examples/sim.filt.fit.geno.tsv \
     --community examples/sim.filt.fit.comm.tsv
 ```
