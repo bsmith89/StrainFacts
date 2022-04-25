@@ -1,6 +1,7 @@
 import pyro
 import torch
 import sfacts as sf
+import logging
 
 
 PRECISION_MAP = {32: torch.float32, 64: torch.float64}
