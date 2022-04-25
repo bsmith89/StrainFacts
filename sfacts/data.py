@@ -523,7 +523,7 @@ class Community(WrappedDataArrayMixin):
         new_data = new_data / new_data.sum("strain")
         return self.__class__(new_data)
 
-    def pdist(self, dim="strain"):
+    def pdist(self, dim="sample"):
         index = getattr(self, dim)
         if dim == "strain":
             unwrapped_values = self.values.T
