@@ -17,8 +17,11 @@ start_jupyter:
 	jupyter lab --port=8888 --notebook-dir examples
 
 
-%.html: %.ipynb
+%.ipynb.html: %.ipynb
 	jupyter nbconvert $< --execute --to=html --stdout > $@
+
+%.html: %.md
+	pandoc -o $@ $<
 
 .compile_examples: ${addsuffix .ipynb,${EXAMPLES_IN_ORDER}}
 	for example in ${EXAMPLES_IN_ORDER} ; \
