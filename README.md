@@ -28,8 +28,8 @@ The simplest possible installation directly from GitHub
 pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts
 ```
 
-However, installing as a conda environment (described below) is probably
-the more robust option.
+However, installing [as a conda environment](#with-conda) (described below) is
+probably the more robust option.
 
 Installing PyTorch/Pyro with GPU support may be more challenging.
 Consider using a Docker/Singularity container like
