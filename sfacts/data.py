@@ -334,7 +334,7 @@ class Metagenotype(WrappedDataArrayMixin):
             over = "sample"
         return self.total_counts().mean(over)
 
-    def horizontal_coverage(self, min_count=0, dim="sample"):
+    def horizontal_coverage(self, min_count=1, dim="sample"):
         if dim == "sample":
             over = "position"
         elif dim == "position":
