@@ -97,7 +97,7 @@ sfacts fit -m ssdd3_with_error  \
     examples/sim.filt.mgen.nc examples/sim.filt.fit.world.nc
 ```
 
-In addition, values for `--num-positions`, `--precision`, `--random-seed`, `--device` and
+In addition, values for `--strains-per-sample`/`--num-strains`, `--num-positions`, `--precision`, `--random-seed`, `--device` and
 input/output files were as described in the paper.
 
 ### Data Formats
