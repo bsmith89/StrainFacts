@@ -55,6 +55,12 @@ class WrappedDataArrayMixin:
     # transparently passed through to self.data, but with
     # different symantics for the return value.
     dims = ()
+    safe_lifted = [
+        "isel",
+        "sel",
+        "drop_sel",
+        "drop_isel",
+    ]
     safe_unwrapped = [
         "shape",
         "sizes",
@@ -68,11 +74,7 @@ class WrappedDataArrayMixin:
         "values",
         "pipe",
         "to_series",
-        "isel",
-        "sel",
         "reindex",
-        "drop_sel",
-        "drop_isel",
     ]
     # safe_lifted = []
     variable_name = None
@@ -149,12 +151,15 @@ class WrappedDataArrayMixin:
     def __getattr__(self, name):
         if name in self.dims:
             return getattr(self.data, name)
+        elif name == self.variable_name:
+            return self
         elif name in self.safe_unwrapped:
             return getattr(self.data, name)
-        # elif name in self.safe_lifted:
-        #     return lambda *args, **kwargs: self.__class__(
-        #         getattr(self.data, name)(*args, **kwargs)
-        #     )
+        elif name in self.safe_lifted:
+            # Return a lifted version of the the attributes registered in safe_lifted
+            return lambda *args, **kwargs: self.__class__(
+                getattr(self.data, name)(*args, **kwargs)
+            )
         else:
             raise AttributeError(
                 f"'{self.__class__.__name__}' object has no attribute '{name}' "
@@ -181,7 +186,7 @@ class WrappedDataArrayMixin:
         return self.__class__(func(self.data, *args, **kwargs))
 
     def mlift(self, name, *args, **kwargs):
-        func = getattr(self, name)
+        func = getattr(self.data, name)
         return self.__class__(func(*args, **kwargs))
 
     def __repr__(self):
@@ -641,7 +646,7 @@ class World:
         if name in self.dims:
             # Return dims for those registered in self.dims.
             return getattr(self.data, name)
-        if name in self._variable_wrapper_map:
+        elif name in self._variable_wrapper_map:
             # Return wrapped variables for those registered in self.variables.
             return self._variable_wrapper_map[name](self.data[name])
         elif name in self.safe_unwrapped:
