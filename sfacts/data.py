@@ -688,11 +688,18 @@ class World:
         return cls(out_data)
 
     def unifrac_pdist(self, **kwargs):
-        return pd.DataFrame(
-            squareform(sf.unifrac.unifrac_pdist(self, **kwargs)),
-            index=self.sample,
-            columns=self.sample,
-        )
+        return sf.unifrac.unifrac_pdist(self, **kwargs)
+
+
+    def unifrac_linkage(
+        self,
+        method="average",
+        optimal_ordering=False,
+        **kwargs,
+    ):
+        dmat = self.unifrac_pdist(**kwargs)
+        cdmat = squareform(dmat)
+        return linkage(cdmat, method=method, optimal_ordering=optimal_ordering)
 
     def collapse_strains(self, thresh, **kwargs):
         clust = self.genotype.clusters(thresh=thresh, **kwargs)

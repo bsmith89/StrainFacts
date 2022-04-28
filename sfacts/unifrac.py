@@ -1,5 +1,4 @@
 import pandas as pd
-from scipy.spatial.distance import pdist
 
 
 def neighbor_joining(dm):
@@ -17,7 +16,7 @@ def neighbor_joining(dm):
 
 def unifrac_pdist(world, coef=1e6, discretized=False):
     from skbio import DistanceMatrix
-    from skbio.diversity.beta import weighted_unifrac
+    from skbio.diversity import beta_diversity
 
     if discretized:
         genotype = world.genotype.discretized()
@@ -27,10 +26,11 @@ def unifrac_pdist(world, coef=1e6, discretized=False):
     dm = genotype.pdist()
     dm = DistanceMatrix(dm, dm.index.astype(str))
     tree = neighbor_joining(dm).root_at_midpoint()
-    return pdist(
-        world.community.values * coef,
-        metric=weighted_unifrac,
-        otu_ids=world.strain.values.astype(str),
+    return beta_diversity(
+        'weighted_unifrac',
+        counts=(world.community.data.to_pandas() * coef),
+        ids=world.sample.astype(str).values,
+        otu_ids=world.strain.astype(str).values,
+        normalized=True,
         tree=tree,
-        validate=False,
-    )
+    ).to_data_frame()
