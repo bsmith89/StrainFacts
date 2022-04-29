@@ -330,7 +330,7 @@ class Metagenotype(WrappedDataArrayMixin):
         return self.data.sum("allele")
 
     def allele_counts(self, allele="alt"):
-        return self.sel(allele=allele)
+        return self.data.sel(allele=allele)
 
     def mean_depth(self, dim="sample"):
         if dim == "sample":
