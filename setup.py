@@ -10,7 +10,7 @@ setup(
     author_email="me@byronjsmith.com",
     packages=["sfacts"],
     install_requires=[
-        "pytorch",
+        "torch",
         "pyro-ppl",
         "xarray",
         "netcdf4",
@@ -20,6 +20,7 @@ setup(
         "scipy",
         "tqdm",
         "scikit-learn",
+        "seaborn",
     ],
     dependency_links=[],
     entry_points={"console_scripts": ["sfacts = sfacts.__main__:main"]},

@@ -13,6 +13,12 @@ clean:
 .conda:
 	conda env create -n sfacts-dev -f envs/sfacts-dev.yaml
 
+.conda_test_clean:
+	conda env remove -n sfacts-dev-test
+
+.conda_test:
+	conda env create -n sfacts-dev-test -f envs/sfacts-dev.yaml
+
 start_jupyter:
 	jupyter lab --port=8888 --notebook-dir examples
 
