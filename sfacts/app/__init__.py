@@ -530,6 +530,38 @@ class ConcatGenotypeBlocks(AppInterface):
         world.dump(args.outpath)
 
 
+class CollapseStrains(AppInterface):
+    app_name = "collapse_strains"
+    description = "Merge similar strains."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "--discretized",
+            action='store_true',
+            help="Discretize genotypes before clustering.",
+        )
+        parser.add_argument(
+            "thresh",
+            type=float,
+            help="Distance threshold for clustering.",
+        )
+        parser.add_argument(
+            "inpath",
+            help="Path to StrainFacts/NetCDF file to be collapsed.",
+        )
+        parser.add_argument(
+            "outpath",
+            help="Path to write the StrainFacts/NetCDF file with collapsed strains.",
+        )
+
+    @classmethod
+    def run(cls, args):
+        world = sf.World.load(args.inpath)
+        world_collapsed = world.collapse_strains(thresh=args.thresh, discretized=args.discretized)
+        world_collapsed.dump(args.outpath)
+
+
 class DescribeModel(AppInterface):
     app_name = "describe"
     description = "Summarize a model and its hyperparameters."
@@ -696,6 +728,7 @@ SUBCOMMANDS = [
     # Data Processing
     FilterMetagenotype,
     ConcatGenotypeBlocks,
+    CollapseStrains,
     # Simulation:
     Simulate,
     # Fitting:

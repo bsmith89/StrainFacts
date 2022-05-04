@@ -706,8 +706,11 @@ class World:
         cdmat = squareform(dmat)
         return linkage(cdmat, method=method, optimal_ordering=optimal_ordering)
 
-    def collapse_strains(self, thresh, **kwargs):
-        clust = self.genotype.clusters(thresh=thresh, **kwargs)
+    def collapse_strains(self, thresh, discretized=False, **kwargs):
+        if discretized:
+            clust = self.genotype.discretized().clusters(thresh=thresh, **kwargs)
+        else:
+            clust = self.genotype.clusters(thresh=thresh, **kwargs)
         genotype = Genotype(
             self.genotype.to_series()
             .unstack("strain")
