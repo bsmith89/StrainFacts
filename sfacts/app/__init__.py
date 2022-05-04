@@ -247,7 +247,18 @@ class Fit(AppInterface):
         parser.add_argument(
             "--strains-per-sample",
             type=float,
-            help="Set number of latent strains to this fixed ratio with the number of samples (only one of --num-strains or --strains-per-sample may be set).",
+            help=(
+                "Set number of latent strains to this fixed ratio with the number of samples "
+                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
+            ),
+        )
+        parser.add_argument(
+            "--strain-sample-exponent",
+            type=float,
+            help=(
+                "Set number of latent strains to the number of samples raised to this exponent "
+                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
+            ),
         )
         parser.add_argument(
             "--num-strains",
@@ -255,7 +266,7 @@ class Fit(AppInterface):
             type=int,
             help=(
                 "Set number of latent strains to fit "
-                "(only one of --num-strains or --strains-per-sample may be set)."
+                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
             ),
         )
         parser.add_argument(
@@ -320,15 +331,14 @@ class Fit(AppInterface):
             raise argparse.ArgumentError(
                 "anneal_steps", "Annealing for 0 steps is like no annealing at all."
             )
-        if args.num_strains and args.strains_per_sample:
-            raise argparse.ArgumentError(
-                "strains_per_sample",
-                "Only one of --num-strains or --strains-per-sample may be set.",
-            )
-        if (args.num_strains is None) and (args.strains_per_sample is None):
+        strain_setting_indicator = [
+            int(bool(getattr(args, k)))
+            for k in ["num_strains", "strains_per_sample", "strain_sample_exponent"]
+        ]
+        if sum(strain_setting_indicator) != 1:
             raise argparse.ArgumentError(
                 "num_strains",
-                "One of either --num-strains or --strains-per-sample must be set.",
+                "One and only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set.",
             )
         if args.num_strains and (args.num_strains < 2):
             raise argparse.ArgumentError(
@@ -373,6 +383,15 @@ class Fit(AppInterface):
         if args.strains_per_sample:
             num_strains = int(
                 max(np.ceil(metagenotype.sizes["sample"] * args.strains_per_sample), 2)
+            )
+        elif args.strain_sample_exponent:
+            num_strains = int(
+                max(
+                    np.ceil(
+                        metagenotype.sizes["sample"] ** args.strain_sample_exponent
+                    ),
+                    2,
+                )
             )
         else:
             num_strains = args.num_strains
