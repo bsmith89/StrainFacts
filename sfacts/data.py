@@ -8,6 +8,7 @@ from sklearn.cluster import AgglomerativeClustering
 import scipy as sp
 from functools import partial
 from warnings import warn
+import logging
 
 
 class Error(Exception):
@@ -23,15 +24,23 @@ class DataDimensionsError(Error):
 
 
 class DataConstraint:
-    def __init__(self, name, test_func):
+    def __init__(self, name, test_func, allow_empty=True):
         self.name = name
         self.test_func = test_func
+        self.allow_empty = allow_empty
 
     def __call__(self, data):
-        return self.test_func(data)
+        if data.to_series().empty:
+            if self.allow_empty:
+                logging.warn(f"{self.name} not tested because data was empty: {data}")
+                return True
+            else:
+                return False
+        else:
+            return self.test_func(data)
 
     def raise_error(self, data):
-        raise DataConstraintError(f"Failed constraint: {constraint.name}")
+        raise DataConstraintError(f"Failed constraint: {self.name}")
 
 
 ON_2_SIMPLEX = DataConstraint(
