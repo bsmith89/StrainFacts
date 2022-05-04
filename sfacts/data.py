@@ -704,7 +704,6 @@ class World:
     def unifrac_pdist(self, **kwargs):
         return sf.unifrac.unifrac_pdist(self, **kwargs)
 
-
     def unifrac_linkage(
         self,
         method="average",

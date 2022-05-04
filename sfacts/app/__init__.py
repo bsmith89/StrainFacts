@@ -557,7 +557,7 @@ class CollapseStrains(AppInterface):
     def add_subparser_arguments(cls, parser):
         parser.add_argument(
             "--discretized",
-            action='store_true',
+            action="store_true",
             help="Discretize genotypes before clustering.",
         )
         parser.add_argument(
@@ -577,7 +577,9 @@ class CollapseStrains(AppInterface):
     @classmethod
     def run(cls, args):
         world = sf.World.load(args.inpath)
-        world_collapsed = world.collapse_strains(thresh=args.thresh, discretized=args.discretized)
+        world_collapsed = world.collapse_strains(
+            thresh=args.thresh, discretized=args.discretized
+        )
         world_collapsed.dump(args.outpath)
 
 

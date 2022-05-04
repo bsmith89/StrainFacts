@@ -27,7 +27,7 @@ def unifrac_pdist(world, coef=1e6, discretized=False):
     dm = DistanceMatrix(dm, dm.index.astype(str))
     tree = neighbor_joining(dm).root_at_midpoint()
     return beta_diversity(
-        'weighted_unifrac',
+        "weighted_unifrac",
         counts=(world.community.data.to_pandas() * coef),
         ids=world.sample.astype(str).values,
         otu_ids=world.strain.astype(str).values,
