@@ -76,7 +76,6 @@ def plot_generic_clustermap_factory(
     metric="correlation",
     cbar_pos=None,
     transpose=False,
-    isel=None,
     background_color="darkgrey",
 ):
     def _plot_func(
@@ -105,7 +104,6 @@ def plot_generic_clustermap_factory(
         metric=metric,
         cbar_pos=cbar_pos,
         transpose=transpose,
-        isel=isel,
         pad_width=pad_width,
         pad_height=pad_height,
         background_color=background_color,
@@ -117,10 +115,7 @@ def plot_generic_clustermap_factory(
 
         matrix_data = matrix_func(world)
 
-        if isel is None:
-            isel = {}
-
-        matrix_data = matrix_data.isel(**isel).to_pandas()
+        matrix_data = matrix_data.to_pandas()
 
         if transpose:
             matrix_data = matrix_data.T
