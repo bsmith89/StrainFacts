@@ -308,8 +308,9 @@ plot_prediction_error = plot_generic_clustermap_factory(
 )
 
 plot_dominance = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.metagenotype.dominant_allele_fraction(pseudo=1.0).T,
+    matrix_func=lambda w: w.metagenotype.dominant_allele_fraction(pseudo=0).T,
     col_linkage_func=lambda w: w.metagenotype.linkage(dim="sample"),
+    row_linkage_func=lambda w: w.metagenotype.linkage(dim="position"),
     metric="cosine",
     scalex=0.15,
     scaley=0.01,
