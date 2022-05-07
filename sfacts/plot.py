@@ -223,28 +223,6 @@ def plot_generic_clustermap_factory(
 
 
 plot_metagenotype = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.metagenotype.alt_allele_fraction(pseudo=1.0).T,
-    row_linkage_func=lambda w: w.metagenotype.linkage(dim="position"),
-    col_linkage_func=lambda w: w.metagenotype.linkage(dim="sample"),
-    scalex=0.15,
-    scaley=0.01,
-    vmin=0,
-    vmax=1,
-    center=0.5,
-    cmap="coolwarm",
-    xticklabels=1,
-    yticklabels=0,
-    col_colors_func=(
-        lambda w: (
-            w.metagenotype.sum("allele")
-            .mean("position")
-            .pipe(np.sqrt)
-            .rename("mean_depth")
-        )
-    ),
-)
-
-plot_metagenotype2 = plot_generic_clustermap_factory(
     matrix_func=lambda w: w.metagenotype.alt_allele_fraction(pseudo=0.0).T,
     row_linkage_func=lambda w: w.metagenotype.linkage(dim="position"),
     col_linkage_func=lambda w: w.metagenotype.linkage(dim="sample"),
