@@ -21,9 +21,10 @@ import torch
 from tqdm import tqdm
 import logging
 
+TQDM_NUM_FORMAT_STRING = "{n:+#0.3e}"
 
 def _tqdm_format_num(n):
-    return f"{n:+#0.3e}"
+    return TQDM_NUM_FORMAT_STRING.format(n)
 
 
 OPTIMIZERS = dict()
