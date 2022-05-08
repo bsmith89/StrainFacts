@@ -67,6 +67,15 @@ examples/sim.world.nc:
 	    --random-seed 0 \
 	    $< $@
 
+examples/sim.filt.fit-%.world.nc: examples/sim.filt.mgen.nc
+	sfacts fit \
+	    --verbose \
+	    --model-structure $* \
+	    --num-strains 15 \
+	    --random-seed 0 \
+	    $< $@
+
+
 %.fit.refit.geno-0.nc: %.fit.world.nc %.mgen.nc
 	sfacts fit_geno \
 	    --verbose \
