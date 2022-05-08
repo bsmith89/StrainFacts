@@ -213,3 +213,50 @@ class LogitLaplace(TorchDistribution):
             self.b,
             value,
         )
+
+
+class LogTriangle(TorchDistribution):
+    support = constraints.unit_interval
+    has_rsample = False
+    arg_constraints = {
+        "a": constraints.real,
+    }
+
+    def __init__(self, a, validate_args=None):
+        # FIXME: I don't understand how to set up the shapes and pass them to super()
+        a, low, high = torch.distributions.utils.broadcast_all(
+            a, torch.zeros_like(a), torch.ones_like(a)
+        )
+        self.a = a
+        self._uniform = dist.Uniform(low, high)
+        super().__init__(self._uniform._batch_shape, validate_args=validate_args)
+
+    @property
+    def _normalizer(self):
+        a = self.a
+        return 2 * (torch.exp(a / 2) - 1) / a
+
+    def _half_prob(self, value):
+        a, normalizer = self.a, self._normalizer
+        return torch.exp(a * value) / normalizer
+
+    def _prob(self, value):
+        first_half = self._half_prob(value)
+        second_half = self._half_prob(1 - value)
+        return torch.where(value < 0.5, first_half, second_half)
+
+    def log_prob(self, value):
+        return torch.log(self._prob(value))
+
+    def _half_inv_cdf(self, q):
+        a, normalizer = self.a, self._normalizer
+        return torch.log(q * normalizer * a + 1) / a
+
+    def _inv_cdf(self, q):
+        first_half = self._half_inv_cdf(q)
+        second_half = 1 - self._half_inv_cdf(1 - q)
+        return torch.where(q < 0.5, first_half, second_half)
+
+    def sample(self, sample_shape=()):
+        u = self._uniform.sample(sample_shape)
+        return self._inv_cdf(u)
