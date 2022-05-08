@@ -238,7 +238,7 @@ def estimate_parameters(
                 pbar_postfix = {
                     "NLP": history[-1],
                     "delta": np.nan_to_num(delta),
-                    f"lag{lagA}": np.nan_to_num(delta_lagA),
+                    # f"lag{lagA}": np.nan_to_num(delta_lagA),
                     f"lag{lagB}": np.nan_to_num(delta_lagB),
                     "lr": learning_rate,
                 }
