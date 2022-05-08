@@ -2,6 +2,7 @@ from sfacts.model_zoo import (
     simulation0,
     model1,
     model2,
+    model3,
 )
 
 NAMED_STRUCTURES = dict(
@@ -11,4 +12,5 @@ NAMED_STRUCTURES = dict(
     ssdd3_with_error=model1.model,
     simulation0=simulation0.model,
     model2=model2.model,
+    model3=model3.model,
 )
