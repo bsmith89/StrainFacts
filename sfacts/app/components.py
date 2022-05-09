@@ -78,7 +78,7 @@ def add_optimization_arguments(parser):
         help="Setting for `pyro.optim.ReduceLROnPlateau` 'patience' argument.",
     )
     parser.add_argument(
-        "--nojit",
+        "--no-jit",
         dest="jit",
         action="store_false",
         default=True,
