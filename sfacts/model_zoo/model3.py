@@ -4,7 +4,7 @@ from sfacts.model_zoo.components import (
     SHARED_DESCRIPTIONS,
     SHARED_DIMS,
     ShiftedScaledDirichlet,
-    LogTriangle,
+    LogSoftTriangle,
 )
 import torch
 import pyro
@@ -62,7 +62,10 @@ def model(
 
     with pyro.plate("position", g, dim=-1):
         with pyro.plate("strain", s, dim=-2):
-            gamma = pyro.sample("gamma", LogTriangle(a=torch.log(gamma_hyper)))
+            gamma = pyro.sample(
+                "gamma",
+                LogSoftTriangle(a=torch.log(gamma_hyper), b=torch.log(gamma_hyper)),
+            )
     pyro.deterministic("genotype", gamma)
 
     # Meta-community composition
