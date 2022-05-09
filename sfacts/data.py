@@ -719,11 +719,22 @@ class World:
             clust = self.genotype.discretized().clusters(thresh=thresh, **kwargs)
         else:
             clust = self.genotype.clusters(thresh=thresh, **kwargs)
+
+        total_strain_depth = (
+            (self.metagenotype.mean_depth("sample") * self.community.data)
+            .sum("sample")
+            .to_series()
+        )
         genotype = Genotype(
             self.genotype.to_series()
             .unstack("strain")
             .groupby(clust, axis="columns")
-            .mean()
+            .apply(
+                lambda x: pd.Series(
+                    np.average(x, weights=total_strain_depth.loc[x.columns], axis=1),
+                    index=x.index,
+                )
+            )
             .rename_axis(columns="strain")
             .T.stack()
             .to_xarray()
