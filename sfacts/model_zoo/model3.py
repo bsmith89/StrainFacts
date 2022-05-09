@@ -24,7 +24,6 @@ TODO
         SHARED_DESCRIPTIONS,
         [
             "rho",
-            "pi_hyper_sample",
             "p",
             "mu",
             "m",
@@ -39,7 +38,6 @@ TODO
         gamma_hyper=1e-10,
         rho_hyper=0.2,
         pi_hyper=0.5,
-        pi_hyper_scale=0.01,
         mu_hyper_mean=1.0,
         mu_hyper_scale=1.0,
         m_hyper_concentration=1.0,
@@ -53,7 +51,6 @@ def model(
     gamma_hyper,
     rho_hyper,
     pi_hyper,
-    pi_hyper_scale,
     mu_hyper_mean,
     mu_hyper_scale,
     m_hyper_concentration,
@@ -72,13 +69,9 @@ def model(
     rho = pyro.sample("rho", dist.Dirichlet(rho_hyper.repeat(s)))
 
     with pyro.plate("sample", n, dim=-1):
-        pi_hyper_sample = pyro.sample(
-            "pi_hyper_sample",
-            dist.LogNormal(loc=torch.log(pi_hyper), scale=pi_hyper_scale),
-        )
         # Community composition
         pi = pyro.sample(
-            "pi", ShiftedScaledDirichlet(_unit.repeat(s), rho, 1 / pi_hyper_sample)
+            "pi", ShiftedScaledDirichlet(_unit.repeat(s), rho, 1 / pi_hyper)
         )
         mu = pyro.sample(
             "mu", dist.LogNormal(loc=torch.log(mu_hyper_mean), scale=mu_hyper_scale)
