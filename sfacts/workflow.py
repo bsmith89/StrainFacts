@@ -115,7 +115,9 @@ def fit_metagenotype_complex(
             est_list.append(est_curr)
         logging.info(
             "Average metagenotype error: {}".format(
-                sf.evaluation.metagenotype_error2(est_curr, metagenotype)[0]
+                sf.evaluation.metagenotype_error2(
+                    est_curr, metagenotype, discretized=True
+                )[0]
             )
         )
 
