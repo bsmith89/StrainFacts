@@ -7,14 +7,6 @@ import pandas as pd
 import logging
 
 
-DEFAULT_NMF_KWARGS = dict(
-    alpha=0.0,
-    solver="cd",
-    tol=1e-3,
-    eps=1e-4,
-)
-
-
 def _chunk_start_end_iterator(total, per):
     for i in range(total // per):
         yield (per * i), (per * (i + 1))
@@ -63,16 +55,16 @@ def fit_metagenotype_complex(
     condition_on=None,
     device="cpu",
     dtype=torch.float32,
-    nmf_init=False,
-    nmf_init_kwargs=None,
+    init_func=None,
+    init_kwargs=None,
     nmf_seed=None,
     estimation_kwargs=None,
 ):
 
     if estimation_kwargs is None:
         estimation_kwargs = {}
-    if nmf_init_kwargs is None:
-        nmf_init_kwargs = {}
+    if init_kwargs is None:
+        init_kwargs = {}
 
     est_list = []
     history_list = []
@@ -80,16 +72,13 @@ def fit_metagenotype_complex(
     with sf.logging_util.phase_info(
         f"Fitting {nstrain} strains with data shape {metagenotype.sizes}."
     ):
-        if nmf_init:
-            with sf.logging_util.phase_info("Initializing with NMF."):
+        if init_func:
+            with sf.logging_util.phase_info("Initializing with init_func"):
                 logging.info("(This may take a while if data dimensions are large.)")
-                nmf_kwargs = DEFAULT_NMF_KWARGS.copy()
-                nmf_kwargs.update(nmf_init_kwargs)
-                approx = sf.estimation.nmf_approximation(
+                approx = init_func(
                     metagenotype.to_world(),
                     s=nstrain,
-                    random_state=nmf_seed,
-                    **nmf_kwargs,
+                    **init_kwargs,
                 )
                 initialize_params = dict(
                     gamma=approx.genotype.values,

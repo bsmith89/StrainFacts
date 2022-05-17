@@ -380,6 +380,17 @@ class Metagenotype(WrappedDataArrayMixin):
             squareform(pdist(d.values, metric="cosine")), index=d.index, columns=d.index
         )
 
+    def clusters(self, s, linkage="average", **kwargs):
+        dist = self.pdist("sample", **kwargs)
+        return pd.Series(
+            AgglomerativeClustering(
+                n_clusters=s,
+                affinity="precomputed",
+                linkage=linkage,
+            ).fit_predict(dist),
+            index=dist.columns,
+        )
+
     def linkage(self, dim="sample", pseudo=0.0, **kwargs):
         if dim == "sample":
             _dim = "strain"

@@ -407,3 +407,36 @@ def nmf_approximation(
         )
     )
     return approx
+
+
+def clust_approximation(
+    world,
+    s,
+    pseudo=1.0,
+    frac=1.0,
+    **kwargs,
+):
+    mgen = world.metagenotype
+    clust = mgen.clusters(s=s, **kwargs)
+    geno = sf.Metagenotype(
+        mgen.to_series()
+        .unstack("sample")
+        .groupby(clust, axis="columns")
+        .sum()
+        .rename_axis(columns="sample")
+        .stack()
+        .to_xarray()
+        .transpose("sample", "position", "allele")
+    ).to_estimated_genotype(pseudo=pseudo)
+    comm = sf.Community(
+        clust.to_frame(name="strain")
+        .assign(community=frac)
+        .reset_index()
+        .set_index(["sample", "strain"])
+        .squeeze()
+        .unstack("strain", fill_value=(1 - frac) / (s - 1))
+        .stack()
+        .to_xarray()
+    )
+    world = sf.World.from_combined(mgen, comm, geno)
+    return world

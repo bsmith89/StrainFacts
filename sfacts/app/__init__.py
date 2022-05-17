@@ -290,11 +290,23 @@ class Fit(AppInterface):
         )
         add_optimization_arguments(parser)
         parser.add_argument(
-            "--no-nmf-init",
+            "--nmf-init",
             dest="nmf_init",
-            action="store_false",
-            default=True,
-            help="Don't use NMF to select starting parameters; NMF *is* used by default",
+            action="store_true",
+            default=False,
+            help="Use NMF to select starting parameters.",
+        )
+        parser.add_argument(
+            "--clust-init",
+            dest="clust_init",
+            action="store_true",
+            default=False,
+            help="Use agglomorative clustering to select starting parameters.",
+        )
+        parser.add_argument(
+            "--clust-init-frac",
+            default=0.5,
+            help="How much strain abundance goes to the cluster strain for each sample. Has no effect without --clust-init",
         )
         parser.add_argument(
             "--anneal-wait",
@@ -356,6 +368,32 @@ class Fit(AppInterface):
             )
             for k in args.anneal_hyperparameters
         }
+
+        # Initialization
+        if args.nmf_init and args.clust_init:
+            raise argparse.ArgumentError(
+                "nmf_init", "Only one of --nmf-init and --clust-init may be used."
+            )
+        if args.nmf_init:
+            args.init_func = sf.estimation.nmf_approximation
+            args.init_kwargs = dict(
+                random_state=args.random_seed,
+                alpha=0.0,
+                l1_ratio=1.0,
+                solver="cd",
+                tol=1e-3,
+                eps=1e-4,
+                max_iter=int(1e4),
+                init="random",
+            )
+        elif args.clust_init:
+            args.init_func = sf.estimation.clust_approximation
+            args.init_kwargs = dict(
+                pseudo=1.0, frac=args.clust_init_frac, linkage="average"
+            )
+        else:
+            args.init_func = None
+            args.init_kwargs = dict()
         return args
 
     @classmethod
@@ -412,8 +450,8 @@ class Fit(AppInterface):
             structure=args.model_structure,
             metagenotype=metagenotype_ss,
             nstrain=num_strains,
-            nmf_init=args.nmf_init,
-            nmf_seed=args.random_seed,
+            init_func=args.init_func,
+            init_kwargs=args.init_kwargs,
             hyperparameters=args.hyperparameters,
             anneal_hyperparameters=args.anneal_hyperparameters,
             annealiter=args.anneal_steps,
