@@ -16,9 +16,9 @@ the main input data-type analyzed by StrainFacts.
 
 For detailed information, check out the paper:
 
-> Scalable microbial strain inference in metagenomic data using StrainFacts.
-B.J. Smith, X. Li, Z.J. Shi, A. Abate, K.S. Pollard
-_Frontiers in Bioinformatics_
+> B.J. Smith, X. Li, Z.J. Shi, A. Abate, K.S. Pollard.
+Scalable microbial strain inference in metagenomic data using StrainFacts.
+_Frontiers in Bioinformatics_ (2022)
 doi:[10.3389/fbinf.2022.867386](https://doi.org/10.3389/fbinf.2022.867386)
 
 
