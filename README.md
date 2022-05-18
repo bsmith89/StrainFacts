@@ -12,12 +12,14 @@ polymorphic sites in that species's genome.
 Metagenotypes from multiple (maybe _many_) samples stacked together form
 the main input data-type analyzed by StrainFacts.
 
-For detailed information, check out the manuscript
-(now in-press at Frontiers in Bioinformatics):
+#### Citation
+
+For detailed information, check out the paper:
 
 > Scalable microbial strain inference in metagenomic data using StrainFacts.
-B.J. Smith, X. Li, A. Abate, Z.J. Shi, K.S. Pollard
-_bioRxiv_ doi:[10.1101/2022.02.01.478746](https://doi.org/10.1101/2022.02.01.478746)
+B.J. Smith, X. Li, Z.J. Shi, A. Abate, K.S. Pollard
+_Frontiers in Bioinformatics_
+doi:[10.3389/fbinf.2022.867386](https://doi.org/10.3389/fbinf.2022.867386)
 
 
 ## Installation
@@ -98,7 +100,7 @@ sfacts fit -m ssdd3_with_error  \
 ```
 
 In addition, values for `--strains-per-sample`/`--num-strains`, `--num-positions`, `--precision`, `--random-seed`, `--device` and
-input/output files were as described in the paper.
+input/output files were as described in [the paper](#citation).
 
 ### Data Formats
 
