@@ -622,7 +622,7 @@ class CollapseStrains(AppInterface):
 
 
 class DescribeModel(AppInterface):
-    app_name = "describe"
+    app_name = "model_info"
     description = "Summarize a model and its hyperparameters."
 
     @classmethod
