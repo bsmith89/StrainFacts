@@ -279,4 +279,5 @@ make start_jupyter
     - [x] Use Python `logging` module instead of shoe-string `info()` function.
     - [ ] Drop stale code in `sfacts.data`, `sfacts.evaluation`, and `sfacts.plot`
     - [ ] Simplify the model structure decorator.
+    - [ ] Fix mismatch between 'gamma'/'pi' and 'genotype'/'community'. (Probably just change variable names in the model, yeah?)
 - [ ] Memoization of expensive calculations on wrapped Datasets and DataArrays.
