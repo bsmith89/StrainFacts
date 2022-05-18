@@ -56,6 +56,7 @@ def fit_metagenotype_complex(
     device="cpu",
     dtype=torch.float32,
     init_func=None,
+    init_vars=['genotype', 'community'],
     init_kwargs=None,
     nmf_seed=None,
     estimation_kwargs=None,
@@ -65,6 +66,9 @@ def fit_metagenotype_complex(
         estimation_kwargs = {}
     if init_kwargs is None:
         init_kwargs = {}
+    invalid_init_vars = set(init_vars) - set(['genotype', 'community'])
+    if invalid_init_vars:
+        raise RuntimeError(f"Invalid names included in init_vars: {invalid_init_vars}")
 
     est_list = []
     history_list = []
@@ -73,17 +77,18 @@ def fit_metagenotype_complex(
         f"Fitting {nstrain} strains with data shape {metagenotype.sizes}."
     ):
         if init_func:
-            with sf.logging_util.phase_info(f"Initializing with {init_func.__name__}"):
+            with sf.logging_util.phase_info(f"Initializing {init_vars} with {init_func.__name__}"):
                 logging.info("(This may take a while if data dimensions are large.)")
                 approx = init_func(
                     metagenotype.to_world(),
                     s=nstrain,
                     **init_kwargs,
                 )
-                initialize_params = dict(
-                    gamma=approx.genotype.values,
-                    pi=approx.community.values,
-                )
+                initialize_params = {}
+                if 'genotype' in init_vars:
+                    initialize_params['gamma'] = approx.genotype.values
+                if 'community' in init_vars:
+                    initialize_params['pi'] = approx.community.values
         else:
             initialize_params = None
 

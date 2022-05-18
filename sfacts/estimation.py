@@ -412,18 +412,23 @@ def nmf_approximation(
 def clust_approximation(
     world,
     s,
+    thresh=None,
     pseudo=1.0,
     frac=1.0,
     **kwargs,
 ):
     mgen = world.metagenotype
-    clust = mgen.clusters(s=s, **kwargs)
+    if thresh is None:
+        clust = mgen.clusters(s_or_thresh=s, **kwargs)
+    else:
+        clust = mgen.clusters(s_or_thresh=thresh, **kwargs)
     geno = sf.Metagenotype(
         mgen.to_series()
         .unstack("sample")
         .groupby(clust, axis="columns")
         .sum()
         .rename_axis(columns="sample")
+        .reindex(columns=range(s), fill_value=0)
         .stack()
         .to_xarray()
         .transpose("sample", "position", "allele")
@@ -434,7 +439,9 @@ def clust_approximation(
         .reset_index()
         .set_index(["sample", "strain"])
         .squeeze()
-        .unstack("strain", fill_value=(1 - frac) / (s - 1))
+        .unstack("strain")
+        .reindex(range(s))
+        .fillna((1 - frac) / (s - 1))
         .stack()
         .to_xarray()
     )

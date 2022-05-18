@@ -380,11 +380,18 @@ class Metagenotype(WrappedDataArrayMixin):
             squareform(pdist(d.values, metric="cosine")), index=d.index, columns=d.index
         )
 
-    def clusters(self, s, linkage="average", **kwargs):
+    def clusters(self, s_or_thresh, linkage="average", **kwargs):
+        if s_or_thresh < 1:
+            s = None
+            thresh = float(s_or_thresh)
+        elif s_or_thresh > 1:
+            s = int(s_or_thresh)
+            thresh = None
         dist = self.pdist("sample", **kwargs)
         return pd.Series(
             AgglomerativeClustering(
                 n_clusters=s,
+                distance_threshold=thresh,
                 affinity="precomputed",
                 linkage=linkage,
             ).fit_predict(dist),

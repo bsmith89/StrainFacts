@@ -290,6 +290,12 @@ class Fit(AppInterface):
         )
         add_optimization_arguments(parser)
         parser.add_argument(
+            "--init-vars",
+            default=["genotype", "community"],
+            nargs="+",
+            help="Which parameters to use from initialization output; has no effect without one of --nmf-init or --clust-init.",
+        )
+        parser.add_argument(
             "--nmf-init",
             dest="nmf_init",
             action="store_true",
@@ -306,7 +312,31 @@ class Fit(AppInterface):
         parser.add_argument(
             "--clust-init-frac",
             default=0.5,
-            help="How much strain abundance goes to the cluster strain for each sample. Has no effect without --clust-init",
+            type=float,
+            help=(
+                "How much strain abundance goes to the cluster strain for "
+                "each sample; has no effect without --clust-init"
+            ),
+        )
+        parser.add_argument(
+            "--clust-init-pseudo",
+            default=1.0,
+            type=float,
+            help=(
+                "Pseudo-count added to metagenotype for consensus genotype "
+                "resulting from clusters. has no effect without --clust-init"
+            ),
+        )
+        parser.add_argument(
+            "--clust-init-thresh",
+            default=None,
+            type=float,
+            help=(
+                "Dissimilarity threshold below which to cluster "
+                "metagenotypes together; has no effect without --clust-init; "
+                "and may cause a RuntimeError if too many strains are found "
+                "in the approximation."
+            ),
         )
         parser.add_argument(
             "--anneal-wait",
@@ -389,7 +419,10 @@ class Fit(AppInterface):
         elif args.clust_init:
             args.init_func = sf.estimation.clust_approximation
             args.init_kwargs = dict(
-                pseudo=1.0, frac=args.clust_init_frac, linkage="average"
+                pseudo=args.clust_init_pseudo,
+                frac=args.clust_init_frac,
+                thresh=args.clust_init_thresh,
+                linkage="average",
             )
         else:
             args.init_func = None
@@ -450,6 +483,7 @@ class Fit(AppInterface):
             structure=args.model_structure,
             metagenotype=metagenotype_ss,
             nstrain=num_strains,
+            init_vars=args.init_vars,
             init_func=args.init_func,
             init_kwargs=args.init_kwargs,
             hyperparameters=args.hyperparameters,
