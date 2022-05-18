@@ -73,7 +73,7 @@ def fit_metagenotype_complex(
         f"Fitting {nstrain} strains with data shape {metagenotype.sizes}."
     ):
         if init_func:
-            with sf.logging_util.phase_info("Initializing with init_func"):
+            with sf.logging_util.phase_info(f"Initializing with {init_func.__name__}"):
                 logging.info("(This may take a while if data dimensions are large.)")
                 approx = init_func(
                     metagenotype.to_world(),
