@@ -5,7 +5,10 @@ import torch
 from pyro.distributions import TorchDistribution
 from torch.distributions import constraints
 from torch.nn.functional import pad as torch_pad
+# from sfacts.pyro_util import log1mexp
 import warnings
+# import scipy as sp
+# import numpy as np
 
 
 SHARED_DIMS = ("sample", "position", "strain", "allele")
@@ -296,6 +299,11 @@ class LogSoftTriangle(TorchDistribution):
             / (a * (-exp(b)) - exp(a) * b + a + b)
         )
 
+    # def icdf(self, value):
+    #     out = np.array([sp.optimize.bisect(lambda x: (v - self.cdf(x)).cpu().numpy(), 0, 1) for v in value.flatten()])
+    #     breakpoint()
+    #     return torch.tensor(out).reshape(*value.shape)
+    #
     def sample(self, sample_shape=()):
         _approx = LogTriangle(a=self.a)
         warnings.warn("Using LogTriangle as an approximation for random sampling. This is probably a bad idea.")
