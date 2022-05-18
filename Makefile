@@ -98,6 +98,9 @@ examples/sim.filt.fit-%.world.nc: examples/sim.filt.mgen.nc
 %.filt.fit.refit.eval.tsv: %.world.nc %.filt.fit.world.nc %.filt.fit.refit.world.nc
 	sfacts evaluate_fit $*.world.nc $*.world.nc $*.filt.fit.world.nc $*.filt.fit.refit.world.nc | tee $@ | column -t
 
+examples/sim.filt.fit-%.eval.tsv: examples/sim.world.nc examples/sim.filt.fit-%.world.nc
+	sfacts evaluate_fit examples/sim.world.nc examples/sim.filt.fit-$*.world.nc | tee $@ | column -t
+
 %.geno.tsv: %.world.nc
 	sfacts dump --genotype $@ $<
 
