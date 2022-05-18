@@ -1,6 +1,6 @@
 CLEANUP := examples/sim.*
 EXAMPLES_IN_ORDER := examples/simulate_data examples/fit_metagenotype examples/evaluate_simulation_fit
-TEST_MODELS = model1 model2 model3
+TEST_MODELS = model1 model2 model3 model4 model5
 
 test: examples/sim.filt.fit.refit.eval.tsv $(patsubst %,examples/sim.filt.fit-%.world.nc,${TEST_MODELS})
 
