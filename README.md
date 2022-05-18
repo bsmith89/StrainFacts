@@ -274,5 +274,7 @@ make start_jupyter
 - [ ] Refactor for the best looking code
     - [x] De-pluralize core datatypes (community not communities)
     - [x] Remove unused CLI apps/workflows/plotting code
-    - [ ] Drop stale code in `sfacts.data`, `sfacts.evaluation`, and `sfacts.plot`
     - [x] Use Python `logging` module instead of shoe-string `info()` function.
+    - [ ] Drop stale code in `sfacts.data`, `sfacts.evaluation`, and `sfacts.plot`
+    - [ ] Simplify the model structure decorator.
+- [ ] Memoization of expensive calculations on wrapped Datasets and DataArrays.
