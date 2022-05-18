@@ -279,13 +279,17 @@ class LogSoftTriangle(TorchDistribution):
 
     @property
     def _normalizer(self):
+        return torch.exp(self._log_normalizer)
+
+    @property
+    def _log_normalizer(self):
         a, b = self.a, self.b
-        return (torch.exp(a) - 1) / a + (torch.exp(b) - 1) / b
+        return torch.log((torch.exp(a) - 1) / a + (torch.exp(b) - 1) / b)
 
     def log_prob(self, value):
-        a, b, c = self.a, self.b, self._normalizer
+        a, b, log_c = self.a, self.b, self._log_normalizer
         x = value
-        return torch.log((torch.exp(a * x) + torch.exp(b * (1 - x))) / c)
+        return torch.logaddexp((a * x), (b * (1 - x))) - log_c
 
     def cdf(self, value):
         a, b = self.a, self.b
