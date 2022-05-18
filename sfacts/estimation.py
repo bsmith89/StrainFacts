@@ -422,6 +422,9 @@ def clust_approximation(
         clust = mgen.clusters(s_or_thresh=s, **kwargs)
     else:
         clust = mgen.clusters(s_or_thresh=thresh, **kwargs)
+
+    nclust = len(clust.unique())
+    logging.info(f"Clustering approximated {n_clusts} strains.")
     geno = sf.Metagenotype(
         mgen.to_series()
         .unstack("sample")
