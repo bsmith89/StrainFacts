@@ -5,9 +5,14 @@ import torch
 from pyro.distributions import TorchDistribution
 from torch.distributions import constraints
 from torch.nn.functional import pad as torch_pad
+
 # from sfacts.pyro_util import log1mexp
 import warnings
-# import scipy as sp
+
+# from xitorch.optimize import rootfinder
+
+import scipy as sp
+
 # import numpy as np
 
 
@@ -283,28 +288,55 @@ class LogSoftTriangle(TorchDistribution):
     @property
     def _normalizer(self):
         a, b = self.a, self.b
-        return (torch.exp(a) - 1) / a + (torch.exp(b) - 1) / b
+        exp = torch.exp
+        return (exp(a) - 1) / a + (exp(b) - 1) / b
 
-    def log_prob(self, value):
+    def _prob(self, value):
         a, b, c = self.a, self.b, self._normalizer
         x = value
-        return torch.log((torch.exp(a * x) + torch.exp(b * (1 - x))) / c)
+        exp = torch.exp
+        return (exp(a * x) + exp(b * (1 - x))) / c
+
+    def log_prob(self, value):
+        return torch.log(self._prob(value))
 
     def cdf(self, value):
-        a, b = self.a, self.b
+        a, b, c = self.a, self.b, self._normalizer
         exp = torch.exp
-        x = value
-        return (
-            (b * (-exp(a * x)) + a * exp(b) * (exp(-b * x) - 1) + b)
-            / (a * (-exp(b)) - exp(a) * b + a + b)
+        t = value
+        # Wolfram-alpha says
+        # integral_0^t (exp(a x) + exp(b (1 - x)))/((exp(a) - 1)/a + (exp(b) - 1)/b) dx
+        # = (b (-e^(a t)) + a e^b (e^(-b t) - 1) + b)/(a (-e^b) - e^a b + a + b)
+        # integral_0^t (exp(a x) + exp(b (1 - x)))/c dx
+        # = ((e^(a t) - 1)/a + (e^b - e^(b - b t))/b)/c
+        return ((exp(a * t) - 1) / a + (exp(b) - exp(b - b * t)) / b) / c
+
+        # return (b * (-exp(a * t)) + a * exp(b) * (exp(-b * t) - 1) + b) / (
+        #     a * (-exp(b) - exp(a) * b + a + b)
+        # )
+
+    @property
+    def mean(self):
+    # From WolframAlpha
+    # integral_0^1 (x (exp(a x) + exp(b (1 - x))))/((exp(a) - 1)/a + (exp(b) - 1)/b) dx = \
+    # (a^2 (-b + e^b - 1) + e^a a b^2 - (e^a - 1) b^2)/(a b ((e^a - 1) b + a (e^b - 1)))
+        pass
+
+
+    def icdf(self, value, **kwargs):
+        return torch.tensor(
+            [sp.optimize.bisect(lambda x: q - self.cdf(x), 0, 1) for q in torch.ravel(value)]
         )
 
-    # def icdf(self, value):
-    #     out = np.array([sp.optimize.bisect(lambda x: (v - self.cdf(x)).cpu().numpy(), 0, 1) for v in value.flatten()])
-    #     breakpoint()
-    #     return torch.tensor(out).reshape(*value.shape)
-    #
     def sample(self, sample_shape=()):
+        # FIXME: This is too slow for large samples:
+        # q = self._uniform.sample(sample_shape)
+        # return self.icdf(q)
+
+        # Instead we're doing this, which is wrong, but a good approximation
+        # for fairly large values of a where a = b.
         _approx = LogTriangle(a=self.a)
-        warnings.warn("Using LogTriangle as an approximation for random sampling. This is probably a bad idea.")
+        warnings.warn(
+            "Using LogTriangle as an approximation for random sampling. This is probably a bad idea."
+        )
         return _approx.sample(sample_shape=sample_shape)
