@@ -935,7 +935,7 @@ class DescribeModel(AppInterface):
         )
         print("Defined in:", model.structure.generative.__module__)
         print("Summary:", model.structure.text_summary)
-        print("Hyperparameters:", model.hyperparameters)
+        print("Default Hyperparameters:", model.hyperparameters)
         if args.shapes:
             print(sf.pyro_util.shape_info(model))
 
