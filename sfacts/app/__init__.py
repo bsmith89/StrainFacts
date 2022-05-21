@@ -166,7 +166,18 @@ class SubsampleMetagenotype(AppInterface):
         parser.add_argument(
             "--block-number",
             type=int,
-            help="Select positions [i * num_positions, (i + 1) * num_positions); without this flag, positions are sampled randomly.",
+            default=0,
+            help="Select positions [i * num_positions, (i + 1) * num_positions).",
+        )
+        parser.add_argument(
+            "--no-shuffle",
+            dest="shuffle",
+            action="store_false",
+            help=(
+                "Don't randomize positions before selecting "
+                "the desired block (therefore, pull a contiguous block of "
+                "positions from the original data)."
+            ),
         )
         parser.add_argument(
             "inpath",
@@ -193,15 +204,24 @@ class SubsampleMetagenotype(AppInterface):
         total_num_positions = metagenotype.sizes["position"]
         num_positions = min(args.num_positions, total_num_positions)
 
-        if args.block_number:
-            block_positions = args.num_positions
-            block_start = args.block_number * block_positions
-            block_stop = min((args.block_number + 1) * block_positions, total_num_positions)
-            assert total_num_positions >= block_start
-            mgen_ss = metagenotype.isel(position=slice(block_start, block_stop))
-        else:
+        if args.shuffle:
             np.random.seed(args.random_seed)
-            mgen_ss = metagenotype.random_sample(position=num_positions)
+            logging.info(f"Shuffling metagenotype positions using random seed {args.random_seed}.")
+            position_list = np.random.choice(
+                metagenotype.position, size=total_num_positions, replace=False
+            )
+        else:
+            position_list = metagenotype.position
+
+        block_positions = args.num_positions
+        block_start = args.block_number * block_positions
+        block_stop = min(
+            (args.block_number + 1) * block_positions, total_num_positions
+        )
+        assert total_num_positions >= block_start
+        logging.info(f"Extraction positions [{block_start}, {block_stop}).")
+
+        mgen_ss = metagenotype.sel(position=position_list[block_start:block_stop])
         mgen_ss.dump(args.outpath)
 
 
