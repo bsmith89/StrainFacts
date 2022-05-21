@@ -113,9 +113,6 @@ class FilterMetagenotype(AppInterface):
             help="Remove sample with less than this fraction of sites with non-zero counts.",
         )
         parser.add_argument(
-            "--num-positions", type=int, help="Randomly subsample this number of sites."
-        )
-        parser.add_argument(
             "--random-seed",
             type=int,
             help="Seed for random number generator; must be set for reproducible subsampling.",
@@ -141,8 +138,6 @@ class FilterMetagenotype(AppInterface):
                 "min_horizontal_cvrg",
                 "Argument min_horizontal_cvrg must be between 0 and 1.",
             )
-        if args.num_positions is None:
-            args.num_positions = int(1e20)
         return args
 
     @classmethod
@@ -151,11 +146,63 @@ class FilterMetagenotype(AppInterface):
         mgen_filt = mgen_all.select_variable_positions(
             thresh=args.min_minor_allele_freq
         ).select_samples_with_coverage(args.min_horizontal_cvrg)
+        mgen_filt.dump(args.outpath)
 
-        nposition = min(mgen_filt.sizes["position"], args.num_positions)
-        np.random.seed(args.random_seed)
-        mgen_filt_ss = mgen_filt.random_sample(position=nposition)
-        mgen_filt_ss.dump(args.outpath)
+
+class SubsampleMetagenotype(AppInterface):
+    app_name = "sample_mgen"
+    description = "Select a subsample of metagenotype positions."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "--num-positions", type=int, help="Select this number of sites."
+        )
+        parser.add_argument(
+            "--random-seed",
+            type=int,
+            help="Seed for random number generator; must be set for reproducible subsampling.",
+        )
+        parser.add_argument(
+            "--block-number",
+            type=int,
+            help="Select positions [i * num_positions, (i + 1) * num_positions); without this flag, positions are sampled randomly.",
+        )
+        parser.add_argument(
+            "inpath",
+            help="StrainFacts/NetCDF formatted file to load metagenotype data from.",
+        )
+        parser.add_argument(
+            "outpath",
+            help="Path to write StrainFacts/NetCDF formatted file metagenotype data after filtering/subsampling.",
+        )
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        assert args.num_positions > 0
+        if args.block_number:
+            assert args.block_number >= 0
+        if args.num_positions is None:
+            args.num_positions = int(1e20)
+        return args
+
+    @classmethod
+    def run(cls, args):
+        metagenotype = sf.data.Metagenotype.load(args.inpath)
+
+        total_num_positions = metagenotype.sizes["position"]
+        num_positions = min(args.num_positions, total_num_positions)
+
+        if args.block_number:
+            block_positions = args.num_positions
+            block_start = args.block_number * block_positions
+            block_stop = min((args.block_number + 1) * block_positions, total_num_positions)
+            assert total_num_positions >= block_start
+            mgen_ss = metagenotype.isel(position=slice(block_start, block_stop))
+        else:
+            np.random.seed(args.random_seed)
+            mgen_ss = metagenotype.random_sample(position=num_positions)
+        mgen_ss.dump(args.outpath)
 
 
 class Simulate(AppInterface):
@@ -237,6 +284,226 @@ class Simulate(AppInterface):
         world.dump(args.outpath)
 
 
+class ClusterApproximation(AppInterface):
+    app_name = "cluster_init"
+    description = "Use sample clustering to roughly estimate genotypes."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "--random-seed",
+            "--seed",
+            "-r",
+            type=int,
+            help="Seed for all random number generators; must be set for reproducible model fitting.",
+        )
+        parser.add_argument(
+            "--strains-per-sample",
+            type=float,
+            help=(
+                "Set number of latent strains to this fixed ratio with the number of samples "
+                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
+            ),
+        )
+        parser.add_argument(
+            "--strain-sample-exponent",
+            type=float,
+            help=(
+                "Set number of latent strains to the number of samples raised to this exponent "
+                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
+            ),
+        )
+        parser.add_argument(
+            "--num-strains",
+            "-s",
+            type=int,
+            help=(
+                "Set number of latent strains to fit "
+                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
+            ),
+        )
+        parser.add_argument("inpath", help="Metagenotype data input path.")
+        parser.add_argument(
+            "outpath",
+            help="Path to write output StrainFacts/NetCDF file with estimated parameters.",
+        )
+        parser.add_argument(
+            "--frac",
+            default=0.5,
+            type=float,
+            help=(
+                "How much strain abundance goes to the cluster strain for "
+                "each sample; has no effect without --clust-init"
+            ),
+        )
+        parser.add_argument(
+            "--pseudo",
+            default=1.0,
+            type=float,
+            help=(
+                "Pseudo-count added to metagenotype for consensus genotype "
+                "resulting from clusters. has no effect without --clust-init"
+            ),
+        )
+        parser.add_argument(
+            "--thresh",
+            default=None,
+            type=float,
+            help=(
+                "Dissimilarity threshold below which to cluster "
+                "metagenotypes together; has no effect without --clust-init; "
+                "and may cause a RuntimeError if too many strains are found "
+                "in the approximation."
+            ),
+        )
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        strain_setting_indicator = [
+            int(bool(getattr(args, k)))
+            for k in ["num_strains", "strains_per_sample", "strain_sample_exponent"]
+        ]
+        if sum(strain_setting_indicator) != 1:
+            raise argparse.ArgumentError(
+                "num_strains",
+                "One and only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set.",
+            )
+        if args.num_strains and (args.num_strains < 2):
+            raise argparse.ArgumentError(
+                "num_strains", "num_strains must be 2 or more."
+            )
+        return args
+
+    @classmethod
+    def run(cls, args):
+        metagenotype = sf.data.Metagenotype.load(args.inpath)
+
+        if args.strains_per_sample:
+            num_strains = int(
+                max(np.ceil(metagenotype.sizes["sample"] * args.strains_per_sample), 2)
+            )
+        elif args.strain_sample_exponent:
+            num_strains = int(
+                max(
+                    np.ceil(
+                        metagenotype.sizes["sample"] ** args.strain_sample_exponent
+                    ),
+                    2,
+                )
+            )
+        else:
+            num_strains = args.num_strains
+
+        np.random.seed(args.random_seed)
+
+        world = sf.estimation.clust_approximation(
+            metagenotype.to_world(),
+            s=num_strains,
+            pseudo=args.pseudo,
+            frac=args.frac,
+            thresh=args.thresh,
+            linkage="average",
+        )
+        world.dump(args.outpath)
+
+
+class NMFApproximation(AppInterface):
+    app_name = "nmf_init"
+    description = "Use NMF to roughly estimate genotypes."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "--random-seed",
+            "--seed",
+            "-r",
+            type=int,
+            help="Seed for all random number generators; must be set for reproducible model fitting.",
+        )
+        parser.add_argument(
+            "--strains-per-sample",
+            type=float,
+            help=(
+                "Set number of latent strains to this fixed ratio with the number of samples "
+                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
+            ),
+        )
+        parser.add_argument(
+            "--strain-sample-exponent",
+            type=float,
+            help=(
+                "Set number of latent strains to the number of samples raised to this exponent "
+                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
+            ),
+        )
+        parser.add_argument(
+            "--num-strains",
+            "-s",
+            type=int,
+            help=(
+                "Set number of latent strains to fit "
+                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
+            ),
+        )
+        parser.add_argument("inpath", help="Metagenotype data input path.")
+        parser.add_argument(
+            "outpath",
+            help="Path to write output StrainFacts/NetCDF file with estimated parameters.",
+        )
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        strain_setting_indicator = [
+            int(bool(getattr(args, k)))
+            for k in ["num_strains", "strains_per_sample", "strain_sample_exponent"]
+        ]
+        if sum(strain_setting_indicator) != 1:
+            raise argparse.ArgumentError(
+                "num_strains",
+                "One and only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set.",
+            )
+        if args.num_strains and (args.num_strains < 2):
+            raise argparse.ArgumentError(
+                "num_strains", "num_strains must be 2 or more."
+            )
+        return args
+
+    @classmethod
+    def run(cls, args):
+        metagenotype = sf.data.Metagenotype.load(args.inpath)
+
+        if args.strains_per_sample:
+            num_strains = int(
+                max(np.ceil(metagenotype.sizes["sample"] * args.strains_per_sample), 2)
+            )
+        elif args.strain_sample_exponent:
+            num_strains = int(
+                max(
+                    np.ceil(
+                        metagenotype.sizes["sample"] ** args.strain_sample_exponent
+                    ),
+                    2,
+                )
+            )
+        else:
+            num_strains = args.num_strains
+
+        np.random.seed(args.random_seed)
+        world = sf.estimation.nmf_approximation(
+            metagenotype.to_world(),
+            s=num_strains,
+            random_state=args.random_seed,
+            alpha=0.0,
+            l1_ratio=1.0,
+            solver="cd",
+            tol=1e-3,
+            eps=1e-4,
+            max_iter=int(1e4),
+            init="random",
+        )
+        world.dump(args.outpath)
+
+
 class Fit(AppInterface):
     app_name = "fit"
     description = "Fit strain genotypes and community composition to metagenotype data."
@@ -269,12 +536,6 @@ class Fit(AppInterface):
                 "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
             ),
         )
-        parser.add_argument(
-            "--num-positions",
-            "-g",
-            type=int,
-            help="Number of randomly subsampled SNP positions from metagenotype to fit.",
-        )
         add_hyperparameters_cli_argument(parser)
         parser.add_argument(
             "--tsv",
@@ -290,53 +551,15 @@ class Fit(AppInterface):
         )
         add_optimization_arguments(parser)
         parser.add_argument(
+            "--init-from",
+            help="A StrainFacts/NetCDF file with genotype and/or community variables to use for initialization.",
+        )
+        parser.add_argument(
             "--init-vars",
             default=["genotype", "community"],
+            choices=["genotype", "community"],
             nargs="+",
             help="Which parameters to use from initialization output; has no effect without one of --nmf-init or --clust-init.",
-        )
-        parser.add_argument(
-            "--nmf-init",
-            dest="nmf_init",
-            action="store_true",
-            default=False,
-            help="Use NMF to select starting parameters.",
-        )
-        parser.add_argument(
-            "--clust-init",
-            dest="clust_init",
-            action="store_true",
-            default=False,
-            help="Use agglomorative clustering to select starting parameters.",
-        )
-        parser.add_argument(
-            "--clust-init-frac",
-            default=0.5,
-            type=float,
-            help=(
-                "How much strain abundance goes to the cluster strain for "
-                "each sample; has no effect without --clust-init"
-            ),
-        )
-        parser.add_argument(
-            "--clust-init-pseudo",
-            default=1.0,
-            type=float,
-            help=(
-                "Pseudo-count added to metagenotype for consensus genotype "
-                "resulting from clusters. has no effect without --clust-init"
-            ),
-        )
-        parser.add_argument(
-            "--clust-init-thresh",
-            default=None,
-            type=float,
-            help=(
-                "Dissimilarity threshold below which to cluster "
-                "metagenotypes together; has no effect without --clust-init; "
-                "and may cause a RuntimeError if too many strains are found "
-                "in the approximation."
-            ),
         )
         parser.add_argument(
             "--anneal-wait",
@@ -386,8 +609,6 @@ class Fit(AppInterface):
             raise argparse.ArgumentError(
                 "num_strains", "num_strains must be 2 or more."
             )
-        if args.num_positions is None:
-            args.num_positions = int(1e20)
         args = transform_optimization_parameter_inputs(args)
         args.anneal_hyperparameters = {
             k: dict(
@@ -399,34 +620,6 @@ class Fit(AppInterface):
             for k in args.anneal_hyperparameters
         }
 
-        # Initialization
-        if args.nmf_init and args.clust_init:
-            raise argparse.ArgumentError(
-                "nmf_init", "Only one of --nmf-init and --clust-init may be used."
-            )
-        if args.nmf_init:
-            args.init_func = sf.estimation.nmf_approximation
-            args.init_kwargs = dict(
-                random_state=args.random_seed,
-                alpha=0.0,
-                l1_ratio=1.0,
-                solver="cd",
-                tol=1e-3,
-                eps=1e-4,
-                max_iter=int(1e4),
-                init="random",
-            )
-        elif args.clust_init:
-            args.init_func = sf.estimation.clust_approximation
-            args.init_kwargs = dict(
-                pseudo=args.clust_init_pseudo,
-                frac=args.clust_init_frac,
-                thresh=args.clust_init_thresh,
-                linkage="average",
-            )
-        else:
-            args.init_func = None
-            args.init_kwargs = dict()
         return args
 
     @classmethod
@@ -451,6 +644,9 @@ class Fit(AppInterface):
         else:
             metagenotype = sf.data.Metagenotype.load(args.inpath)
 
+        if args.init_from:
+            init_from = sf.World.load(args.init_from)
+
         if args.strains_per_sample:
             num_strains = int(
                 max(np.ceil(metagenotype.sizes["sample"] * args.strains_per_sample), 2)
@@ -468,24 +664,20 @@ class Fit(AppInterface):
             num_strains = args.num_strains
 
         np.random.seed(args.random_seed)
-        num_positions_ss = min(args.num_positions, metagenotype.sizes["position"])
-        metagenotype_ss = metagenotype.random_sample(position=num_positions_ss)
 
-        if args.debug:
-            logging.info("\n\n")
-            logging.info(
-                dict(
-                    hyperparameters=args.hyperparameters,
-                    anneal_hyperparameters=args.anneal_hyperparameters,
-                )
+        logging.debug("\n\n")
+        logging.debug(
+            dict(
+                hyperparameters=args.hyperparameters,
+                anneal_hyperparameters=args.anneal_hyperparameters,
             )
-        est0, est_list, history_list = sf.workflow.fit_metagenotype_complex(
+        )
+        est, history = sf.workflow.fit_metagenotype_complex(
             structure=args.model_structure,
-            metagenotype=metagenotype_ss,
+            metagenotype=metagenotype,
             nstrain=num_strains,
+            init_from=init_from,
             init_vars=args.init_vars,
-            init_func=args.init_func,
-            init_kwargs=args.init_kwargs,
             hyperparameters=args.hyperparameters,
             anneal_hyperparameters=args.anneal_hyperparameters,
             annealiter=args.anneal_steps,
@@ -493,10 +685,10 @@ class Fit(AppInterface):
             dtype=args.dtype,
             estimation_kwargs=args.estimation_kwargs,
         )
-        est0.dump(args.outpath)
+        est.dump(args.outpath)
         if args.history_outpath:
             with open(args.history_outpath, "w") as f:
-                for v in history_list[0]:
+                for v in history:
                     print(v, file=f)
 
 
@@ -839,11 +1031,14 @@ SUBCOMMANDS = [
     Dump,
     # Data Processing
     FilterMetagenotype,
+    SubsampleMetagenotype,
     ConcatGenotypeBlocks,
     CollapseStrains,
     # Simulation:
     Simulate,
     # Fitting:
+    ClusterApproximation,
+    NMFApproximation,
     Fit,
     FitGenotypeBlock,
     # Evaluation:

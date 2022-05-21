@@ -55,20 +55,27 @@ def fit_metagenotype_complex(
     condition_on=None,
     device="cpu",
     dtype=torch.float32,
-    init_func=None,
-    init_vars=['genotype', 'community'],
-    init_kwargs=None,
+    init_from=None,
+    init_vars=["genotype", "community"],
     nmf_seed=None,
     estimation_kwargs=None,
 ):
 
     if estimation_kwargs is None:
         estimation_kwargs = {}
-    if init_kwargs is None:
-        init_kwargs = {}
-    invalid_init_vars = set(init_vars) - set(['genotype', 'community'])
-    if invalid_init_vars:
-        raise RuntimeError(f"Invalid names included in init_vars: {invalid_init_vars}")
+
+    if init_from:
+        logging.info(f"Initializing {init_vars} with provided values.")
+        initialize_params = {}
+        if "genotype" in init_vars:
+            assert (init_from.genotype.position == metagenotype.position).all()
+            initialize_params["gamma"] = init_from.genotype.values
+        if "community" in init_vars:
+            assert (init_from.community.sample == metagenotype.sample).all()
+            initialize_params["pi"] = init_from.community.values
+    else:
+        initialize_params = None
+
 
     est_list = []
     history_list = []
@@ -76,57 +83,38 @@ def fit_metagenotype_complex(
     with sf.logging_util.phase_info(
         f"Fitting {nstrain} strains with data shape {metagenotype.sizes}."
     ):
-        if init_func:
-            with sf.logging_util.phase_info(f"Initializing {init_vars} with {init_func.__name__}"):
-                logging.info("(This may take a while if data dimensions are large.)")
-                approx = init_func(
-                    metagenotype.to_world(),
-                    s=nstrain,
-                    **init_kwargs,
-                )
-                initialize_params = {}
-                if 'genotype' in init_vars:
-                    initialize_params['gamma'] = approx.genotype.values
-                if 'community' in init_vars:
-                    initialize_params['pi'] = approx.community.values
-        else:
-            initialize_params = None
+        pmodel = sf.model.ParameterizedModel(
+            structure,
+            coords=dict(
+                sample=metagenotype.sample.values,
+                position=metagenotype.position.values,
+                allele=metagenotype.allele.values,
+                strain=range(nstrain),
+            ),
+            hyperparameters=hyperparameters,
+            data=condition_on,
+            device=device,
+            dtype=dtype,
+        ).condition(**metagenotype.to_counts_and_totals())
 
-        with sf.logging_util.phase_info(f"Fitting model parameters."):
-            pmodel = sf.model.ParameterizedModel(
-                structure,
-                coords=dict(
-                    sample=metagenotype.sample.values,
-                    position=metagenotype.position.values,
-                    allele=metagenotype.allele.values,
-                    strain=range(nstrain),
-                ),
-                hyperparameters=hyperparameters,
-                data=condition_on,
-                device=device,
-                dtype=dtype,
-            ).condition(**metagenotype.to_counts_and_totals())
-
-            est_curr, history = sf.estimation.estimate_parameters(
-                pmodel,
-                device=device,
-                dtype=dtype,
-                anneal_hyperparameters=anneal_hyperparameters,
-                annealiter=annealiter,
-                initialize_params=initialize_params,
-                **estimation_kwargs,
-            )
-            history_list.append(history)
-            est_list.append(est_curr)
-        logging.info(
-            "Average metagenotype error: {}".format(
-                sf.evaluation.metagenotype_error2(
-                    est_curr, metagenotype, discretized=True
-                )[0]
-            )
+        est, history = sf.estimation.estimate_parameters(
+            pmodel,
+            device=device,
+            dtype=dtype,
+            anneal_hyperparameters=anneal_hyperparameters,
+            annealiter=annealiter,
+            initialize_params=initialize_params,
+            **estimation_kwargs,
         )
+    logging.info(
+        "Average metagenotype error: {}".format(
+            sf.evaluation.metagenotype_error2(
+                est, metagenotype, discretized=True
+            )[0]
+        )
+    )
 
-    return est_curr, est_list, history_list
+    return est, history
 
 
 def iteratively_fit_genotype_conditioned_on_community(

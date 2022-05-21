@@ -424,7 +424,7 @@ def clust_approximation(
         clust = mgen.clusters(s_or_thresh=thresh, **kwargs)
 
     nclust = len(clust.unique())
-    logging.info(f"Clustering approximated {n_clusts} strains.")
+    logging.info(f"Clustering approximated {nclust} strains.")
     geno = sf.Metagenotype(
         mgen.to_series()
         .unstack("sample")
@@ -436,6 +436,7 @@ def clust_approximation(
         .to_xarray()
         .transpose("sample", "position", "allele")
     ).to_estimated_genotype(pseudo=pseudo)
+    geno.validate_constraints()
     comm = sf.Community(
         clust.to_frame(name="strain")
         .assign(community=frac)
@@ -443,10 +444,11 @@ def clust_approximation(
         .set_index(["sample", "strain"])
         .squeeze()
         .unstack("strain")
-        .reindex(range(s))
+        .reindex(columns=range(s))
         .fillna((1 - frac) / (s - 1))
         .stack()
         .to_xarray()
     )
+    comm.validate_constraints()
     world = sf.World.from_combined(mgen, comm, geno)
     return world
