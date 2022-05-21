@@ -666,6 +666,8 @@ class Fit(AppInterface):
 
         if args.init_from:
             init_from = sf.World.load(args.init_from)
+        else:
+            init_from = None
 
         if args.strains_per_sample:
             num_strains = int(
