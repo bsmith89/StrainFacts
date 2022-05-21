@@ -940,6 +940,24 @@ class DescribeModel(AppInterface):
             print(sf.pyro_util.shape_info(model))
 
 
+class DescribeData(AppInterface):
+    app_name = "data_info"
+    description = "Summarize shapes from a StrainFacts formatted file."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "inpath", help="Path StrainFacts/NetCDF file with one or more parameters."
+        )
+
+    @classmethod
+    def run(cls, args):
+        world = sf.World.load(args.inpath)
+        print(world.sizes)
+        # for dim in world.dims:
+        #     print('{}: {}'.format(dim, world.sizes[dim]))
+
+
 class Dump(AppInterface):
     app_name = "dump"
     description = "Extract output data from StrainFacts files"
@@ -1029,6 +1047,7 @@ SUBCOMMANDS = [
     # Debugging
     NoOp,
     DescribeModel,
+    DescribeData,
     # Input/Output
     Load,
     Dump,
