@@ -143,9 +143,11 @@ class FilterMetagenotype(AppInterface):
     @classmethod
     def run(cls, args):
         mgen_all = sf.data.Metagenotype.load(args.inpath)
+        logging.info(f"Input metagenotype shapes: {mgen_all.sizes}.")
         mgen_filt = mgen_all.select_variable_positions(
             thresh=args.min_minor_allele_freq
         ).select_samples_with_coverage(args.min_horizontal_cvrg)
+        logging.info(f"Output metagenotype shapes: {mgen_filt.sizes}.")
         mgen_filt.dump(args.outpath)
 
 
@@ -397,6 +399,7 @@ class ClusterApproximation(AppInterface):
     @classmethod
     def run(cls, args):
         metagenotype = sf.data.Metagenotype.load(args.inpath)
+        logging.info(f"Input metagenotype shapes: {metagenotype.sizes}.")
 
         if args.strains_per_sample:
             num_strains = int(
@@ -491,6 +494,7 @@ class NMFApproximation(AppInterface):
     @classmethod
     def run(cls, args):
         metagenotype = sf.data.Metagenotype.load(args.inpath)
+        logging.info(f"Input metagenotype shapes: {metagenotype.sizes}.")
 
         if args.strains_per_sample:
             num_strains = int(
@@ -666,6 +670,7 @@ class Fit(AppInterface):
 
         if args.init_from:
             init_from = sf.World.load(args.init_from)
+            logging.info(f"Initialization data shapes: {init_from.sizes}.")
         else:
             init_from = None
 
