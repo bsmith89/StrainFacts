@@ -9,6 +9,7 @@ import scipy as sp
 from functools import partial
 from warnings import warn
 import logging
+from functools import cached_property
 
 
 class Error(Exception):
@@ -158,10 +159,10 @@ class WrappedDataArrayMixin:
         self.validate_fast()
 
     def __getattr__(self, name):
-        if name in self.dims:
-            return getattr(self.data, name)
-        elif name == self.variable_name:
+        if name == self.variable_name:
             return self
+        elif name in self.dims:
+            return getattr(self.data, name)
         elif name in self.safe_unwrapped:
             return getattr(self.data, name)
         elif name in self.safe_lifted:
@@ -361,7 +362,18 @@ class Metagenotype(WrappedDataArrayMixin):
             m=self.total_counts().values,
         )
 
+    @cached_property
+    def _sample_pdist_pseudo0(self):
+        return (
+            self.to_estimated_genotype(pseudo=0.0)
+            .pdist(dim="strain")
+            .rename_axis(columns="sample", index="sample")
+        )
+
     def pdist(self, dim="sample", pseudo=0.0, **kwargs):
+        # Use the special cached property for this common invocation.
+        if (dim == "sample") and (pseudo == 0.0) and (not kwargs):
+            return self._sample_pdist_pseudo0
         if dim == "sample":
             _dim = "strain"
         else:
@@ -618,6 +630,21 @@ class World:
     #         missing_dims = [k for k in cls.dims if k not in data.dims]
     #         return data.expand_dims(missing_dims).transpose(*cls.dims)
 
+    @cached_property
+    def metagenotype(self):
+        name = "metagenotype"
+        return self._variable_wrapper_map[name](self.data[name])
+
+    @cached_property
+    def genotype(self):
+        name = "genotype"
+        return self._variable_wrapper_map[name](self.data[name])
+
+    @cached_property
+    def community(self):
+        name = "community"
+        return self._variable_wrapper_map[name](self.data[name])
+
     @classmethod
     def from_combined(cls, *args):
         return cls(xr.Dataset({v.variable_name: v.data for v in args}))
@@ -719,8 +746,14 @@ class World:
         out_data[dim] = new_coords
         return cls(out_data)
 
-    def unifrac_pdist(self, **kwargs):
-        return sf.unifrac.unifrac_pdist(self, **kwargs)
+    @cached_property
+    def _unifrac_pdist_discretized(self):
+        return sf.unifrac.unifrac_pdist(self, discretized=True)
+
+    def unifrac_pdist(self, discretized=True, **kwargs):
+        if discretized and (not kwargs):
+            return self._unifrac_pdist_discretized
+        return sf.unifrac.unifrac_pdist(self, discretized=discretized, **kwargs)
 
     def unifrac_linkage(
         self,
