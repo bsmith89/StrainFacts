@@ -109,7 +109,10 @@ def model(
     # Expected fractions of each allele at each position
     p_noerr = pyro.deterministic("p_noerr", pi @ gamma)
     p = pyro.deterministic(
-        "p", torch.clamp((1 - epsilon / 2) * (p_noerr) + (epsilon / 2) * (1 - p_noerr), min=0, max=1)
+        "p",
+        torch.clamp(
+            (1 - epsilon / 2) * (p_noerr) + (epsilon / 2) * (1 - p_noerr), min=0, max=1
+        ),
     )
 
     # Observation

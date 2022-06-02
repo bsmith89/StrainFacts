@@ -76,7 +76,6 @@ def fit_metagenotype_complex(
     else:
         initialize_params = None
 
-
     est_list = []
     history_list = []
 
@@ -108,9 +107,7 @@ def fit_metagenotype_complex(
         )
     logging.info(
         "Average metagenotype error: {}".format(
-            sf.evaluation.metagenotype_error2(
-                est, metagenotype, discretized=True
-            )[0]
+            sf.evaluation.metagenotype_error2(est, metagenotype, discretized=True)[0]
         )
     )
 
