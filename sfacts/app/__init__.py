@@ -831,7 +831,6 @@ class EvaluateFitAgainstSimulation(AppInterface):
 
 SUBCOMMANDS = [
     # Debugging
-    NoOp,
     DescribeModel,
     DescribeData,
     # Input/Output
