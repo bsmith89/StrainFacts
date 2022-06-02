@@ -341,14 +341,7 @@ def community_aggregated_by_strain_cluster(
 def nmf_approximation(
     world,
     s,
-    regularization="both",
-    alpha=1.0,
-    l1_ratio=1.0,
-    tol=1e-4,
-    max_iter=int(1e4),
-    random_state=None,
-    init="random",
-    eps=1e-10,
+    eps=0,
     **kwargs,
 ):
     d = (
@@ -362,17 +355,6 @@ def nmf_approximation(
     gamma0, pi0, _ = non_negative_factorization(
         d.values,
         n_components=s,
-        regularization={
-            "community": "components",
-            "genotype": "transformation",
-            "both": "both",
-        }[regularization],
-        alpha=alpha,
-        l1_ratio=l1_ratio,
-        tol=tol,
-        max_iter=max_iter,
-        random_state=random_state,
-        init=init,
         **kwargs,
     )
     pi1 = (
