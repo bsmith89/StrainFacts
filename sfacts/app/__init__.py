@@ -307,7 +307,7 @@ class Simulate(AppInterface):
 
 
 class ClusterApproximation(AppInterface):
-    app_name = "cluster_init"
+    app_name = "clust_init"
     description = "Use sample clustering to roughly estimate genotypes."
 
     @classmethod
