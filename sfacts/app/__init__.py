@@ -646,17 +646,17 @@ class Fit(AppInterface):
     def run(cls, args):
         warnings.filterwarnings(
             "ignore",
-            category=UserWarning,
-            module="sfacts.math",
-            lineno=43,
-            message="Progress bar not implemented for genotype_pdist.",
-        )
-        warnings.filterwarnings(
-            "ignore",
             category=RuntimeWarning,
             module="sfacts.math",
             lineno=26,
             message="invalid value encountered in float_scalars",
+        )
+        warnings.filterwarnings(
+            "ignore",
+            category=UserWarning,
+            module="sfacts.model_zoo.components",
+            lineno=309,
+            message="Using LogTriangle as an approximation for random sampling. This is probably a bad idea.",
         )
 
         if args.tsv:
@@ -761,6 +761,13 @@ class FitGenotypeBlock(AppInterface):
 
     @classmethod
     def run(cls, args):
+        warnings.filterwarnings(
+            "ignore",
+            category=UserWarning,
+            module="sfacts.model_zoo.components",
+            lineno=309,
+            message="Using LogTriangle as an approximation for random sampling. This is probably a bad idea.",
+        )
         community = sf.data.World.load(args.community).community
         metagenotype = sf.data.Metagenotype.load(args.metagenotype)
 
