@@ -947,13 +947,14 @@ class DescribeData(AppInterface):
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument(
-            "inpath", help="Path StrainFacts/NetCDF file with one or more parameters."
+            "inpath", nargs='+', help="Path StrainFacts/NetCDF file with one or more parameters."
         )
 
     @classmethod
     def run(cls, args):
-        world = sf.World.load(args.inpath)
-        print(world.sizes)
+        for path in args.inpath:
+            world = sf.World.load(path)
+            print(path, world.sizes)
         # for dim in world.dims:
         #     print('{}: {}'.format(dim, world.sizes[dim]))
 
