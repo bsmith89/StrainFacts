@@ -1076,7 +1076,7 @@ SUBCOMMANDS = [
 
 
 def main():
-    logging.basicConfig()
+    logging.basicConfig(format='%s %(message)s')
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         fromfile_prefix_chars="@",
