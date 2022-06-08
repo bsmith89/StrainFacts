@@ -16,6 +16,14 @@ from sfacts.app.components import (
 )
 
 
+class ArgumentConstraintError(Exception):
+    pass
+
+
+class ArgumentMutualExclusionError(Exception):
+    pass
+
+
 class NoOp(AppInterface):
     app_name = "do_nothing"
     description = "Do nothing (dummy subcommand)."
@@ -67,9 +75,8 @@ class Load(AppInterface):
     @classmethod
     def transform_app_parameter_inputs(cls, args):
         if args.gtpro_metagenotype and args.metagenotype:
-            raise argparse.ArgumentError(
-                "gtpro_metagenotype",
-                "Only one of --num-strains or --strains-per-sample may be set.",
+            raise ArgumentMutualExclusionError(
+                "Only one of --metagenotype or --gtpro-metagenotype may be passed.",
             )
         return args
 
@@ -129,14 +136,12 @@ class FilterMetagenotype(AppInterface):
     @classmethod
     def transform_app_parameter_inputs(cls, args):
         if not (0 < args.min_minor_allele_freq < 1):
-            raise argparse.ArgumentError(
-                "min_minor_allele_freq",
-                "Argument min_minor_allele_freq must be between 0 and 1.",
+            raise ArgumentConstraintError(
+                "Argument --min-minor-allele-freq must be between 0 and 1.",
             )
         if not (0 < args.min_horizontal_cvrg < 1):
-            raise argparse.ArgumentError(
-                "min_horizontal_cvrg",
-                "Argument min_horizontal_cvrg must be between 0 and 1.",
+            raise ArgumentConstraintError(
+                "Argument --min-horizontal-cvrg must be between 0 and 1.",
             )
         return args
 
@@ -384,13 +389,12 @@ class ClusterApproximation(AppInterface):
             for k in ["num_strains", "strains_per_sample", "strain_sample_exponent"]
         ]
         if sum(strain_setting_indicator) != 1:
-            raise argparse.ArgumentError(
-                "num_strains",
+            raise ArgumentMutualExclusionError(
                 "One and only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set.",
             )
         if args.num_strains and (args.num_strains < 2):
-            raise argparse.ArgumentError(
-                "num_strains", "num_strains must be 2 or more."
+            raise ArgumentConstraintError(
+                "--num-strains must be 2 or more."
             )
         return args
 
@@ -478,13 +482,12 @@ class NMFApproximation(AppInterface):
             for k in ["num_strains", "strains_per_sample", "strain_sample_exponent"]
         ]
         if sum(strain_setting_indicator) != 1:
-            raise argparse.ArgumentError(
-                "num_strains",
+            raise ArgumentMutualExclusionError(
                 "One and only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set.",
             )
         if args.num_strains and (args.num_strains < 2):
-            raise argparse.ArgumentError(
-                "num_strains", "num_strains must be 2 or more."
+            raise ArgumentConstraintError(
+                "Argument --num-strains must be 2 or more."
             )
         return args
 
@@ -613,21 +616,20 @@ class Fit(AppInterface):
             args.anneal_hyperparameters
         )
         if args.anneal_hyperparameters and (args.anneal_steps <= 0):
-            raise argparse.ArgumentError(
-                "anneal_steps", "Annealing for 0 steps is like no annealing at all."
+            raise ArgumentConstraintError(
+                "Annealing for 0 steps is like no annealing at all."
             )
         strain_setting_indicator = [
             int(bool(getattr(args, k)))
             for k in ["num_strains", "strains_per_sample", "strain_sample_exponent"]
         ]
         if sum(strain_setting_indicator) != 1:
-            raise argparse.ArgumentError(
-                "num_strains",
+            raise ArgumentMutualExclusionError(
                 "One and only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set.",
             )
         if args.num_strains and (args.num_strains < 2):
-            raise argparse.ArgumentError(
-                "num_strains", "num_strains must be 2 or more."
+            raise ArgumentConstraintError(
+                "Argument --num-strains must be 2 or more."
             )
         args = transform_optimization_parameter_inputs(args)
         args.anneal_hyperparameters = {
