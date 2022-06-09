@@ -14,9 +14,7 @@ import pyro.distributions as dist
 @sf.model.structure(
     text_summary="""Metagenotype model intended for inference, designed for simplicity and speed.
 
-No explicit error and no overdispersion of counts.
-
-TODO
+Just like model4 but with uniform sequencing error.
 
     """,
     dims=SHARED_DIMS,

@@ -248,7 +248,8 @@ This runs a complex workflow, including
 
 - simulation
 - data conversion
-- initial fitting
+- NMF approximation
+- model fitting
 - genotype refitting
 - evaluation of estimates against the simulated ground-truth
 
@@ -288,3 +289,5 @@ make start_jupyter
     - [ ] Move choice of strain numbers for fit and init apps to a set of helper functions.
     - [ ] Refactor CLI app architecture to be more intuitive.
 - [ ] Memoization of expensive calculations on wrapped Datasets and DataArrays.
+- [ ] Better tools for model selection (e.g. more evaluation scores based on only
+      metagenotypes and fits)

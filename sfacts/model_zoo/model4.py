@@ -16,7 +16,8 @@ import pyro.distributions as dist
 
 No explicit error and no overdispersion of counts.
 
-TODO
+LogSoftTriangle prior on genotypes and introduces
+a second tuning parameter for the sparsity of the (meta)community.
 
     """,
     dims=SHARED_DIMS,

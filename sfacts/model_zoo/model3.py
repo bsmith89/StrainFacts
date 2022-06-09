@@ -16,7 +16,7 @@ import pyro.distributions as dist
 
 No explicit error and no overdispersion of counts.
 
-TODO
+Used the LogSoftTriangle prior on genotypes.
 
     """,
     dims=SHARED_DIMS,

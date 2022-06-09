@@ -15,7 +15,8 @@ import pyro.distributions as dist
 @sf.model.structure(
     text_summary="""Metagenotype model with fixed and uniform error, and sequencing depth.
 
-TODO
+Intended as a lowest-common-denomenator metagenotype simulator.
+Used for ben benchmarks in the paper (Smith et al. 2022, Frontiers in Bioinformatics)
 
     """,
     dims=SHARED_DIMS,
