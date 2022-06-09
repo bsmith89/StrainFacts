@@ -267,12 +267,15 @@ make start_jupyter
       interpreting the output.
     - [x] Simple example fitting a metagenotype
     - [x] Flesh out the example with an explanation of all of the steps.
-    - [ ] ~Example data from SRA with a GT-Pro step, instead of simulated~
+    - [ ] ~~Example data from SRA with a GT-Pro step, instead of simulated~~
+    - [ ] Update README/Makefile/Examples to match new CLI interfaces.
 - [x] The parameters selected for use in this paper (which we have found to be
       applicable across a range of datasets) will be set as the default.
     - Caveat: All of the hyperparameter annealing parameters should still be set by the user
 - [x] We will document some useful approaches for hyperparameter tuning.
 - [x] Improve the CLI documentation.
+    - [ ] Explicit blurb about how to run the model as in the paper
+    - [ ] Model description strings.
 - [ ] Refactor for the best looking code
     - [x] De-pluralize core datatypes (community not communities)
     - [x] Remove unused CLI apps/workflows/plotting code
@@ -280,4 +283,6 @@ make start_jupyter
     - [ ] Drop stale code in `sfacts.data`, `sfacts.evaluation`, and `sfacts.plot`
     - [ ] Simplify the model structure decorator.
     - [ ] Fix mismatch between 'gamma'/'pi' and 'genotype'/'community'. (Probably just change variable names in the model, yeah?)
+    - [ ] Move choice of strain numbers for fit and init apps to a set of helper functions.
+    - [ ] Refactor CLI app architecture to be more intuitive.
 - [ ] Memoization of expensive calculations on wrapped Datasets and DataArrays.
