@@ -1019,8 +1019,13 @@ class EvaluateFitAgainstSimulation(AppInterface):
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument(
-            "simulation",
-            help="Path to StrainFacts/NetCDF file with ground-truth parameters.",
+            "reference",
+            help="Path to StrainFacts/NetCDF file with reference data for comparison.",
+        )
+        parser.add_argument(
+            "--simulation",
+            action='store_true',
+            help='Reference includes "ground-truth" community and genotype, i.e. from a simulation',
         )
         parser.add_argument(
             "fit",
@@ -1029,12 +1034,12 @@ class EvaluateFitAgainstSimulation(AppInterface):
         )
         parser.add_argument(
             "--outpath",
-            help="Write TSV of evaluation scores to file; otherwise to STDOUT",
+            help="Write TSV of evaluation scores to file; otherwise write to STDOUT",
         )
 
     @classmethod
     def run(cls, args):
-        sim = sf.World.load(args.simulation)
+        ref = sf.World.load(args.reference)
         results = {}
         for fit_path in args.fit:
             fit = sf.World.load(fit_path)
@@ -1042,7 +1047,10 @@ class EvaluateFitAgainstSimulation(AppInterface):
             # (string) at some point during processing.
             # NOTE: This fix is just a hack and is probably fairly brittle.
             fit = sf.World(fit.data.assign_coords(position=fit.position.astype(int)))
-            results[fit_path] = sf.workflow.evaluate_fit_against_simulation(sim, fit)
+            metrics = sf.workflow.evaluate_fit_against_metagenotype(ref, fit)
+            if args.simulation:
+                metrics.update(sf.workflow.evaluate_fit_against_simulation(ref, fit))
+            results[fit_path] = metrics
 
         results = pd.DataFrame(results).rename_axis(index="score")
 
