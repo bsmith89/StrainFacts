@@ -271,7 +271,7 @@ make start_jupyter
     - [x] Simple example fitting a metagenotype
     - [x] Flesh out the example with an explanation of all of the steps.
     - [ ] ~~Example data from SRA with a GT-Pro step, instead of simulated~~
-    - [ ] Update README/Makefile/Examples to match new CLI interfaces.
+    - [x] Update README/Makefile/Examples to match new CLI interfaces.
 - [x] The parameters selected for use in this paper (which we have found to be
       applicable across a range of datasets) will be set as the default.
     - Caveat: All of the hyperparameter annealing parameters should still be set by the user
