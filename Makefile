@@ -11,6 +11,9 @@ clean:
 	git config --local filter.dropoutput_ipynb.clean scripts/ipynb_output_filter.py
 	git config --local filter.dropoutput_ipynb.smudge cat
 
+tags:
+	ctags -R
+
 .conda:
 	conda env create -n sfacts-dev -f envs/sfacts-dev.yaml
 
