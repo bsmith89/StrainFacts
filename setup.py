@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="StrainFacts",
-    version="0.1",
+    version="0.3.0",
     summary="TODO",
     url="http://github.com/bsmith89/StrainFacts",
     author="Byron J. Smith",
