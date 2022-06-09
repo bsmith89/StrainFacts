@@ -211,7 +211,9 @@ class SubsampleMetagenotype(AppInterface):
 
         if args.shuffle:
             np.random.seed(args.random_seed)
-            logging.info(f"Shuffling metagenotype positions using random seed {args.random_seed}.")
+            logging.info(
+                f"Shuffling metagenotype positions using random seed {args.random_seed}."
+            )
             position_list = np.random.choice(
                 metagenotype.position, size=total_num_positions, replace=False
             )
@@ -220,9 +222,7 @@ class SubsampleMetagenotype(AppInterface):
 
         block_positions = args.num_positions
         block_start = args.block_number * block_positions
-        block_stop = min(
-            (args.block_number + 1) * block_positions, total_num_positions
-        )
+        block_stop = min((args.block_number + 1) * block_positions, total_num_positions)
         assert total_num_positions >= block_start
         logging.info(f"Extraction positions [{block_start}, {block_stop}).")
 
@@ -393,9 +393,7 @@ class ClusterApproximation(AppInterface):
                 "One and only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set.",
             )
         if args.num_strains and (args.num_strains < 2):
-            raise ArgumentConstraintError(
-                "--num-strains must be 2 or more."
-            )
+            raise ArgumentConstraintError("--num-strains must be 2 or more.")
         return args
 
     @classmethod
@@ -486,9 +484,7 @@ class NMFApproximation(AppInterface):
                 "One and only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set.",
             )
         if args.num_strains and (args.num_strains < 2):
-            raise ArgumentConstraintError(
-                "Argument --num-strains must be 2 or more."
-            )
+            raise ArgumentConstraintError("Argument --num-strains must be 2 or more.")
         return args
 
     @classmethod
@@ -628,9 +624,7 @@ class Fit(AppInterface):
                 "One and only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set.",
             )
         if args.num_strains and (args.num_strains < 2):
-            raise ArgumentConstraintError(
-                "Argument --num-strains must be 2 or more."
-            )
+            raise ArgumentConstraintError("Argument --num-strains must be 2 or more.")
         args = transform_optimization_parameter_inputs(args)
         args.anneal_hyperparameters = {
             k: dict(
@@ -956,7 +950,9 @@ class DescribeData(AppInterface):
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument(
-            "inpath", nargs='+', help="Path StrainFacts/NetCDF file with one or more parameters."
+            "inpath",
+            nargs="+",
+            help="Path StrainFacts/NetCDF file with one or more parameters.",
         )
 
     @classmethod
@@ -1024,7 +1020,7 @@ class EvaluateFitAgainstSimulation(AppInterface):
         )
         parser.add_argument(
             "--simulation",
-            action='store_true',
+            action="store_true",
             help='Reference includes "ground-truth" community and genotype, i.e. from a simulation',
         )
         parser.add_argument(
@@ -1104,7 +1100,7 @@ SUBCOMMANDS = [
 
 
 def main():
-    logging.basicConfig(format='%s %(message)s')
+    logging.basicConfig(format="%s %(message)s")
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         fromfile_prefix_chars="@",

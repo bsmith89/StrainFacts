@@ -294,9 +294,8 @@ class LogSoftTriangle(TorchDistribution):
         a, b = self.a, self.b
         exp = torch.exp
         x = value
-        return (
-            (b * (-exp(a * x)) + a * exp(b) * (exp(-b * x) - 1) + b)
-            / (a * (-exp(b)) - exp(a) * b + a + b)
+        return (b * (-exp(a * x)) + a * exp(b) * (exp(-b * x) - 1) + b) / (
+            a * (-exp(b)) - exp(a) * b + a + b
         )
 
     # def icdf(self, value):
@@ -306,5 +305,7 @@ class LogSoftTriangle(TorchDistribution):
     #
     def sample(self, sample_shape=()):
         _approx = LogTriangle(a=self.a)
-        warnings.warn("Using LogTriangle as an approximation for random sampling. This is probably a bad idea.")
+        warnings.warn(
+            "Using LogTriangle as an approximation for random sampling. This is probably a bad idea."
+        )
         return _approx.sample(sample_shape=sample_shape)
