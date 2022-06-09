@@ -1034,7 +1034,15 @@ class EvaluateFitAgainstSimulation(AppInterface):
         )
         parser.add_argument(
             "--outpath",
-            help="Write TSV of evaluation scores to file; otherwise write to STDOUT",
+            help="Write TSV of evaluation scores to file; otherwise write to STDOUT.",
+        )
+        parser.add_argument(
+            "--num-format", help="Python format string for writing all numbers."
+        )
+        parser.add_argument(
+            "--transpose",
+            action="store_true",
+            help="Transpose rows and columns of output.",
         )
 
     @classmethod
@@ -1058,7 +1066,17 @@ class EvaluateFitAgainstSimulation(AppInterface):
             outpath_or_handle = args.outpath
         else:
             outpath_or_handle = sys.stdout
-        results.to_csv(outpath_or_handle, sep="\t", index=True, header=True)
+
+        if args.transpose:
+            results = results.T
+
+        results.to_csv(
+            outpath_or_handle,
+            sep="\t",
+            index=True,
+            header=True,
+            float_format=args.num_format,
+        )
 
 
 SUBCOMMANDS = [
