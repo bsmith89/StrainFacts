@@ -8,6 +8,7 @@ from sklearn.cluster import AgglomerativeClustering
 import scipy as sp
 from functools import partial
 from warnings import warn
+import logging
 
 
 class Error(Exception):
@@ -23,15 +24,23 @@ class DataDimensionsError(Error):
 
 
 class DataConstraint:
-    def __init__(self, name, test_func):
+    def __init__(self, name, test_func, allow_empty=True):
         self.name = name
         self.test_func = test_func
+        self.allow_empty = allow_empty
 
     def __call__(self, data):
-        return self.test_func(data)
+        if data.to_series().empty:
+            if self.allow_empty:
+                logging.warn(f"{self.name} not tested because data was empty: {data}")
+                return True
+            else:
+                return False
+        else:
+            return self.test_func(data)
 
     def raise_error(self, data):
-        raise DataConstraintError(f"Failed constraint: {constraint.name}")
+        raise DataConstraintError(f"Failed constraint: {self.name}")
 
 
 ON_2_SIMPLEX = DataConstraint(
@@ -55,6 +64,12 @@ class WrappedDataArrayMixin:
     # transparently passed through to self.data, but with
     # different symantics for the return value.
     dims = ()
+    safe_lifted = [
+        "isel",
+        "sel",
+        "drop_sel",
+        "drop_isel",
+    ]
     safe_unwrapped = [
         "shape",
         "sizes",
@@ -68,11 +83,7 @@ class WrappedDataArrayMixin:
         "values",
         "pipe",
         "to_series",
-        "isel",
-        "sel",
         "reindex",
-        "drop_sel",
-        "drop_isel",
     ]
     # safe_lifted = []
     variable_name = None
@@ -149,12 +160,15 @@ class WrappedDataArrayMixin:
     def __getattr__(self, name):
         if name in self.dims:
             return getattr(self.data, name)
+        elif name == self.variable_name:
+            return self
         elif name in self.safe_unwrapped:
             return getattr(self.data, name)
-        # elif name in self.safe_lifted:
-        #     return lambda *args, **kwargs: self.__class__(
-        #         getattr(self.data, name)(*args, **kwargs)
-        #     )
+        elif name in self.safe_lifted:
+            # Return a lifted version of the the attributes registered in safe_lifted
+            return lambda *args, **kwargs: self.__class__(
+                getattr(self.data, name)(*args, **kwargs)
+            )
         else:
             raise AttributeError(
                 f"'{self.__class__.__name__}' object has no attribute '{name}' "
@@ -181,7 +195,7 @@ class WrappedDataArrayMixin:
         return self.__class__(func(self.data, *args, **kwargs))
 
     def mlift(self, name, *args, **kwargs):
-        func = getattr(self, name)
+        func = getattr(self.data, name)
         return self.__class__(func(*args, **kwargs))
 
     def __repr__(self):
@@ -224,7 +238,6 @@ class Metagenotype(WrappedDataArrayMixin):
     dims = ("sample", "position", "allele")
     constraints = [POSITIVE_COUNTS]
     variable_name = "metagenotype"
-
 
     @classmethod
     def load_from_merged_gtpro(cls, path, validate=True, **kwargs):
@@ -279,7 +292,6 @@ class Metagenotype(WrappedDataArrayMixin):
         x = np.stack([y, m - y], axis=-1)
         return cls.from_ndarray(x, coords=coords)
 
-
     def to_csv(self, *args, **kwargs):
         self.data.to_series().to_csv(*args, **kwargs)
 
@@ -327,7 +339,7 @@ class Metagenotype(WrappedDataArrayMixin):
         return self.data.sum("allele")
 
     def allele_counts(self, allele="alt"):
-        return self.sel(allele=allele)
+        return self.data.sel(allele=allele)
 
     def mean_depth(self, dim="sample"):
         if dim == "sample":
@@ -336,7 +348,7 @@ class Metagenotype(WrappedDataArrayMixin):
             over = "sample"
         return self.total_counts().mean(over)
 
-    def horizontal_coverage(self, min_count=0, dim="sample"):
+    def horizontal_coverage(self, min_count=1, dim="sample"):
         if dim == "sample":
             over = "position"
         elif dim == "position":
@@ -366,6 +378,24 @@ class Metagenotype(WrappedDataArrayMixin):
         d = self.to_series().unstack(dim).T
         return pd.DataFrame(
             squareform(pdist(d.values, metric="cosine")), index=d.index, columns=d.index
+        )
+
+    def clusters(self, s_or_thresh, linkage="average", **kwargs):
+        if s_or_thresh < 1:
+            s = None
+            thresh = float(s_or_thresh)
+        elif s_or_thresh > 1:
+            s = int(s_or_thresh)
+            thresh = None
+        dist = self.pdist("sample", **kwargs)
+        return pd.Series(
+            AgglomerativeClustering(
+                n_clusters=s,
+                distance_threshold=thresh,
+                affinity="precomputed",
+                linkage=linkage,
+            ).fit_predict(dist),
+            index=dist.columns,
         )
 
     def linkage(self, dim="sample", pseudo=0.0, **kwargs):
@@ -427,13 +457,13 @@ class Genotype(WrappedDataArrayMixin):
     def fuzzed(self, eps=1e-5):
         return self.lift(lambda x: (x + eps) / (1 + 2 * eps))
 
-    def pdist(self, dim="strain", quiet=True, **kwargs):
+    def pdist(self, dim="strain", **kwargs):
         index = getattr(self, dim)
         if dim == "strain":
             unwrapped_values = self.values
             _kwargs = dict()
             _kwargs.update(kwargs)
-            cdmat = sf.math.genotype_pdist(unwrapped_values, quiet=quiet, **_kwargs)
+            cdmat = sf.math.genotype_pdist(unwrapped_values, **_kwargs)
         elif dim == "position":
             unwrapped_values = self.values.T
             _kwargs = dict(metric="cosine")
@@ -446,12 +476,11 @@ class Genotype(WrappedDataArrayMixin):
     def linkage(
         self,
         dim="strain",
-        quiet=True,
         method="complete",
         optimal_ordering=False,
         **kwargs,
     ):
-        dmat = self.pdist(dim=dim, quiet=quiet)
+        dmat = self.pdist(dim=dim)
         cdmat = squareform(dmat)
         return linkage(
             cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
@@ -526,7 +555,7 @@ class Community(WrappedDataArrayMixin):
         new_data = new_data / new_data.sum("strain")
         return self.__class__(new_data)
 
-    def pdist(self, dim="strain", quiet=True):
+    def pdist(self, dim="sample"):
         index = getattr(self, dim)
         if dim == "strain":
             unwrapped_values = self.values.T
@@ -541,12 +570,11 @@ class Community(WrappedDataArrayMixin):
     def linkage(
         self,
         dim="strain",
-        quiet=True,
         method="average",
         optimal_ordering=False,
         **kwargs,
     ):
-        dmat = self.pdist(dim=dim, quiet=quiet)
+        dmat = self.pdist(dim=dim)
         cdmat = squareform(dmat)
         return linkage(
             cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
@@ -595,7 +623,7 @@ class World:
         return cls(xr.Dataset({v.variable_name: v.data for v in args}))
 
     def validate_fast(self):
-        if (set(self.data.dims) - set(self.dims)):
+        if set(self.data.dims) - set(self.dims):
             raise DataDimensionsError(self.data.dims, self.dims)
 
     def validate_constraints(self):
@@ -645,7 +673,7 @@ class World:
         if name in self.dims:
             # Return dims for those registered in self.dims.
             return getattr(self.data, name)
-        if name in self._variable_wrapper_map:
+        elif name in self._variable_wrapper_map:
             # Return wrapped variables for those registered in self.variables.
             return self._variable_wrapper_map[name](self.data[name])
         elif name in self.safe_unwrapped:
@@ -692,19 +720,39 @@ class World:
         return cls(out_data)
 
     def unifrac_pdist(self, **kwargs):
-        return pd.DataFrame(
-            squareform(sf.unifrac.unifrac_pdist(self, **kwargs)),
-            index=self.sample,
-            columns=self.sample,
-        )
+        return sf.unifrac.unifrac_pdist(self, **kwargs)
 
-    def collapse_strains(self, thresh, **kwargs):
-        clust = self.genotype.clusters(thresh=thresh, **kwargs)
+    def unifrac_linkage(
+        self,
+        method="average",
+        optimal_ordering=False,
+        **kwargs,
+    ):
+        dmat = self.unifrac_pdist(**kwargs)
+        cdmat = squareform(dmat)
+        return linkage(cdmat, method=method, optimal_ordering=optimal_ordering)
+
+    def collapse_strains(self, thresh, discretized=False, **kwargs):
+        if discretized:
+            clust = self.genotype.discretized().clusters(thresh=thresh, **kwargs)
+        else:
+            clust = self.genotype.clusters(thresh=thresh, **kwargs)
+
+        total_strain_depth = (
+            (self.metagenotype.mean_depth("sample") * self.community.data)
+            .sum("sample")
+            .to_series()
+        )
         genotype = Genotype(
             self.genotype.to_series()
             .unstack("strain")
             .groupby(clust, axis="columns")
-            .mean()
+            .apply(
+                lambda x: pd.Series(
+                    np.average(x, weights=total_strain_depth.loc[x.columns], axis=1),
+                    index=x.index,
+                )
+            )
             .rename_axis(columns="strain")
             .T.stack()
             .to_xarray()

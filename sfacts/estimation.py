@@ -19,11 +19,11 @@ import pyro
 # import pyro.distributions as dist
 import torch
 from tqdm import tqdm
-from sfacts.logging_util import info
+import logging
 
+TQDM_NUM_FORMAT_STRING = "{:+#0.2e}"
 
-def _tqdm_format_num(n):
-    return f"{n:+#0.3e}"
+_tqdm_format_num = TQDM_NUM_FORMAT_STRING.format
 
 
 OPTIMIZERS = dict()
@@ -105,7 +105,6 @@ def get_scheduled_optimization_stepper(
     factor=0.5,
     optimizer_kwargs=None,
     optimizer_clip_kwargs=None,
-    quiet=False,
 ):
     optimizer, default_optimizer_kwargs = OPTIMIZERS[optimizer_name]
     _optimizer_kwargs = default_optimizer_kwargs.copy()
@@ -142,7 +141,6 @@ def estimate_parameters(
     optimizer_name="Adamax",
     optimizer_kwargs=None,
     optimizer_clip_kwargs=None,
-    quiet=False,
     ignore_jit_warnings=False,
     seed=None,
     catch_keyboard_interrupt=False,
@@ -173,7 +171,7 @@ def estimate_parameters(
     }
     model = model.with_passed_hyperparameters(*anneal_hyperparameters.keys())
 
-    sf.pyro_util.set_random_seed(seed, warn=(not quiet))
+    sf.pyro_util.set_random_seed(seed)
 
     if jit:
         loss = pyro.infer.JitTrace_ELBO(ignore_jit_warnings=ignore_jit_warnings)
@@ -198,7 +196,6 @@ def estimate_parameters(
         cooldown=lagB,
         optimizer_kwargs=optimizer_kwargs,
         optimizer_clip_kwargs=optimizer_clip_kwargs,
-        quiet=quiet,
     )
 
     history = []
@@ -208,9 +205,9 @@ def estimate_parameters(
     pbar = tqdm(
         zip(range(maxiter), *anneal_hyperparameters.values()),
         total=maxiter,
-        disable=quiet,
         mininterval=1.0,
         bar_format="{l_bar}{r_bar}",
+        disable=(not logging.getLogger().isEnabledFor(logging.INFO)),
     )
     try:
         for i, *passed_hyperparameters in pbar:
@@ -240,7 +237,7 @@ def estimate_parameters(
                 pbar_postfix = {
                     "NLP": history[-1],
                     "delta": np.nan_to_num(delta),
-                    f"lag{lagA}": np.nan_to_num(delta_lagA),
+                    # f"lag{lagA}": np.nan_to_num(delta_lagA),
                     f"lag{lagB}": np.nan_to_num(delta_lagB),
                     "lr": learning_rate,
                 }
@@ -256,17 +253,17 @@ def estimate_parameters(
                 # if (delta_lagA <= 0) and (delta_lagB <= 0):
                 if learning_rate < minimum_lr:
                     pbar.close()
-                    info(f"Converged: NLP={elbo:.5e}", quiet=quiet)
+                    logging.info(f"Converged: NLP={elbo:.5e}")
                     break
 
         else:
             pbar.close()
             elbo = svi.evaluate_loss(*final_anneal_hyperparameters.values())
-            info(f"Reached maxiter: NLP={elbo:.5e}", quiet=quiet)
+            logging.info(f"Reached maxiter: NLP={elbo:.5e}")
     except KeyboardInterrupt as err:
         pbar.close()
         elbo = svi.evaluate_loss(*final_anneal_hyperparameters.values())
-        info(f"Interrupted: NLP={elbo:.5e}", quiet=quiet)
+        logging.info(f"Interrupted: NLP={elbo:.5e}")
         if catch_keyboard_interrupt:
             pass
         else:
@@ -278,14 +275,14 @@ def estimate_parameters(
     est = {k: est[k].detach().cpu().numpy().mean(0).squeeze() for k in est.keys()}
 
     if device.startswith("cuda"):
-        #         info(
+        #         logging.info(
         #             "CUDA available mem: {}".format(
         #                 torch.cuda.get_device_properties(0).total_memory
         #             ),
         #         )
-        #         info("CUDA reserved mem: {}".format(torch.cuda.memory_reserved(0)))
-        #         info("CUDA allocated mem: {}".format(torch.cuda.memory_allocated(0)))
-        #         info(
+        #         logging.info("CUDA reserved mem: {}".format(torch.cuda.memory_reserved(0)))
+        #         logging.info("CUDA allocated mem: {}".format(torch.cuda.memory_allocated(0)))
+        #         logging.info(
         #             "CUDA free mem: {}".format(
         #                 torch.cuda.memory_reserved(0) - torch.cuda.memory_allocated(0)
         #             )
@@ -410,3 +407,48 @@ def nmf_approximation(
         )
     )
     return approx
+
+
+def clust_approximation(
+    world,
+    s,
+    thresh=None,
+    pseudo=1.0,
+    frac=1.0,
+    **kwargs,
+):
+    mgen = world.metagenotype
+    if thresh is None:
+        clust = mgen.clusters(s_or_thresh=s, **kwargs)
+    else:
+        clust = mgen.clusters(s_or_thresh=thresh, **kwargs)
+
+    nclust = len(clust.unique())
+    logging.info(f"Clustering approximated {nclust} strains.")
+    geno = sf.Metagenotype(
+        mgen.to_series()
+        .unstack("sample")
+        .groupby(clust, axis="columns")
+        .sum()
+        .rename_axis(columns="sample")
+        .reindex(columns=range(s), fill_value=0)
+        .stack()
+        .to_xarray()
+        .transpose("sample", "position", "allele")
+    ).to_estimated_genotype(pseudo=pseudo)
+    geno.validate_constraints()
+    comm = sf.Community(
+        clust.to_frame(name="strain")
+        .assign(community=frac)
+        .reset_index()
+        .set_index(["sample", "strain"])
+        .squeeze()
+        .unstack("strain")
+        .reindex(columns=range(s))
+        .fillna((1 - frac) / (s - 1))
+        .stack()
+        .to_xarray()
+    )
+    comm.validate_constraints()
+    world = sf.World.from_combined(mgen, comm, geno)
+    return world

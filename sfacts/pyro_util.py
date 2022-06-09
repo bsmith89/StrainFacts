@@ -1,6 +1,7 @@
 import pyro
 import torch
 import sfacts as sf
+import logging
 
 
 PRECISION_MAP = {32: torch.float32, 64: torch.float64}
@@ -22,11 +23,13 @@ def all_torch(dtype=None, device=None, **kwargs):
 def shape_info(model, *args, **kwargs):
     _trace = pyro.poutine.trace(model).get_trace(*args, **kwargs)
     _trace.compute_log_prob()
-    sf.logging_util.info(_trace.format_shapes())
+    return _trace.format_shapes()
 
 
-def set_random_seed(seed, warn=True):
-    if seed is not None:
+def set_random_seed(seed):
+    if seed is None:
+        logging.warn("No RNG seed set. Results will not be deterministic.")
+    else:
         pyro.set_rng_seed(seed)
 
 

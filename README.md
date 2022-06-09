@@ -2,23 +2,27 @@
 
 StrainFacts is a "strain deconvolution" tool, which infers both strain
 genotypes and their relative abundance across samples directly from
-metagenotype data[^metagenotype-meaning].
+metagenotype data.
 
-[^metagenotype-meaning]: A "metagenotype" is a data matrix of counts of how
-many reads in a shotgun metagenomic sequence library contained each allele at a
-set of polymorphic sites.
+A "metagenotype" for a particular species in a particular sample is an
+multidimensional array
+counting the number of reads (from shotgun metagenomic sequencing, usually)
+that contained a particular allele at
+polymorphic sites in that species's genome.
 Metagenotypes from multiple (maybe _many_) samples stacked together form
 the main input data-type analyzed by StrainFacts.
 
-For detailed information, check out the manuscript
-(now in-press at Frontiers in Bioinformatics):
+#### Citation
 
-> Scalable microbial strain inference in metagenomic data using StrainFacts.
-B.J. Smith, X. Li, A. Abate, Z.J. Shi, K.S. Pollard
-_bioRxiv_ doi:[10.1101/2022.02.01.478746](https://doi.org/10.1101/2022.02.01.478746)
+For detailed information, check out the paper:
+
+> B.J. Smith, X. Li, Z.J. Shi, A. Abate, K.S. Pollard.
+Scalable microbial strain inference in metagenomic data using StrainFacts.
+_Frontiers in Bioinformatics_ (2022)
+doi:[10.3389/fbinf.2022.867386](https://doi.org/10.3389/fbinf.2022.867386)
 
 
-## Installation[^GPU]
+## Installation
 
 The simplest possible installation directly from GitHub
 
@@ -26,10 +30,10 @@ The simplest possible installation directly from GitHub
 pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts
 ```
 
-However, installing as a conda environment (described below) is probably
-the better option.
+However, installing [as a conda environment](#with-conda) (described below) is
+probably the more robust option.
 
-[^GPU]: Installing PyTorch/Pyro with GPU support may be more challenging.
+Installing PyTorch/Pyro with GPU support may be more challenging.
 Consider using a Docker/Singularity container like
 [this one](https://hub.docker.com/r/bsmith89/sfacts_dev), which has many of the
 necessary prerequisites (but excluding StrainFacts itself).
@@ -40,14 +44,16 @@ Short vignettes explaining how to use StrainFacts for data processing,
 visualization, and evaluation are provided as Jupyter Notebooks:
 
 - [`examples/simulate_data.ipynb`](https://byronjsmith.com/StrainFacts/simulate_data.html)
+- [`examples/filter_data.ipynb`](https://byronjsmith.com/StrainFacts/filter_data.html)
 - [`examples/fit_metagenotype.ipynb`](https://byronjsmith.com/StrainFacts/fit_metagenotype.html)
+- [`examples/fit_metagenotype_advanced.ipynb`](https://byronjsmith.com/StrainFacts/fit_metagenotype_advanced.html)
 - [`examples/evaluate_simulation_fit.ipynb`](https://byronjsmith.com/StrainFacts/evaluate_simulation_fit.html)
 
-## Usage[^test-data]
+## Usage
 
-[^test-data]: All of the files described in those notebooks and the usage
+(**NOTE**: All of the files described in those notebooks and the usage
 examples below can be built automatically with Make
-(e.g. try running: `make examples/sim.filt.fit.world.nc`).
+e.g. try running: `make examples/sim.filt.fit.world.nc`.)
 
 ### Get help
 
@@ -92,11 +98,11 @@ sfacts fit -m ssdd3_with_error  \
     --optimizer-learning-rate 0.05 \
     --min-optimizer-learning-rate 1e-06 \
     --max-iter 1_000_000 --lag1 50 --lag2 100 \
-    examples/sim.filt.mgen.nc examples/sim.filt.fit.nc
+    examples/sim.filt.mgen.nc examples/sim.filt.fit.world.nc
 ```
 
-However, with `--num-positions`, `--precision`, `--random-seed`, `--device` and
-input/output files set as described in the paper.
+In addition, values for `--strains-per-sample`/`--num-strains`, `--num-positions`, `--precision`, `--random-seed`, `--device` and
+input/output files were as described in [the paper](#citation).
 
 ### Data Formats
 
@@ -116,14 +122,14 @@ files in other programming environments, but this has not been tested.
 For users who prefer to interact with StrainFacts via the command-line
 interface (CLI) and plain-text files,
 scripts are provided as subcommands to convert metagenotype TSVs to this format
-(see `sfacts load_mgen`).
-as well as to extract key parameter estimates after fitting (see `sfacts dump`).
+(see `sfacts load --metagenotype`).
+as well as to export key parameter estimates after fitting (see `sfacts dump`).
 
 For example, to export tab-delimited relative abundance and genotypes tables
-from `examples/sim.filt.fit.nc`:
+from `examples/sim.filt.fit.world.nc`:
 
 ```
-sfacts dump examples/sim.filt.fit.nc \
+sfacts dump examples/sim.filt.fit.world.nc \
     --genotype examples/sim.filt.fit.geno.tsv \
     --community examples/sim.filt.fit.comm.tsv
 ```
@@ -178,7 +184,7 @@ gets large.
 - [MIDAS / IGGtools](https://github.com/czbiohub/iggtools)
 - [StrainPhlan](https://github.com/biobakery/metaphlan)
 
-GT-Pro is the preferred metagenotyper for Strain Finder.
+GT-Pro is the preferred metagenotyper for StrainFacts.
 While other metagenotypers will also work
 (e.g. MIDAS or StrainPhlan assuming their outputs are formatted correctly),
 only bi-allelic and core genome SNP sites are currently supported.
@@ -193,7 +199,7 @@ This is a subset of the recently updated
 database.
 The MGnify website provides a convenient way to browse this reference.
 
-## How to Hack
+## How to Hack on StrainFacts
 
 ### Editable Installation
 
@@ -263,13 +269,22 @@ make start_jupyter
       interpreting the output.
     - [x] Simple example fitting a metagenotype
     - [x] Flesh out the example with an explanation of all of the steps.
-    - [ ] ~Example data from SRA with a GT-Pro step, instead of simulated~
+    - [ ] ~~Example data from SRA with a GT-Pro step, instead of simulated~~
+    - [ ] Update README/Makefile/Examples to match new CLI interfaces.
 - [x] The parameters selected for use in this paper (which we have found to be
       applicable across a range of datasets) will be set as the default.
     - Caveat: All of the hyperparameter annealing parameters should still be set by the user
 - [x] We will document some useful approaches for hyperparameter tuning.
 - [x] Improve the CLI documentation.
+    - [ ] Explicit blurb about how to run the model as in the paper
+    - [ ] Model description strings.
 - [ ] Refactor for the best looking code
     - [x] De-pluralize core datatypes (community not communities)
     - [x] Remove unused CLI apps/workflows/plotting code
-    - [ ] Split apps into their own modules?
+    - [x] Use Python `logging` module instead of shoe-string `info()` function.
+    - [ ] Drop stale code in `sfacts.data`, `sfacts.evaluation`, and `sfacts.plot`
+    - [ ] Simplify the model structure decorator.
+    - [ ] Fix mismatch between 'gamma'/'pi' and 'genotype'/'community'. (Probably just change variable names in the model, yeah?)
+    - [ ] Move choice of strain numbers for fit and init apps to a set of helper functions.
+    - [ ] Refactor CLI app architecture to be more intuitive.
+- [ ] Memoization of expensive calculations on wrapped Datasets and DataArrays.

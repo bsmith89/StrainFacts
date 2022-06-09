@@ -1,15 +1,20 @@
 from sfacts.model_zoo import (
-    simplest_simulation,
-    ssdd3_with_error,
+    simulation0,
+    model1,
     model2,
+    model3,
+    model4,
+    model5,
 )
 
 NAMED_STRUCTURES = dict(
-    default=model2.model,
-    model1=ssdd3_with_error.model,
-    default_simulation=simplest_simulation.model,
-    ssdd3_with_error=ssdd3_with_error.model,
-    simplest_simulation=simplest_simulation.model,
-    simulation0=simplest_simulation.model,
+    default=model5.model,
+    model1=model1.model,
+    default_simulation=simulation0.model,
+    ssdd3_with_error=model1.model,
+    simulation0=simulation0.model,
     model2=model2.model,
+    model3=model3.model,
+    model4=model4.model,
+    model5=model5.model,
 )

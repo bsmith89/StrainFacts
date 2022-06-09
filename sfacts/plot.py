@@ -76,7 +76,6 @@ def plot_generic_clustermap_factory(
     metric="correlation",
     cbar_pos=None,
     transpose=False,
-    isel=None,
     background_color="darkgrey",
 ):
     def _plot_func(
@@ -105,7 +104,6 @@ def plot_generic_clustermap_factory(
         metric=metric,
         cbar_pos=cbar_pos,
         transpose=transpose,
-        isel=isel,
         pad_width=pad_width,
         pad_height=pad_height,
         background_color=background_color,
@@ -117,10 +115,7 @@ def plot_generic_clustermap_factory(
 
         matrix_data = matrix_func(world)
 
-        if isel is None:
-            isel = {}
-
-        matrix_data = matrix_data.isel(**isel).to_pandas()
+        matrix_data = matrix_data.to_pandas()
 
         if transpose:
             matrix_data = matrix_data.T
@@ -228,28 +223,6 @@ def plot_generic_clustermap_factory(
 
 
 plot_metagenotype = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.metagenotype.alt_allele_fraction(pseudo=1.0).T,
-    row_linkage_func=lambda w: w.metagenotype.linkage(dim="position"),
-    col_linkage_func=lambda w: w.metagenotype.linkage(dim="sample"),
-    scalex=0.15,
-    scaley=0.01,
-    vmin=0,
-    vmax=1,
-    center=0.5,
-    cmap="coolwarm",
-    xticklabels=1,
-    yticklabels=0,
-    col_colors_func=(
-        lambda w: (
-            w.metagenotype.sum("allele")
-            .mean("position")
-            .pipe(np.sqrt)
-            .rename("mean_depth")
-        )
-    ),
-)
-
-plot_metagenotype2 = plot_generic_clustermap_factory(
     matrix_func=lambda w: w.metagenotype.alt_allele_fraction(pseudo=0.0).T,
     row_linkage_func=lambda w: w.metagenotype.linkage(dim="position"),
     col_linkage_func=lambda w: w.metagenotype.linkage(dim="sample"),
@@ -296,9 +269,7 @@ plot_expected_fractions = plot_generic_clustermap_factory(
 )
 
 plot_prediction_error = plot_generic_clustermap_factory(
-    matrix_func=lambda w: (
-        w.data["p"] - w.metagenotype.frequencies().sel(allele="alt")
-    )
+    matrix_func=lambda w: (w.data["p"] - w.metagenotype.frequencies().sel(allele="alt"))
     .fillna(0)
     .T,
     row_linkage_func=lambda w: w.metagenotype.linkage(dim="position"),
@@ -315,8 +286,9 @@ plot_prediction_error = plot_generic_clustermap_factory(
 )
 
 plot_dominance = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.metagenotype.dominant_allele_fraction(pseudo=1.0).T,
+    matrix_func=lambda w: w.metagenotype.dominant_allele_fraction(pseudo=0).T,
     col_linkage_func=lambda w: w.metagenotype.linkage(dim="sample"),
+    row_linkage_func=lambda w: w.metagenotype.linkage(dim="position"),
     metric="cosine",
     scalex=0.15,
     scaley=0.01,

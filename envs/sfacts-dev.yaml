@@ -3,7 +3,7 @@ channels:
   - defaults
 dependencies:
   - xarray
-  - pytorch
+  - pytorch::pytorch
   - numpy
   - tqdm
   - pandas

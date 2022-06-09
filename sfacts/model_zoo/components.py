@@ -5,7 +5,10 @@ import torch
 from pyro.distributions import TorchDistribution
 from torch.distributions import constraints
 from torch.nn.functional import pad as torch_pad
-from sfacts.pyro_util import log1mexp
+# from sfacts.pyro_util import log1mexp
+import warnings
+# import scipy as sp
+# import numpy as np
 
 
 SHARED_DIMS = ("sample", "position", "strain", "allele")
@@ -213,3 +216,95 @@ class LogitLaplace(TorchDistribution):
             self.b,
             value,
         )
+
+
+class LogTriangle(TorchDistribution):
+    support = constraints.unit_interval
+    has_rsample = False
+    arg_constraints = {
+        "a": constraints.real,
+    }
+
+    def __init__(self, a, validate_args=None):
+        # FIXME: I don't understand how to set up the shapes and pass them to super()
+        a, low, high = torch.distributions.utils.broadcast_all(
+            a, torch.zeros_like(a), torch.ones_like(a)
+        )
+        self.a = a
+        self._uniform = dist.Uniform(low, high)
+        super().__init__(self._uniform._batch_shape, validate_args=validate_args)
+
+    @property
+    def _normalizer(self):
+        a = self.a
+        return 2 * (torch.exp(a / 2) - 1) / a
+
+    def _half_prob(self, value):
+        a, normalizer = self.a, self._normalizer
+        return torch.exp(a * value) / normalizer
+
+    def _prob(self, value):
+        first_half = self._half_prob(value)
+        second_half = self._half_prob(1 - value)
+        return torch.where(value < 0.5, first_half, second_half)
+
+    def log_prob(self, value):
+        return torch.log(self._prob(value))
+
+    def _half_inv_cdf(self, q):
+        a, normalizer = self.a, self._normalizer
+        return torch.log(q * normalizer * a + 1) / a
+
+    def _inv_cdf(self, q):
+        first_half = self._half_inv_cdf(q)
+        second_half = 1 - self._half_inv_cdf(1 - q)
+        return torch.where(q < 0.5, first_half, second_half)
+
+    def sample(self, sample_shape=()):
+        u = self._uniform.sample(sample_shape)
+        return self._inv_cdf(u)
+
+
+class LogSoftTriangle(TorchDistribution):
+    support = constraints.unit_interval
+    has_rsample = False
+    arg_constraints = {
+        "a": constraints.real,
+        "b": constraints.real,
+    }
+
+    def __init__(self, a, b, validate_args=None):
+        a, b = torch.distributions.utils.broadcast_all(a, b)
+        low, high = torch.zeros_like(a), torch.ones_like(a)
+        self.a, self.b = a, b
+        self._uniform = dist.Uniform(low, high)
+        super().__init__(self._uniform._batch_shape, validate_args=validate_args)
+
+    @property
+    def _normalizer(self):
+        a, b = self.a, self.b
+        return (torch.exp(a) - 1) / a + (torch.exp(b) - 1) / b
+
+    def log_prob(self, value):
+        a, b, c = self.a, self.b, self._normalizer
+        x = value
+        return torch.log((torch.exp(a * x) + torch.exp(b * (1 - x))) / c)
+
+    def cdf(self, value):
+        a, b = self.a, self.b
+        exp = torch.exp
+        x = value
+        return (
+            (b * (-exp(a * x)) + a * exp(b) * (exp(-b * x) - 1) + b)
+            / (a * (-exp(b)) - exp(a) * b + a + b)
+        )
+
+    # def icdf(self, value):
+    #     out = np.array([sp.optimize.bisect(lambda x: (v - self.cdf(x)).cpu().numpy(), 0, 1) for v in value.flatten()])
+    #     breakpoint()
+    #     return torch.tensor(out).reshape(*value.shape)
+    #
+    def sample(self, sample_shape=()):
+        _approx = LogTriangle(a=self.a)
+        warnings.warn("Using LogTriangle as an approximation for random sampling. This is probably a bad idea.")
+        return _approx.sample(sample_shape=sample_shape)

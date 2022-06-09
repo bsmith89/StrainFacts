@@ -2,6 +2,7 @@ import sfacts as sf
 import itertools
 from copy import deepcopy
 import argparse
+import logging
 
 
 def add_hyperparameters_cli_argument(parser):
@@ -77,7 +78,7 @@ def add_optimization_arguments(parser):
         help="Setting for `pyro.optim.ReduceLROnPlateau` 'patience' argument.",
     )
     parser.add_argument(
-        "--nojit",
+        "--no-jit",
         dest="jit",
         action="store_false",
         default=True,
@@ -144,6 +145,17 @@ class AppInterface:
         return args
 
     @classmethod
+    def _setup_logging(cls, args):
+        if args.debug:
+            logging_level = logging.DEBUG
+        elif args.verbose:
+            logging_level = logging.INFO
+        else:
+            logging_level = logging.WARNING
+        logging.getLogger().setLevel(logging_level)
+        logging.debug(f"Set logging level to {logging_level}")
+
+    @classmethod
     def run(cls, args):
         raise NotImplementedError(
             "Subclasses of AppInterface must implement a `run` method."
@@ -152,8 +164,8 @@ class AppInterface:
     def __init__(self, args):
         """Run the application."""
         args = self.transform_app_parameter_inputs(deepcopy(args))
-        if args.debug:
-            sf.logging_util.info(args)
+        self._setup_logging(args)
+        logging.debug(args)
         self.run(args)
 
     @classmethod
@@ -169,13 +181,11 @@ class AppInterface:
             "--verbose",
             "-v",
             action="store_true",
-            default=False,
             help="Print info messages to stderr.",
         )
         subparser.add_argument(
             "--debug",
             action="store_true",
-            default=False,
             help="Print debug messages to stderr.",
         )
         cls.add_subparser_arguments(subparser)
