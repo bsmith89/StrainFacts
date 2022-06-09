@@ -203,10 +203,10 @@ def evaluate_fit_against_metagenotype(ref, fit):
     ref = ref.sel(position=fit.position.astype(int), sample=fit.sample.astype(int))
 
     mgen_error = sf.evaluation.metagenotype_error2(fit, discretized=True)
-    # mgen_unifrac_discordance = sf.evaluation.mgen_unifrac_discordance(ref, fit)
+    mgen_unifrac_discordance = sf.evaluation.mgen_unifrac_discordance(ref, fit)
     return dict(
         mgen_error=mgen_error[0],
-        # mgen_unifrac_discordance=mgen_unifrac_discordance[0],
+        mgen_unifrac_discordance=mgen_unifrac_discordance[0],
     )
 
 

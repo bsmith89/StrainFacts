@@ -1,5 +1,5 @@
 from scipy.spatial.distance import squareform
-from scipy.stats import hmean
+from scipy.stats import hmean, spearmanr
 from sfacts.math import (
     genotype_cdist,
     entropy,
@@ -252,3 +252,12 @@ def unifrac_error2(reference, estimate, coef=1e6, discretized=True):
         np.mean(out),
         pd.Series(out, index=reference.sample).rename_axis(index="sample"),
     )
+
+def mgen_unifrac_discordance(reference, estimate):
+    mg_dist = reference.metagenotype.pdist()
+    uf_dist = estimate.unifrac_pdist(discretized=True)
+    diss = {}
+    for i in mg_dist.index:
+        diss[i] = 1 - spearmanr(mg_dist[i].drop(i), uf_dist[i].drop(i))[0]
+    diss = pd.Series(diss)
+    return diss.mean(), diss
