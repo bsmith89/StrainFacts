@@ -129,10 +129,23 @@ examples/sim.filt.ss-0.fit-%.world.nc: examples/sim.filt.ss-0.mgen.nc
 	    $< $@
 
 %.eval_all_fits.tsv: %.world.nc %.world.nc %.filt.ss-0.fit.world.nc %.filt.ss-0.fit2.world.nc %.filt.fit3.world.nc
-	sfacts evaluate_fit --outpath $@ $*.world.nc $*.world.nc $*.filt.ss-0.fit.world.nc $*.filt.ss-0.fit2.world.nc $*.filt.fit3.world.nc | tee $@ | column -t
+	sfacts evaluate_fit \
+	    --num-format '%.5f' \
+	    --simulation $*.world.nc \
+	    $*.world.nc \
+	    $*.filt.ss-0.fit.world.nc \
+	    $*.filt.ss-0.fit2.world.nc \
+	    $*.filt.fit3.world.nc \
+	    | tee $@ \
+	    | column -t
 
 examples/sim.filt.fit-%.eval.tsv: examples/sim.world.nc examples/sim.filt.fit-%.world.nc
-	sfacts evaluate_fit examples/sim.world.nc examples/sim.filt.fit-$*.world.nc | tee $@ | column -t
+	sfacts evaluate_fit \
+	    --num-format '%.5f' \
+	    --simulation examples/sim.world.nc \
+	    examples/sim.filt.fit-$*.world.nc \
+	    | tee $@ \
+	    | column -t
 
 %.geno.tsv: %.world.nc
 	sfacts dump --genotype $@ $<
