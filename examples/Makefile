@@ -1,6 +1,5 @@
 CLEANUP += examples/sim.* examples/*.html
 TEST_TARGETS += examples/sim.eval_all_fits.tsv
-EXAMPLES_IN_ORDER := examples/simulate_data examples/filter_data examples/fit_metagenotype examples/fit_metagenotype_advanced examples/evaluate_simulation_fit
 
 .compile_examples: ${addsuffix .ipynb,${EXAMPLES_IN_ORDER}}
 	for example in ${EXAMPLES_IN_ORDER} ; \
