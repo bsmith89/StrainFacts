@@ -2,7 +2,7 @@ CLEANUP := examples/sim.* examples/*.html
 EXAMPLES_IN_ORDER := examples/simulate_data examples/filter_data examples/fit_metagenotype examples/fit_metagenotype_advanced examples/evaluate_simulation_fit
 TEST_MODELS = model1 model2 model3 model4 model5
 
-test: examples/sim.filt.fit2.eval.tsv $(patsubst %,examples/sim.filt.fit-%.world.nc,${TEST_MODELS})
+test: examples/sim.eval_all_fits.tsv $(patsubst %,examples/sim.filt.ss-0.fit-%.world.nc,${TEST_MODELS})
 
 clean:
 	rm -f ${CLEANUP}
@@ -34,7 +34,7 @@ start_jupyter:
 	for example in ${EXAMPLES_IN_ORDER} ; \
 	do \
 	    echo $${example} ; \
-	    ${MAKE} $${example}.html ; \
+	    ${MAKE} $${example}.ipynb.html ; \
 	done
 
 
