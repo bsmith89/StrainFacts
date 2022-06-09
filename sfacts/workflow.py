@@ -209,7 +209,7 @@ def evaluate_fit_against_metagenotype(ref, fit):
     mgen_unifrac_discordance = sf.evaluation.mgen_unifrac_discordance(ref, fit)
     return dict(
             mgen_error=mgen_error[0],
-            mgen_unifrac_discordance=mgen_unifrac_discordance[0],
+            # mgen_unifrac_discordance=mgen_unifrac_discordance[0],
     )
 
 def evaluate_fit_against_simulation(sim, fit):
