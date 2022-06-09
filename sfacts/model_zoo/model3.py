@@ -31,7 +31,6 @@ Used the LogSoftTriangle prior on genotypes.
             "genotype",
             "community",
             "metagenotype",
-            "mu",
         ],
     ),
     default_hyperparameters=dict(

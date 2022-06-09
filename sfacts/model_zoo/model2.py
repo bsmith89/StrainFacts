@@ -30,7 +30,6 @@ Does not explicitly model sequencing error nor overdispersion of counts.
             "genotype",
             "community",
             "metagenotype",
-            "mu",
         ],
     ),
     default_hyperparameters=dict(

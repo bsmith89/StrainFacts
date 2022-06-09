@@ -32,7 +32,6 @@ a second tuning parameter for the sparsity of the (meta)community.
             "genotype",
             "community",
             "metagenotype",
-            "mu",
         ],
     ),
     default_hyperparameters=dict(

@@ -30,7 +30,6 @@ Just like model4 but with uniform sequencing error.
             "genotype",
             "community",
             "metagenotype",
-            "mu",
         ],
     ),
     default_hyperparameters=dict(

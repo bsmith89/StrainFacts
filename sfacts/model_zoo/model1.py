@@ -35,7 +35,6 @@ The model includes both error and overdispersion parameters of which may be diff
             "genotype",
             "community",
             "metagenotype",
-            "mu",
         ],
     ),
     default_hyperparameters=dict(
