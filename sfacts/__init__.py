@@ -39,3 +39,5 @@ from sfacts.workflow import (
     fit_metagenotype_complex,
     iteratively_fit_genotype_conditioned_on_community,
 )
+
+__version__ = "0.3.0"

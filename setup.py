@@ -1,10 +1,32 @@
-from setuptools import setup
+import setuptools
+
+# Long description and versioning code copied with modifications from
+# <https://github.com/blackjax-devs/blackjax/blob/main/setup.py>
+
+with open("README.md") as f:
+    long_description = f.read()
 
 
-setup(
+def get_version(path):
+    """Get the package's version number.
+    We fetch the version  number from the `__version__` variable located in the
+    package root's `__init__.py` file. This way there is only a single source
+    of truth for the package's version number.
+    """
+    with open(path) as f:
+        for line in f:
+            if line.startswith("__version__"):
+                delim = '"' if '"' in line else "'"
+                return line.split(delim)[1]
+        else:
+            raise RuntimeError("Unable to find version string.")
+
+
+setuptools.setup(
     name="StrainFacts",
-    version="0.3.0",
-    summary="TODO",
+    version=get_version("sfacts/__init__.py"),
+    long_description=long_description,
+    description="Factorize metagenotypes to infer strains and their abundances",
     url="http://github.com/bsmith89/StrainFacts",
     author="Byron J. Smith",
     author_email="me@byronjsmith.com",
