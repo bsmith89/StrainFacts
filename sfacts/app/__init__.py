@@ -148,9 +148,11 @@ class FilterMetagenotype(AppInterface):
     @classmethod
     def run(cls, args):
         mgen_all = sf.data.Metagenotype.load(args.inpath)
+        logging.info(f"Input metagenotype shapes: {mgen_all.sizes}.")
         mgen_filt = mgen_all.select_variable_positions(
             thresh=args.min_minor_allele_freq
         ).select_samples_with_coverage(args.min_horizontal_cvrg)
+        logging.info(f"Output metagenotype shapes: {mgen_filt.sizes}.")
         mgen_filt.dump(args.outpath)
 
 
@@ -310,7 +312,7 @@ class Simulate(AppInterface):
 
 
 class ClusterApproximation(AppInterface):
-    app_name = "cluster_init"
+    app_name = "clust_init"
     description = "Use sample clustering to roughly estimate genotypes."
 
     @classmethod
@@ -399,6 +401,7 @@ class ClusterApproximation(AppInterface):
     @classmethod
     def run(cls, args):
         metagenotype = sf.data.Metagenotype.load(args.inpath)
+        logging.info(f"Input metagenotype shapes: {metagenotype.sizes}.")
 
         if args.strains_per_sample:
             num_strains = int(
@@ -467,6 +470,18 @@ class NMFApproximation(AppInterface):
                 "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
             ),
         )
+        parser.add_argument(
+            "--alpha-genotype",
+            type=float,
+            default=0.0,
+            help="Regularization parameter on genotype estimate.",
+        )
+        parser.add_argument(
+            "--alpha-community",
+            type=float,
+            default=0.0,
+            help="Regularization parameter on community estimate.",
+        )
         parser.add_argument("inpath", help="Metagenotype data input path.")
         parser.add_argument(
             "outpath",
@@ -490,6 +505,7 @@ class NMFApproximation(AppInterface):
     @classmethod
     def run(cls, args):
         metagenotype = sf.data.Metagenotype.load(args.inpath)
+        logging.info(f"Input metagenotype shapes: {metagenotype.sizes}.")
 
         if args.strains_per_sample:
             num_strains = int(
@@ -512,7 +528,8 @@ class NMFApproximation(AppInterface):
             metagenotype.to_world(),
             s=num_strains,
             random_state=args.random_seed,
-            alpha=0.0,
+            alpha_W=args.alpha_genotype,
+            alpha_H=args.alpha_community,
             l1_ratio=1.0,
             solver="cd",
             tol=1e-3,
@@ -662,6 +679,7 @@ class Fit(AppInterface):
 
         if args.init_from:
             init_from = sf.World.load(args.init_from)
+            logging.info(f"Initialization data shapes: {init_from.sizes}.")
         else:
             init_from = None
 
