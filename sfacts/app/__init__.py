@@ -99,6 +99,38 @@ class Load(AppInterface):
         world.dump(args.outpath)
 
 
+class StackMetagenotypes(AppInterface):
+    app_name = "stack_mgen"
+    description = "Combine samples from two or more metagenotype files."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "outpath",
+            help="Path StrainFacts/NetCDF output.",
+        )
+        parser.add_argument(
+            "inpath",
+            nargs="+",
+            help="Path StrainFacts/NetCDF file with one or more parameters.",
+        )
+
+    @classmethod
+    def run(cls, args):
+        inputs = {}
+        sample_names = []
+        for path in args.inpath:
+            mgen = sf.Metagenotype.load(path)
+            inputs[path] = mgen
+            sample_names.extend(list(mgen.sample.values))
+            print(path, mgen.sizes)
+        assert len(sample_names) == len(set(sample_names))
+        out = sf.data.Metagenotype.concat(inputs, dim="sample", rename=False).mlift(
+            "fillna", 0
+        )
+        out.dump(args.outpath)
+
+
 class FilterMetagenotype(AppInterface):
     app_name = "filter_mgen"
     description = (
@@ -1101,6 +1133,7 @@ SUBCOMMANDS = [
     Load,
     Dump,
     # Data Processing
+    StackMetagenotypes,
     FilterMetagenotype,
     SubsampleMetagenotype,
     ConcatGenotypeBlocks,
