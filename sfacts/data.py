@@ -5,9 +5,6 @@ import pandas as pd
 from scipy.spatial.distance import pdist, squareform
 from scipy.cluster.hierarchy import linkage
 from sklearn.cluster import AgglomerativeClustering
-import scipy as sp
-from functools import partial
-from warnings import warn
 import logging
 from functools import cached_property
 
@@ -456,13 +453,6 @@ class Genotype(WrappedDataArrayMixin):
         data.name = cls.variable_name
         return cls._post_load(data)
 
-    def softmask_missing(self, missingness, eps=1e-10):
-        clip = partial(np.clip, a_min=eps, a_max=(1 - eps))
-        return self.lift(
-            lambda g, m: sp.special.expit(sp.special.logit(clip(g)) * clip(m)),
-            m=missingness.data,
-        )
-
     def discretized(self):
         return self.lift(np.round)
 
@@ -546,12 +536,6 @@ class Genotype(WrappedDataArrayMixin):
         )
 
 
-class Missingness(WrappedDataArrayMixin):
-    dims = ("strain", "position")
-    constraints = [ON_2_SIMPLEX]
-    variable_name = "missingness"
-
-
 class Community(WrappedDataArrayMixin):
     dims = ("sample", "strain")
     constraints = [
@@ -602,23 +586,11 @@ class Community(WrappedDataArrayMixin):
         return pd.Series(ent, index=getattr(p, dim)).rename_axis(index=dim).to_xarray()
 
 
-# class Overdispersion(WrappedDataArrayMixin):
-#     dims = ("sample",)
-#     constraints = dict(strictly_positive=_strictly_positive)
-#     variable_name = "overdispersion"
-#
-#
-# class ErrorRate(WrappedDataArrayMixin):
-#     dims = ("sample",)
-#     constraints = dict(on_2_simplex=_on_2_simplex)
-#     variable_name = "error_rate"
-
-
 class World:
     safe_lifted = ["isel", "sel"]
     safe_unwrapped = ["sizes"]
     dims = ("sample", "position", "strain", "allele")
-    variables = [Genotype, Missingness, Community, Metagenotype]
+    variables = [Genotype, Community, Metagenotype]
     _variable_wrapper_map = {wrapper.variable_name: wrapper for wrapper in variables}
 
     def __init__(self, data):
@@ -691,10 +663,6 @@ class World:
                 ii = sorted(ii)
             isel[dim] = ii
         return self.__class__(data=self.data.isel(**isel))
-
-    @property
-    def masked_genotype(self):
-        return self.genotype.softmask_missing(self.missingness)
 
     def __getattr__(self, name):
         if name in self.dims:
