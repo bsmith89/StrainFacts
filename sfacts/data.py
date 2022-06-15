@@ -843,6 +843,19 @@ class World:
             world = World.from_combined(genotype, community)
         return world
 
+    def expected_dominant_allele_fraction(self):
+        return (
+            (self.community.data @ self.genotype.data)
+            .to_series()
+            .to_frame(name="alt")
+            .rename_axis(columns="allele")
+            .assign(ref=lambda x: 1 - x)
+            .stack()
+            .to_xarray()
+            .transpose(*Metagenotype.dims)
+            .max("allele")
+        )
+
 
 def latent_metagenotype_pdist(world, dim="sample"):
     if dim == "sample":
