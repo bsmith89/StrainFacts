@@ -479,6 +479,29 @@ def ordination_plot(
 
 def plot_metagenotype_frequency_spectrum(
     world,
+    sample,
+    bins=None,
+    ax=None,
+    **kwargs,
+):
+    hist_kwargs = dict()
+    hist_kwargs.update(kwargs)
+
+    if not ax:
+        fig, ax = plt.subplots()
+
+    if bins is None:
+        bins = np.linspace(0.5, 1.0, num=21)
+
+    frequencies = world.metagenotype.dominant_allele_fraction()
+    ax.hist(frequencies.sel(sample=sample), bins=bins, color="black", **hist_kwargs)
+    ax.set_title(sample)
+    ax.set_xlim(0.5, 1)
+    return ax
+
+
+def plot_metagenotype_frequency_spectrum_compare_samples(
+    world,
     sample_list=None,
     show_dominant=False,
     show_predict=False,
@@ -556,7 +579,7 @@ def plot_metagenotype_frequency_spectrum(
     ax.set_xlim(0.5, 1)
 
 
-def plot_metagenotype_frequency_spectrum_comparison(
+def plot_metagenotype_frequency_spectrum_compare_worlds(
     worlds, sample, alpha=0.5, bins=None, ax=None
 ):
     if bins is None:
