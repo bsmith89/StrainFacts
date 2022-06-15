@@ -765,6 +765,44 @@ class World:
         cdmat = squareform(dmat)
         return linkage(cdmat, method=method, optimal_ordering=optimal_ordering)
 
+    def drop_low_abundance_strains(self, thresh):
+        is_abundant = (self.community.max("sample") >= thresh).to_series()
+        clust = self.strain.to_series().where(is_abundant, "other")
+
+        total_strain_depth = (
+            (self.metagenotype.mean_depth("sample") * self.community.data)
+            .sum("sample")
+            .to_series()
+        )
+        genotype = Genotype(
+            self.genotype.to_series()
+            .unstack("strain")
+            .groupby(clust, axis="columns")
+            .apply(
+                lambda x: pd.Series(
+                    np.average(x, weights=total_strain_depth.loc[x.columns], axis=1),
+                    index=x.index,
+                )
+            )
+            .rename_axis(columns="strain")
+            .T.stack()
+            .to_xarray()
+        )
+        community = Community(
+            self.community.to_series()
+            .unstack("strain")
+            .groupby(clust, axis="columns")
+            .sum()
+            .rename_axis(columns="strain")
+            .stack()
+            .to_xarray()
+        )
+        if "metagenotype" in self.data:
+            world = World.from_combined(genotype, community, self.metagenotype)
+        else:
+            world = World.from_combined(genotype, community)
+        return world
+
     def collapse_strains(self, thresh, discretized=False, **kwargs):
         if discretized:
             clust = self.genotype.discretized().clusters(thresh=thresh, **kwargs)
