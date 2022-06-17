@@ -1156,6 +1156,7 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         fromfile_prefix_chars="@",
     )
+    parser.add_argument('--version', action='version', version=sf.__version__)
 
     app_subparsers = parser.add_subparsers(metavar="COMMAND")
     for subcommand in SUBCOMMANDS:
