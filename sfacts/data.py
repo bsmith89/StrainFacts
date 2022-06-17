@@ -565,7 +565,7 @@ class Community(WrappedDataArrayMixin):
 
     def linkage(
         self,
-        dim="strain",
+        dim="sample",
         method="average",
         optimal_ordering=False,
         **kwargs,
@@ -587,7 +587,7 @@ class Community(WrappedDataArrayMixin):
 
 
 class World:
-    safe_lifted = ["isel", "sel"]
+    safe_lifted = ["isel", "sel", "drop_sel"]
     safe_unwrapped = ["sizes"]
     dims = ("sample", "position", "strain", "allele")
     variables = [Genotype, Community, Metagenotype]
