@@ -152,11 +152,6 @@ class FilterMetagenotype(AppInterface):
             help="Remove sample with less than this fraction of sites with non-zero counts.",
         )
         parser.add_argument(
-            "--random-seed",
-            type=int,
-            help="Seed for random number generator; must be set for reproducible subsampling.",
-        )
-        parser.add_argument(
             "inpath",
             help="StrainFacts/NetCDF formatted file to load metagenotype data from.",
         )
