@@ -210,7 +210,8 @@ class SubsampleMetagenotype(AppInterface):
             help=(
                 "Don't randomize positions before selecting "
                 "the desired block (therefore, pull a contiguous block of "
-                "positions from the original data)."
+                "positions from the original data; by default positions are "
+                "NOT contiguous.)"
             ),
         )
         parser.add_argument(
