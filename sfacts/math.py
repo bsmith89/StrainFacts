@@ -18,15 +18,13 @@ def genotype_binary_to_sign(p):
 
 def genotype_dissimilarity(x, y, q=2):
     "Dissimilarity between 1D genotypes, accounting for fuzzyness."
+    assert q == 2, "Not implemented"
     x = genotype_binary_to_sign(x)
     y = genotype_binary_to_sign(y)
 
-    dist = np.abs((x - y) / 2) ** q
-    weight = np.abs(x * y)
+    dist = np.sqrt(np.abs((x - y) ** 2))
+    weight = np.sqrt(np.abs(x * y))
     wmean_dist = ((weight * dist).sum()) / ((weight.sum()))
-    # Why not finish up by powering it by (1 / q)?
-    # I don't do this part because it loses the city-block distance
-    # interpretation when x and y are both discrete (i.e. one of {0, 1}).
 
     # While the basic function is undefined where weight.sum() == 0
     # (and this is only true when one of x or y is always exactly 0.5 at every
