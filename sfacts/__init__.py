@@ -4,7 +4,6 @@ from sfacts import (
     pandas_util,
     math,
     model,
-    model_zoo,
     plot,
     estimation,
     evaluation,
@@ -39,5 +38,6 @@ from sfacts.workflow import (
     fit_metagenotype_complex,
     iteratively_fit_genotype_conditioned_on_community,
 )
+from sfacts import model_zoo
 
 __version__ = "0.3.0"
