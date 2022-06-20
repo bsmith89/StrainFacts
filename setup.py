@@ -30,7 +30,7 @@ setuptools.setup(
     url="http://github.com/bsmith89/StrainFacts",
     author="Byron J. Smith",
     author_email="me@byronjsmith.com",
-    packages=["sfacts"],
+    packages=setuptools.find_packages(),
     install_requires=[
         "torch",
         "pyro-ppl",
