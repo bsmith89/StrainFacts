@@ -7,6 +7,7 @@ from scipy.cluster.hierarchy import linkage
 from sklearn.cluster import AgglomerativeClustering
 import logging
 from functools import cached_property
+from warnings import warn
 
 
 class Error(Exception):
@@ -631,6 +632,14 @@ class World:
             if variable_name in self.data:
                 wrapped_variable = getattr(self, variable_name)
                 wrapped_variable.validate_constraints()
+
+    def cull_empty_dims(self):
+        empty_dims = []
+        for dim in self.data.dims:
+            if self.sizes[dim] == 0:
+                empty_dims.append(dim)
+        warn(f"Empty dimensions {empty_dims} removed from dataset.")
+        return World(self.data.drop_dims(empty_dims))
 
     def dump(self, path, validate=True, **kwargs):
         if validate:
