@@ -586,6 +586,15 @@ class Community(WrappedDataArrayMixin):
         ent = sf.math.entropy(p, axis=sum_over)
         return pd.Series(ent, index=getattr(p, dim)).rename_axis(index=dim).to_xarray()
 
+    def renormalize(self):
+        return Community(
+            self.data.to_series()
+            .unstack()
+            .apply(lambda x: x / x.sum(), axis=1)
+            .stack()
+            .to_xarray()
+        )
+
 
 class World:
     safe_lifted = ["isel", "sel", "drop_sel"]
@@ -771,7 +780,7 @@ class World:
             .rename_axis(columns="strain")
             .stack()
             .to_xarray()
-        )
+        ).renormalize()
         if "metagenotype" in self.data:
             world = World.from_combined(genotype, community, self.metagenotype)
         else:
@@ -791,8 +800,17 @@ class World:
             clust = self.genotype.clusters(thresh=thresh, **kwargs)
         return self.merge_strains(relabel=clust, discretized=discretized)
 
-    def drop_high_community_entropy_samples(self, thresh):
-        return self.sel(sample=sf.pandas_util.idxwhere((self.community.entropy() < thresh).to_series()))
+    def reassign_high_community_entropy_samples(self, thresh):
+        high_entropy_samples = (self.community.entropy() > thresh).to_series()
+        comm = self.community.to_series().unstack("strain")
+        comm.loc[:, -1] = 0
+        comm.loc[high_entropy_samples, :] = 0
+        comm.loc[high_entropy_samples, -1] = 1
+        comm = sf.Community(comm.stack().to_xarray()).renormalize()
+        geno = self.genotype.to_series().unstack()
+        geno.loc[-1, :] = 0.5
+        geno = sf.Genotype(geno.stack().to_xarray())
+        return sf.World.from_combined(comm, geno)
 
     def expected_dominant_allele_fraction(self):
         return (
