@@ -933,7 +933,9 @@ class CleanInferences(AppInterface):
         world = world.drop_low_abundance_strains(args.abundance)
         logging.info(f"{world.sizes} (after dropping low-abundance strains)")
         world = world.reassign_high_community_entropy_samples(thresh=args.entropy)
-        logging.info(f"{world.sizes} (after reassigning high community entropy samples)")
+        logging.info(
+            f"{world.sizes} (after reassigning high community entropy samples)"
+        )
         logging.info("Writing output.")
         world.dump(args.outpath)
 

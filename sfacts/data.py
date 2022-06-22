@@ -792,7 +792,6 @@ class World:
         clust = self.strain.to_series().where(is_abundant, -1)
         return self.merge_strains(relabel=clust, discretized=False)
 
-
     def collapse_similar_strains(self, thresh, discretized=False, **kwargs):
         if discretized:
             clust = self.genotype.discretized().clusters(thresh=thresh, **kwargs)
