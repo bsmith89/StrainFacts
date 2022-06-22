@@ -884,25 +884,38 @@ class ConcatGenotypeBlocks(AppInterface):
         world.dump(args.outpath)
 
 
-class CollapseStrains(AppInterface):
-    app_name = "collapse_strains"
-    description = "Merge similar strains."
+class CleanInferences(AppInterface):
+    app_name = "cleanup_fit"
+    description = "Merge similar strains and drop badly fit samples."
 
     @classmethod
     def add_subparser_arguments(cls, parser):
         parser.add_argument(
-            "--discretized",
-            action="store_true",
-            help="Discretize genotypes before clustering.",
-        )
-        parser.add_argument(
-            "thresh",
+            "--dissimilarity",
             type=float,
+            default=0.0,
             help="Distance threshold for clustering.",
         )
         parser.add_argument(
+            "--discretized",
+            action="store_true",
+            help="Discretize genotypes before merging.",
+        )
+        parser.add_argument(
+            "--abundance",
+            type=float,
+            default=0.0,
+            help="Strain minimum max-abundance threshold for strain culling.",
+        )
+        parser.add_argument(
+            "--entropy",
+            type=float,
+            default=np.inf,
+            help="Community entropy threshold for sample culling",
+        )
+        parser.add_argument(
             "inpath",
-            help="Path to StrainFacts/NetCDF file to be collapsed.",
+            help="Path to StrainFacts/NetCDF file to be cleaned.",
         )
         parser.add_argument(
             "outpath",
@@ -912,10 +925,17 @@ class CollapseStrains(AppInterface):
     @classmethod
     def run(cls, args):
         world = sf.World.load(args.inpath)
-        world_collapsed = world.collapse_strains(
-            thresh=args.thresh, discretized=args.discretized
+        logging.info(f"{world.sizes} (input data sizes)")
+        world = world.collapse_similar_strains(
+            thresh=args.dissimilarity, discretized=args.discretized
         )
-        world_collapsed.dump(args.outpath)
+        logging.info(f"{world.sizes} (after merging similar strains)")
+        world = world.drop_low_abundance_strains(args.abundance)
+        logging.info(f"{world.sizes} (after dropping low-abundance strains)")
+        world = world.drop_high_community_entropy_samples(thresh=args.entropy)
+        logging.info(f"{world.sizes} (after dropping high community entropy samples)")
+        logging.info("Writing output.")
+        world.dump(args.outpath)
 
 
 class DescribeModel(AppInterface):
@@ -1133,7 +1153,7 @@ SUBCOMMANDS = [
     FilterMetagenotype,
     SubsampleMetagenotype,
     ConcatGenotypeBlocks,
-    CollapseStrains,
+    CleanInferences,
     # Simulation:
     Simulate,
     # Fitting:
