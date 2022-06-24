@@ -392,7 +392,9 @@ plot_community = plot_generic_clustermap_factory(
 )
 
 
-def plot_loss_history(*args):
+def plot_loss_history(*args, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
     traces = []
     trace_min = []
     for trace in args:
@@ -400,9 +402,10 @@ def plot_loss_history(*args):
         trace_min.append(traces[-1].min())
     trace_min = np.min(trace_min)
     for i, trace in enumerate(traces):
-        plt.plot(trace - trace_min, label=f"{trace[-1]:0.3e} ({i})")
-    plt.yscale("log")
-    plt.legend(loc="upper right")
+        ax.plot(trace - trace_min, label=f"{trace[-1]:0.3e} ({i})")
+    ax.set_yscale("log")
+    ax.legend(loc="upper right")
+    return ax
 
 
 def nmds_ordination(dmat):
