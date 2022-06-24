@@ -789,15 +789,21 @@ class World:
 
     def drop_low_abundance_strains(self, thresh):
         is_abundant = (self.community.max("sample") >= thresh).to_series()
-        clust = self.strain.to_series().where(is_abundant, -1)
-        return self.merge_strains(relabel=clust, discretized=False)
+        relabel = self.strain.to_series().where(is_abundant, -1)
+        return self.merge_strains(relabel, discretized=False)
+
+    def drop_high_entropy_strains(self, thresh):
+        is_low_entropy = (self.genotype.entropy() <= thresh).to_series()
+        relabel = self.strain.to_series().where(is_low_entropy, -1)
+        return self.merge_strains(relabel, discretized=False)
 
     def collapse_similar_strains(self, thresh, discretized=False, **kwargs):
         if discretized:
-            clust = self.genotype.discretized().clusters(thresh=thresh, **kwargs)
+            geno = self.genotype.discretized()
         else:
-            clust = self.genotype.clusters(thresh=thresh, **kwargs)
-        return self.merge_strains(relabel=clust, discretized=discretized)
+            geno = self.genotype
+        relabel = geno.clusters(thresh=thresh, **kwargs)
+        return self.merge_strains(relabel, discretized=discretized)
 
     def reassign_high_community_entropy_samples(self, thresh):
         high_entropy_samples = (self.community.entropy() > thresh).to_series()
