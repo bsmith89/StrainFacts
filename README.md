@@ -248,7 +248,6 @@ This runs a complex workflow, including
 
 - simulation
 - data conversion
-- NMF approximation
 - model fitting
 - genotype refitting
 - evaluation of estimates against the simulated ground-truth
