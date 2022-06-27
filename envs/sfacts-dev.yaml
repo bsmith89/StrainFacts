@@ -3,18 +3,17 @@ channels:
   - defaults
 dependencies:
   - xarray
-  - pytorch::pytorch
   - numpy
   - tqdm
   - pandas
   - scipy
   - scikit-learn
   - scikit-bio
-  - conda-forge::pyro-ppl
   - seaborn
   - jupyter
   - jupyterlab
   - netcdf4
   - pip
   - pip:
+    - pyro-ppl
     - -e ..
