@@ -58,7 +58,10 @@ def transform_strain_count_parameter_inputs(args):
             raise ArgumentMutualExclusionError(
                 "One and only one of --num-strains and --strains-per-sample must be set.",
             )
-        args.strains_per_sample = 0.0  # Set the strain slope to 0.0
+        # When the num_strains parameter is passed, set both the slope and the
+        # exponent to 0.0.
+        args.strains_per_sample = 0.0
+        args.strain_sample_exponent = 0.0
     else:
         if (args.strain_sample_exponent is None) and (args.strains_per_sample is None):
             raise MissingRequiredArgumentError(
