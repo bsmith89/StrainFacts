@@ -27,7 +27,6 @@ examples/sim.world.nc:
 	sfacts filter_mgen \
 	    --min-minor-allele-freq 0.05 \
 	    --min-horizontal-cvrg 0.15 \
-	    --random-seed 0 \
 	    $< $@
 
 %.ss-0.mgen.nc: %.mgen.nc
