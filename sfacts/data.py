@@ -817,6 +817,17 @@ class World:
         geno = sf.Genotype(geno.stack().to_xarray())
         return sf.World.from_combined(comm, geno, self.metagenotype)
 
+    def reassign_plurality_strain(self):
+        comm = sf.Community(
+            self.community.to_series()
+            .unstack("strain")
+            .apply(lambda x: x == x.max(), axis=1)
+            .astype(float)
+            .stack()
+            .to_xarray()
+        )
+        return sf.World.from_combined(comm, self.genotype, self.metagenotype)
+
     def expected_dominant_allele_fraction(self):
         return (
             (self.community.data @ self.genotype.data)
