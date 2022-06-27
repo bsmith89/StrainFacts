@@ -237,7 +237,6 @@ class SubsampleMetagenotype(AppInterface):
         metagenotype = sf.data.Metagenotype.load(args.inpath)
 
         total_num_positions = metagenotype.sizes["position"]
-        num_positions = min(args.num_positions, total_num_positions)
 
         if args.shuffle:
             np.random.seed(args.random_seed)
