@@ -1,8 +1,88 @@
 import sfacts as sf
 import itertools
+import numpy as np
 from copy import deepcopy
 import argparse
 import logging
+
+
+class ArgumentMutualExclusionError(Exception):
+    pass
+
+
+class MissingRequiredArgumentError(Exception):
+    pass
+
+
+def add_strain_count_cli_arguments(parser):
+    parser.add_argument(
+        "--strains-per-sample",
+        type=float,
+        help=(
+            "Fit a number of strains determined by the number of samples: "
+            "strains_per_sample * n_samples ^ strains_sample_exponent; "
+            "--strain-per-sample defaults to 1.0;"
+            "(if --strain-sample-exponent is given, --num-strains may not be used)."
+        ),
+    )
+    parser.add_argument(
+        "--strain-sample-exponent",
+        type=float,
+        help=(
+            "Fit a number of strains determined by the number of samples: "
+            "strains_per_sample * n_samples ^ strains_sample_exponent; "
+            "--strain-sample-exponent defaults to 1.0;"
+            "(if --strain-sample-exponent is given, --num-strains may not be used)."
+        ),
+    )
+    parser.add_argument(
+        "--num-strains",
+        "-s",
+        type=int,
+        help=(
+            "Fit a fixed number of latent strains"
+            "(if --num-strains is given, neither --strain-sample-exponent nor "
+            "--strains-per-sample may be used)."
+        ),
+    )
+
+
+def transform_strain_count_parameter_inputs(args):
+    args = deepcopy(args)
+    if args.num_strains is not None:
+        if args.strain_sample_exponent is not None:
+            raise ArgumentMutualExclusionError(
+                "One and only one of --num-strains and --strain-sample-exponent must be set.",
+            )
+        if args.strains_per_sample is not None:
+            raise ArgumentMutualExclusionError(
+                "One and only one of --num-strains and --strains-per-sample must be set.",
+            )
+        args.strains_per_sample = 0.0  # Set the strain slope to 0.0
+    else:
+        if (args.strain_sample_exponent is None) and (args.strains_per_sample is None):
+            raise MissingRequiredArgumentError(
+                "Either --num-strains or at least one of "
+                "--strain-sample-exponent or --strains-per-sample must be passed."
+            )
+        if args.strain_sample_exponent is None:
+            args.strain_sample_exponent = 1.0
+        if args.strains_per_sample is None:
+            args.strains_per_sample = 1.0
+        args.num_strains = 0.0  # Set the strain intercept to 0.0
+    return args
+
+
+def calculate_strain_count(n_samples, args):
+    return max(
+        2,
+        int(
+            np.ceil(
+                args.num_strains
+                + args.strains_per_sample * n_samples ** args.strain_sample_exponent
+            )
+        ),
+    )
 
 
 def add_hyperparameters_cli_argument(parser):

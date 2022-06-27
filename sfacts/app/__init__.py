@@ -13,14 +13,14 @@ from sfacts.app.components import (
     add_optimization_arguments,
     transform_optimization_parameter_inputs,
     AppInterface,
+    ArgumentMutualExclusionError,
+    add_strain_count_cli_arguments,
+    transform_strain_count_parameter_inputs,
+    calculate_strain_count,
 )
 
 
 class ArgumentConstraintError(Exception):
-    pass
-
-
-class ArgumentMutualExclusionError(Exception):
     pass
 
 
@@ -352,31 +352,7 @@ class ClusterApproximation(AppInterface):
             type=int,
             help="Seed for all random number generators; must be set for reproducible model fitting.",
         )
-        parser.add_argument(
-            "--strains-per-sample",
-            type=float,
-            help=(
-                "Set number of latent strains to this fixed ratio with the number of samples "
-                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
-            ),
-        )
-        parser.add_argument(
-            "--strain-sample-exponent",
-            type=float,
-            help=(
-                "Set number of latent strains to the number of samples raised to this exponent "
-                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
-            ),
-        )
-        parser.add_argument(
-            "--num-strains",
-            "-s",
-            type=int,
-            help=(
-                "Set number of latent strains to fit "
-                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
-            ),
-        )
+        add_strain_count_cli_arguments(parser)
         parser.add_argument("inpath", help="Metagenotype data input path.")
         parser.add_argument(
             "outpath",
@@ -414,39 +390,14 @@ class ClusterApproximation(AppInterface):
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
-        strain_setting_indicator = [
-            int(bool(getattr(args, k)))
-            for k in ["num_strains", "strains_per_sample", "strain_sample_exponent"]
-        ]
-        if sum(strain_setting_indicator) != 1:
-            raise ArgumentMutualExclusionError(
-                "One and only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set.",
-            )
-        if args.num_strains and (args.num_strains < 2):
-            raise ArgumentConstraintError("--num-strains must be 2 or more.")
+        args = transform_strain_count_parameter_inputs(args)
         return args
 
     @classmethod
     def run(cls, args):
         metagenotype = sf.data.Metagenotype.load(args.inpath)
         logging.info(f"Input metagenotype shapes: {metagenotype.sizes}.")
-
-        if args.strains_per_sample:
-            num_strains = int(
-                max(np.ceil(metagenotype.sizes["sample"] * args.strains_per_sample), 2)
-            )
-        elif args.strain_sample_exponent:
-            num_strains = int(
-                max(
-                    np.ceil(
-                        metagenotype.sizes["sample"] ** args.strain_sample_exponent
-                    ),
-                    2,
-                )
-            )
-        else:
-            num_strains = args.num_strains
-
+        num_strains = calculate_strain_count(metagenotype.sizes["sample"], args)
         np.random.seed(args.random_seed)
 
         world = sf.estimation.clust_approximation(
@@ -473,31 +424,7 @@ class NMFApproximation(AppInterface):
             type=int,
             help="Seed for all random number generators; must be set for reproducible model fitting.",
         )
-        parser.add_argument(
-            "--strains-per-sample",
-            type=float,
-            help=(
-                "Set number of latent strains to this fixed ratio with the number of samples "
-                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
-            ),
-        )
-        parser.add_argument(
-            "--strain-sample-exponent",
-            type=float,
-            help=(
-                "Set number of latent strains to the number of samples raised to this exponent "
-                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
-            ),
-        )
-        parser.add_argument(
-            "--num-strains",
-            "-s",
-            type=int,
-            help=(
-                "Set number of latent strains to fit "
-                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
-            ),
-        )
+        add_strain_count_cli_arguments(parser)
         parser.add_argument(
             "--alpha-genotype",
             type=float,
@@ -518,39 +445,14 @@ class NMFApproximation(AppInterface):
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
-        strain_setting_indicator = [
-            int(bool(getattr(args, k)))
-            for k in ["num_strains", "strains_per_sample", "strain_sample_exponent"]
-        ]
-        if sum(strain_setting_indicator) != 1:
-            raise ArgumentMutualExclusionError(
-                "One and only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set.",
-            )
-        if args.num_strains and (args.num_strains < 2):
-            raise ArgumentConstraintError("Argument --num-strains must be 2 or more.")
+        args = transform_strain_count_parameter_inputs(args)
         return args
 
     @classmethod
     def run(cls, args):
         metagenotype = sf.data.Metagenotype.load(args.inpath)
         logging.info(f"Input metagenotype shapes: {metagenotype.sizes}.")
-
-        if args.strains_per_sample:
-            num_strains = int(
-                max(np.ceil(metagenotype.sizes["sample"] * args.strains_per_sample), 2)
-            )
-        elif args.strain_sample_exponent:
-            num_strains = int(
-                max(
-                    np.ceil(
-                        metagenotype.sizes["sample"] ** args.strain_sample_exponent
-                    ),
-                    2,
-                )
-            )
-        else:
-            num_strains = args.num_strains
-
+        num_strains = calculate_strain_count(metagenotype.sizes["sample"], args)
         np.random.seed(args.random_seed)
         world = sf.estimation.nmf_approximation(
             metagenotype.to_world(),
@@ -575,31 +477,7 @@ class Fit(AppInterface):
     @classmethod
     def add_subparser_arguments(cls, parser):
         add_model_structure_cli_argument(parser)
-        parser.add_argument(
-            "--strains-per-sample",
-            type=float,
-            help=(
-                "Set number of latent strains to this fixed ratio with the number of samples "
-                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
-            ),
-        )
-        parser.add_argument(
-            "--strain-sample-exponent",
-            type=float,
-            help=(
-                "Set number of latent strains to the number of samples raised to this exponent "
-                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
-            ),
-        )
-        parser.add_argument(
-            "--num-strains",
-            "-s",
-            type=int,
-            help=(
-                "Set number of latent strains to fit "
-                "(only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set)."
-            ),
-        )
+        add_strain_count_cli_arguments(parser)
         add_hyperparameters_cli_argument(parser)
         parser.add_argument(
             "--tsv",
@@ -660,16 +538,7 @@ class Fit(AppInterface):
             raise ArgumentConstraintError(
                 "Annealing for 0 steps is like no annealing at all."
             )
-        strain_setting_indicator = [
-            int(bool(getattr(args, k)))
-            for k in ["num_strains", "strains_per_sample", "strain_sample_exponent"]
-        ]
-        if sum(strain_setting_indicator) != 1:
-            raise ArgumentMutualExclusionError(
-                "One and only one of --num-strains, --strain-sample-exponent or --strains-per-sample may be set.",
-            )
-        if args.num_strains and (args.num_strains < 2):
-            raise ArgumentConstraintError("Argument --num-strains must be 2 or more.")
+        args = transform_strain_count_parameter_inputs(args)
         args = transform_optimization_parameter_inputs(args)
         args.anneal_hyperparameters = {
             k: dict(
@@ -711,21 +580,7 @@ class Fit(AppInterface):
         else:
             init_from = None
 
-        if args.strains_per_sample:
-            num_strains = int(
-                max(np.ceil(metagenotype.sizes["sample"] * args.strains_per_sample), 2)
-            )
-        elif args.strain_sample_exponent:
-            num_strains = int(
-                max(
-                    np.ceil(
-                        metagenotype.sizes["sample"] ** args.strain_sample_exponent
-                    ),
-                    2,
-                )
-            )
-        else:
-            num_strains = args.num_strains
+        num_strains = calculate_strain_count(metagenotype.sizes["sample"], args)
 
         np.random.seed(args.random_seed)
 
