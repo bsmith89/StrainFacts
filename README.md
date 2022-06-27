@@ -286,7 +286,7 @@ make start_jupyter
     - [ ] Drop stale code in `sfacts.data`, `sfacts.evaluation`, and `sfacts.plot`
     - [ ] Simplify the model structure decorator.
     - [ ] Fix mismatch between 'gamma'/'pi' and 'genotype'/'community'. (Probably just change variable names in the model, yeah?)
-    - [ ] Move choice of strain numbers for fit and init apps to a set of helper functions.
+    - [x] Move choice of strain numbers for fit and init apps to a set of helper functions.
     - [ ] Refactor CLI app architecture to be more intuitive.
 - [ ] Memoization of expensive calculations on wrapped Datasets and DataArrays.
 - [ ] Better tools for model selection (e.g. more evaluation scores based on only
