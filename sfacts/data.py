@@ -815,7 +815,7 @@ class World:
         geno = self.genotype.to_series().unstack()
         geno.loc[-1, :] = 0.5
         geno = sf.Genotype(geno.stack().to_xarray())
-        return sf.World.from_combined(comm, geno)
+        return sf.World.from_combined(comm, geno, self.metagenotype)
 
     def expected_dominant_allele_fraction(self):
         return (
