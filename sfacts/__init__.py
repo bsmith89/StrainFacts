@@ -40,4 +40,4 @@ from sfacts.workflow import (
 )
 from sfacts import model_zoo
 
-__version__ = "0.3.0"
+__version__ = "0.3.1a"
