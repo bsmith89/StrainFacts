@@ -583,7 +583,6 @@ class Fit(AppInterface):
 
         np.random.seed(args.random_seed)
 
-        logging.debug("\n\n")
         logging.debug(
             dict(
                 hyperparameters=args.hyperparameters,

@@ -246,9 +246,11 @@ class AppInterface:
 
     def __init__(self, args):
         """Run the application."""
+        original_args = args
         args = self.transform_app_parameter_inputs(deepcopy(args))
         self._setup_logging(args)
-        logging.debug(args)
+        logging.debug("Args before transformations: %s", original_args)
+        logging.debug("Args after transformations: %s", args)
         self.run(args)
 
     @classmethod

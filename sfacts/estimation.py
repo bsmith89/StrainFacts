@@ -170,6 +170,7 @@ def estimate_parameters(
         k: anneal_hyperparameters[k][-1] for k in anneal_hyperparameters
     }
     model = model.with_passed_hyperparameters(*anneal_hyperparameters.keys())
+    logging.debug("anneal_hyperparameters=%s", anneal_hyperparameters)
 
     sf.pyro_util.set_random_seed(seed)
 
