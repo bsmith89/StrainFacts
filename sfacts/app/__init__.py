@@ -183,6 +183,44 @@ class FilterMetagenotype(AppInterface):
         mgen_filt.dump(args.outpath)
 
 
+class MetagenotypeDissimilarity(AppInterface):
+    app_name = "mgen_diss"
+    description = "Calculate pairwise distances over metagenotypes."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "inpath",
+            help="StrainFacts/NetCDF formatted file to load metagenotype data from.",
+        )
+        parser.add_argument(
+            "outpath",
+            help="Path to write NetCDF formatted dissimilarity matrix.",
+        )
+
+    @classmethod
+    def transform_app_parameter_inputs(cls, args):
+        pass
+        return args
+
+    @classmethod
+    def run(cls, args):
+        mgen = sf.data.Metagenotype.load(args.inpath)
+        logging.info(f"Input metagenotype shapes: {mgen.sizes}.")
+        with sf.logging_util.phase_info("Calculating metagenotype dissimilarity."):
+            pdist = (
+                mgen.pdist()
+                .rename_axis(index="sampleA", columns="sampleB")
+                .stack()
+                .to_xarray()
+            )
+        pdist.to_dataset(name="dissimilarity").to_netcdf(
+            args.outpath,
+            engine="netcdf4",
+            encoding=dict(dissimilarity=dict(zlib=True, complevel=5)),
+        )
+
+
 class SubsampleMetagenotype(AppInterface):
     app_name = "sample_mgen"
     description = "Select a subsample of metagenotype positions."
@@ -1006,6 +1044,7 @@ SUBCOMMANDS = [
     # Data Processing
     StackMetagenotypes,
     FilterMetagenotype,
+    MetagenotypeDissimilarity,
     SubsampleMetagenotype,
     ConcatGenotypeBlocks,
     CleanInferences,
