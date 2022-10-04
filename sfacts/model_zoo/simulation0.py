@@ -24,6 +24,7 @@ Used for ben benchmarks in the paper (Smith et al. 2022, Frontiers in Bioinforma
         SHARED_DESCRIPTIONS,
         [
             "p",
+            "p_noerr",
             "mu",
             "epsilon",
             "m",
