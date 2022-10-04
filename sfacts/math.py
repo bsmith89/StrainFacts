@@ -22,9 +22,10 @@ def genotype_dissimilarity(x, y, q=2):
     x = genotype_binary_to_sign(x)
     y = genotype_binary_to_sign(y)
 
-    dist = np.sqrt(np.abs((x - y) ** 2))
+    # FIXME: This sqrt(abs(.)) is a no-op
+    dist = np.abs(x - y)
     weight = np.sqrt(np.abs(x * y))
-    wmean_dist = ((weight * dist).sum()) / ((weight.sum()))
+    wmean_dist = (weight * dist).sum() / weight.sum()
 
     # While the basic function is undefined where weight.sum() == 0
     # (and this is only true when one of x or y is always exactly 0.5 at every
