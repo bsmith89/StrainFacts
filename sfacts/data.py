@@ -275,6 +275,7 @@ class Metagenotype(WrappedDataArrayMixin):
         )
         return cls._post_load(data)
 
+    # FIXME: *Peek
     @classmethod
     def peak_netcdf_sizes(cls, filename_or_obj):
         data = xr.open_dataarray(filename_or_obj)
