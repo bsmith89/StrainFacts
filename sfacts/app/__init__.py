@@ -443,7 +443,7 @@ class ClusterApproximation(AppInterface):
             pseudo=args.pseudo,
             frac=args.frac,
             thresh=args.thresh,
-            linkage="average",
+            linkage="complete",
         )
         world.dump(args.outpath)
 

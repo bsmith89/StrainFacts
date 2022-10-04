@@ -390,7 +390,7 @@ class Metagenotype(WrappedDataArrayMixin):
             squareform(pdist(d.values, metric="cosine")), index=d.index, columns=d.index
         )
 
-    def clusters(self, s_or_thresh, linkage="average", **kwargs):
+    def clusters(self, s_or_thresh, linkage="complete", **kwargs):
         if s_or_thresh < 1:
             s = None
             thresh = float(s_or_thresh)
@@ -524,7 +524,7 @@ class Genotype(WrappedDataArrayMixin):
         )
         return ent.mean(over).rename("entropy")
 
-    def clusters(self, thresh, linkage="average", **kwargs):
+    def clusters(self, thresh, linkage="complete", **kwargs):
         dist = self.pdist("strain", **kwargs)
         return pd.Series(
             AgglomerativeClustering(
@@ -567,7 +567,7 @@ class Community(WrappedDataArrayMixin):
     def linkage(
         self,
         dim="sample",
-        method="average",
+        method="complete",
         optimal_ordering=False,
         **kwargs,
     ):
@@ -743,7 +743,7 @@ class World:
 
     def unifrac_linkage(
         self,
-        method="average",
+        method="complete",
         optimal_ordering=False,
         **kwargs,
     ):
@@ -849,7 +849,7 @@ def latent_metagenotype_pdist(world, dim="sample"):
 
 
 def latent_metagenotype_linkage(
-    world, dim="sample", method="average", optimal_ordering=False
+    world, dim="sample", method="complete", optimal_ordering=False
 ):
     return linkage(
         squareform(latent_metagenotype_pdist(world, dim=dim)),
