@@ -6,6 +6,7 @@ from sfacts.model_zoo import (
     model4,
     model5,
     model6,
+    model7,
 )
 
 NAMED_STRUCTURES = dict(
@@ -19,4 +20,5 @@ NAMED_STRUCTURES = dict(
     model4=model4.model,
     model5=model5.model,
     model6=model6.model,
+    model7=model7.model,
 )
