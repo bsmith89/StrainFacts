@@ -50,7 +50,8 @@ def model(
 ):
     with pyro.plate("position", g, dim=-1):
         with pyro.plate("strain", s, dim=-2):
-            gamma = pyro.sample("genotype", dist.Bernoulli(_unit * 0.5))
+            gamma = pyro.sample("gamma", dist.Bernoulli(_unit * 0.5))
+        genotype = pyro.deterministic("genotype", gamma)
 
     with pyro.plate("sample", n, dim=-1):
         # Community composition
