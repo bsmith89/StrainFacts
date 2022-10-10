@@ -759,13 +759,21 @@ class World:
             .sum("sample")
             .to_series()
         )
+
+        def weighted_mean_genotype(genotype, total_depth, **kwargs):
+            try:
+                out = np.average(genotype, weights=total_depth, **kwargs)
+            except ZeroDivisionError:
+                out = np.average(genotype, **kwargs)
+            return out
+
         genotype = Genotype(
             self.genotype.to_series()
             .unstack("strain")
             .groupby(clust, axis="columns")
             .apply(
                 lambda x: pd.Series(
-                    np.average(x, weights=total_strain_depth.loc[x.columns], axis=1),
+                    weighted_mean_genotype(x, total_strain_depth.loc[x.columns], axis=1),
                     index=x.index,
                 )
             )
