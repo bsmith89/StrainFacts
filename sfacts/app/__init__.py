@@ -388,6 +388,7 @@ class ClusterApproximation(AppInterface):
             "outpath",
             help="Path to write output StrainFacts/NetCDF file with estimated parameters.",
         )
+        # TODO: Figure out how to accept a precalculated dissimilarity matrix.
         parser.add_argument(
             "--frac",
             default=0.5,
