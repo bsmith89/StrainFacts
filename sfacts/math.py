@@ -86,3 +86,21 @@ def adjusted_community_dissimilarity(x, y, gdiss):
     outer = np.einsum("a,b->ab", x, y)
     expect = outer * gdiss
     return expect.sum()
+
+
+def podlesny_dissimilarity(mx, my):
+    mx = mx > 0
+    my = my > 0
+    count_shared = (((mx & my).any(1))).sum()
+    count_covered = (mx.any(1) & my.any(1)).sum()
+    return 1 - count_shared / count_covered
+
+
+def podlesny_cdist(xx, yy):
+    xx = xx > 0
+    yy = yy > 0
+    count_shared = (np.einsum("aij,bij->abi", xx.astype(int), yy.astype(int)) > 0).sum(
+        -1
+    )
+    count_covered = np.einsum("ai,bi->ab", xx.any(2).astype(int), yy.any(2).astype(int))
+    return 1 - count_shared / count_covered

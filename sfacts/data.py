@@ -391,6 +391,13 @@ class Metagenotype(WrappedDataArrayMixin):
             squareform(pdist(d.values, metric="cosine")), index=d.index, columns=d.index
         )
 
+    def podlesny_pdist(self, dim="sample"):
+        assert dim == "sample", "Not Implemented"
+        d = self.data.values
+        return pd.DataFrame(
+            sf.math.podlesny_cdist(d, d), index=self.sample, columns=self.sample
+        )
+
     def clusters(self, s_or_thresh, linkage="complete", **kwargs):
         if s_or_thresh < 1:
             s = None
@@ -424,6 +431,19 @@ class Metagenotype(WrappedDataArrayMixin):
         **kwargs,
     ):
         dmat = self.cosine_pdist(dim=dim)
+        cdmat = squareform(dmat)
+        return linkage(
+            cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
+        )
+
+    def podlesny_linkage(
+        self,
+        dim="sample",
+        method="complete",
+        optimal_ordering=False,
+        **kwargs,
+    ):
+        dmat = self.podlesny_pdist(dim=dim)
         cdmat = squareform(dmat)
         return linkage(
             cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
