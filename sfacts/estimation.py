@@ -408,6 +408,10 @@ def clust_approximation(
 
     nclust = len(clust.unique())
     logging.info(f"Clustering approximated {nclust} strains.")
+    assert nclust < s, (
+        "Clustering identified too many clusters (> allowed nstrains). "
+        "Try either increasing the number of strains or the clustering threshold."
+    )
     geno = sf.Metagenotype(
         mgen.to_series()
         .unstack("sample")
