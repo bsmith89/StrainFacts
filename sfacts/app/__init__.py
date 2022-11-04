@@ -382,13 +382,6 @@ class ClusterApproximation(AppInterface):
 
     @classmethod
     def add_subparser_arguments(cls, parser):
-        parser.add_argument(
-            "--random-seed",
-            "--seed",
-            "-r",
-            type=int,
-            help="Seed for all random number generators; must be set for reproducible model fitting.",
-        )
         add_strain_count_cli_arguments(parser)
         parser.add_argument("inpath", help="Metagenotype data input path.")
         parser.add_argument(
@@ -401,7 +394,7 @@ class ClusterApproximation(AppInterface):
             type=float,
             help=(
                 "How much strain abundance goes to the cluster strain for "
-                "each sample; has no effect without --clust-init"
+                "each sample;"
             ),
         )
         parser.add_argument(
@@ -410,7 +403,7 @@ class ClusterApproximation(AppInterface):
             type=float,
             help=(
                 "Pseudo-count added to metagenotype for consensus genotype "
-                "resulting from clusters. has no effect without --clust-init"
+                "resulting from clusters."
             ),
         )
         parser.add_argument(
@@ -419,7 +412,7 @@ class ClusterApproximation(AppInterface):
             type=float,
             help=(
                 "Dissimilarity threshold below which to cluster "
-                "metagenotypes together; has no effect without --clust-init; "
+                "metagenotypes together; "
                 "and may cause a RuntimeError if too many strains are found "
                 "in the approximation."
             ),
@@ -435,8 +428,6 @@ class ClusterApproximation(AppInterface):
         metagenotype = sf.data.Metagenotype.load(args.inpath)
         logging.info(f"Input metagenotype shapes: {metagenotype.sizes}.")
         num_strains = calculate_strain_count(metagenotype.sizes["sample"], args)
-        np.random.seed(args.random_seed)
-
         world = sf.estimation.clust_approximation(
             metagenotype.to_world(),
             s=num_strains,
