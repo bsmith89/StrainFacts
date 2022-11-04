@@ -793,7 +793,9 @@ class World:
             .groupby(clust, axis="columns")
             .apply(
                 lambda x: pd.Series(
-                    weighted_mean_genotype(x, total_strain_depth.loc[x.columns], axis=1),
+                    weighted_mean_genotype(
+                        x, total_strain_depth.loc[x.columns], axis=1
+                    ),
                     index=x.index,
                 )
             )
