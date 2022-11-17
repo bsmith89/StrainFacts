@@ -290,3 +290,5 @@ make start_jupyter
 - [ ] Memoization of expensive calculations on wrapped Datasets and DataArrays.
 - [ ] Better tools for model selection (e.g. more evaluation scores based on only
       metagenotypes and fits)
+- [ ] Split out metagenotype/community/genotype handling to its own package:
+      `mgtp` and make this a StrainFacts dependency.
