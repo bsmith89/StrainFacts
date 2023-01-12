@@ -236,6 +236,15 @@ class SubsampleMetagenotype(AppInterface):
             help="Seed for random number generator; must be set for reproducible subsampling.",
         )
         parser.add_argument(
+            "--with-replacement",
+            action="store_true",
+            default=False,
+            help=(
+                "Sample with replacement, which allows"
+                "sampling more positions than are found in the data."
+            ),
+        )
+        parser.add_argument(
             "--block-number",
             type=int,
             default=0,
@@ -253,6 +262,18 @@ class SubsampleMetagenotype(AppInterface):
             ),
         )
         parser.add_argument(
+            "--entropy-weighted-alpha",
+            type=float,
+            default=0.0,
+            help=(
+                "Sample positions (without replacement) weighted by a "
+                "function of their allele entropy across all samples. "
+                "Positive values of alpha sample more variable positions, "
+                "negative values sample lower entropy positions, and a value "
+                "of 0.0 results in unweighted draws."
+            ),
+        )
+        parser.add_argument(
             "inpath",
             help="StrainFacts/NetCDF formatted file to load metagenotype data from.",
         )
@@ -263,26 +284,47 @@ class SubsampleMetagenotype(AppInterface):
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
-        assert args.num_positions > 0
         if args.block_number:
             assert args.block_number >= 0
-        if args.num_positions is None:
-            args.num_positions = int(1e20)
+        assert args.num_positions > 0
+        if args.with_replacement:
+            assert (
+                args.block_number == 0
+            ), "Block number only makes sense when sampling without replacement."
+        # # FIXME: I actually think entropy weighted alpha
+        # # is just fine without replacement...as long as
+        # # the number of positions is much smaller than
+        # # the total number available.
+        # if args.entropy_weighted_alpha != 0:
+        #     assert (
+        #         args.with_replacement
+        #     ), "entropy_weighted_alpha not equal to 0 only makes sense when sampling without replacement."
         return args
 
     @classmethod
     def run(cls, args):
         metagenotype = sf.data.Metagenotype.load(args.inpath)
 
-        total_num_positions = metagenotype.sizes["position"]
+        if not args.with_replacement:
+            total_num_positions = metagenotype.sizes["position"]
+        else:
+            total_num_positions = args.num_positions
 
         if args.shuffle:
             np.random.seed(args.random_seed)
             logging.info(
-                f"Shuffling metagenotype positions using random seed {args.random_seed}."
+                f"Shuffling metagenotype positions using "
+                f"random seed {args.random_seed}."
             )
+            weight_unnorm = np.exp(
+                args.entropy_weighted_alpha * metagenotype.entropy("position")
+            )
+            weight = weight_unnorm / weight_unnorm.sum()
             position_list = np.random.choice(
-                metagenotype.position, size=total_num_positions, replace=False
+                metagenotype.position,
+                size=total_num_positions,
+                replace=args.with_replacement,
+                p=weight,
             )
         else:
             position_list = metagenotype.position
@@ -294,6 +336,8 @@ class SubsampleMetagenotype(AppInterface):
         logging.info(f"Extraction positions [{block_start}, {block_stop}).")
 
         mgen_ss = metagenotype.sel(position=position_list[block_start:block_stop])
+        if args.with_replacement:
+            mgen_ss.data['position'] = np.arange(block_start, block_stop)
         mgen_ss.dump(args.outpath)
 
 
