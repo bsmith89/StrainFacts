@@ -162,9 +162,9 @@ class FilterMetagenotype(AppInterface):
 
     @classmethod
     def transform_app_parameter_inputs(cls, args):
-        if not (0 < args.min_minor_allele_freq < 1):
+        if not (0 <= args.min_minor_allele_freq < 1):
             raise ArgumentConstraintError(
-                "Argument --min-minor-allele-freq must be between 0 and 1.",
+                "Argument --min-minor-allele-freq must be in [0, 1).",
             )
         if not (0 < args.min_horizontal_cvrg < 1):
             raise ArgumentConstraintError(
