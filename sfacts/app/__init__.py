@@ -337,7 +337,7 @@ class SubsampleMetagenotype(AppInterface):
 
         mgen_ss = metagenotype.sel(position=position_list[block_start:block_stop])
         if args.with_replacement:
-            mgen_ss.data['position'] = np.arange(block_start, block_stop)
+            mgen_ss.data["position"] = np.arange(block_start, block_stop)
         mgen_ss.dump(args.outpath)
 
 
