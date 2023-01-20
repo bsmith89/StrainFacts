@@ -317,7 +317,7 @@ class SubsampleMetagenotype(AppInterface):
                 f"random seed {args.random_seed}."
             )
             weight_unnorm = np.exp(
-                args.entropy_weighted_alpha * metagenotype.entropy("position")
+                args.entropy_weighted_alpha * metagenotype.entropy("position").fillna(0)
             )
             weight = weight_unnorm / weight_unnorm.sum()
             position_list = np.random.choice(
