@@ -449,14 +449,18 @@ class Metagenotype(WrappedDataArrayMixin):
             cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
         )
 
-    def entropy(self, dim="sample"):
+    def entropy(self, dim="sample", norm=1):
         if dim == "sample":
             over = "position"
         elif dim == "position":
             over = "sample"
 
-        ent_scaled = sf.math.entropy(self.frequencies(), "allele") * self.total_counts()
-        return (ent_scaled.sum(over) / self.total_counts().sum(over)).rename("entropy")
+        ent_scaled = (
+            sf.math.entropy(self.frequencies(), "allele") ** norm
+        ) * self.total_counts()
+        return (
+            (ent_scaled.sum(over) / self.total_counts().sum(over)) ** (1 / norm)
+        ).rename("entropy")
 
 
 class Genotype(WrappedDataArrayMixin):
@@ -529,7 +533,7 @@ class Genotype(WrappedDataArrayMixin):
             cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
         )
 
-    def entropy(self, dim="strain"):
+    def entropy(self, dim="strain", norm=1):
         if dim == "strain":
             over = "position"
         elif dim == "position":
@@ -543,7 +547,7 @@ class Genotype(WrappedDataArrayMixin):
             .stack()
             .to_xarray()
         )
-        return ent.mean(over).rename("entropy")
+        return ((ent ** norm).mean(over) ** (1 / norm)).rename("entropy")
 
     def clusters(self, thresh, linkage="complete", **kwargs):
         dist = self.pdist("strain", **kwargs)
@@ -823,8 +827,8 @@ class World:
         relabel = self.strain.to_series().where(is_abundant, -1)
         return self.merge_strains(relabel, discretized=False)
 
-    def drop_high_entropy_strains(self, thresh):
-        is_low_entropy = (self.genotype.entropy() <= thresh).to_series()
+    def drop_high_entropy_strains(self, thresh, norm=1):
+        is_low_entropy = (self.genotype.entropy(norm=norm) <= thresh).to_series()
         relabel = self.strain.to_series().where(is_low_entropy, -1)
         return self.merge_strains(relabel, discretized=False)
 
@@ -836,8 +840,8 @@ class World:
         relabel = geno.clusters(thresh=thresh, **kwargs)
         return self.merge_strains(relabel, discretized=discretized)
 
-    def reassign_high_community_entropy_samples(self, thresh):
-        high_entropy_samples = (self.community.entropy() > thresh).to_series()
+    def reassign_high_community_entropy_samples(self, thresh, norm=1):
+        high_entropy_samples = (self.community.entropy(norm=norm) > thresh).to_series()
         comm = self.community.to_series().unstack("strain")
         comm.loc[:, -1] = 0
         comm.loc[high_entropy_samples, :] = 0
