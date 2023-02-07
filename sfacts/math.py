@@ -1,6 +1,9 @@
 import numpy as np
 from scipy.spatial.distance import cdist, pdist
-import logging
+
+
+def minor_frequency(p):
+    return -(np.abs(p * 2 - 1) - 1) / 2
 
 
 def binary_entropy(p):
