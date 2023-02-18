@@ -16,4 +16,5 @@ dependencies:
   - pip
   - pip:
     - pyro-ppl
+    - lion-pytorch
     - -e ..

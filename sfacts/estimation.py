@@ -20,6 +20,7 @@ import pyro
 import torch
 from tqdm import tqdm
 import logging
+from lion_pytorch import Lion
 
 TQDM_NUM_FORMAT_STRING = "{:+#0.2e}"
 
@@ -37,6 +38,8 @@ for _name, _default_optimizer_kwargs in [
     ("SGD", dict(lr=0.05)),
 ]:
     OPTIMIZERS[_name] = torch.optim.__dict__[_name], _default_optimizer_kwargs
+
+OPTIMIZERS['Lion'] = Lion, dict(lr=0.05)
 
 
 def linear_annealing_schedule(
