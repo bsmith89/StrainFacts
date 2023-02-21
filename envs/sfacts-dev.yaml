@@ -1,20 +1,33 @@
 name: sfacts-dev
 channels:
+  - pytorch
+  - nvidia
+  - conda-forge
   - defaults
 dependencies:
-  - xarray
-  - numpy
-  - tqdm
-  - pandas
-  - scipy
-  - scikit-learn
-  - scikit-bio
-  - seaborn
-  - jupyter
+  - python=3.10
+  - pytorch
+  - torchvision
+  - torchaudio
+  - ipython
   - jupyterlab
-  - netcdf4
+  - xarray
+  - netCDF4
+  - matplotlib
+  - pyro-ppl
+  - pandas
+  - seaborn
+  - tqdm
+  - scipy
+  - numpy
+  - scikit-learn
+  - umap-learn
+  - scikit-bio
+  - line_profiler
+  - memory_profiler
+  - conda-forge::pymc
   - pip
   - pip:
-    - pyro-ppl
+    - --pre triton
     - lion-pytorch
     - -e ..

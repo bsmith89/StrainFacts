@@ -55,6 +55,8 @@ examples/sim.world.nc:
 	    --verbose \
 	    --num-strains 15 \
 	    --random-seed 0 \
+	    --optimizer Lion \
+	    --optimizer-learning-rate 0.05 \
 	    $< $@
 
 %.fit2.world.nc: %.mgen.nc %.approx-nmf.world.nc
@@ -93,6 +95,8 @@ examples/sim.filt.ss-0.fit-%.world.nc: examples/sim.filt.ss-0.mgen.nc
 	    --verbose \
 	    --model-structure $* \
 	    --num-strains 15 \
+	    --optimizer Lion \
+	    --optimizer-learning-rate 0.05 \
 	    --random-seed 0 \
 	    $< $@
 
