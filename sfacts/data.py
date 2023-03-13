@@ -485,6 +485,23 @@ class Genotype(WrappedDataArrayMixin):
     def fuzzed(self, eps=1e-5):
         return self.lift(lambda x: (x + eps) / (1 + 2 * eps))
 
+    def cdist(self, other, **kwargs):
+        "Compare distances between strain genotypes."
+        # Gather indexes
+        self_strains = self.strain
+        other_strains = other.strain
+        positions = list(set(self.position.values) & set(other.position.values))
+
+        # Align data
+        self = self.sel(position=positions).values
+        other = other.sel(position=positions).values
+
+        # Calculate distances
+        dmat = sf.math.genotype_cdist(self, other, **kwargs)
+        # Reboxing
+        dmat = pd.DataFrame(dmat, index=self_strains, columns=other_strains)
+        return dmat
+
     def pdist(self, dim="strain", **kwargs):
         index = getattr(self, dim)
         if dim == "strain":
