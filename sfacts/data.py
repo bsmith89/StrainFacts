@@ -275,14 +275,6 @@ class Metagenotype(WrappedDataArrayMixin):
         )
         return cls._post_load(data)
 
-    # FIXME: *Peek
-    @classmethod
-    def peak_netcdf_sizes(cls, filename_or_obj):
-        data = xr.open_dataarray(filename_or_obj)
-        sizes = data.sizes
-        data.close()
-        return sizes
-
     @classmethod
     def from_counts_and_totals(cls, y, m, coords=None):
         if coords is None:
@@ -712,6 +704,13 @@ class World:
         if validate:
             world.validate_constraints()
         return world
+
+    @classmethod
+    def peek_netcdf_sizes(cls, filename_or_obj):
+        data = xr.open_dataset(filename_or_obj)
+        sizes = data.sizes
+        data.close()
+        return sizes
 
     def random_sample(self, replace=False, keep_order=True, **kwargs):
         isel = {}
