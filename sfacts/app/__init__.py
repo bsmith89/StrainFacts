@@ -4,6 +4,7 @@ import warnings
 import sfacts as sf
 import numpy as np
 import pandas as pd
+from collections import defaultdict
 import logging
 from sfacts.app.components import (
     add_hyperparameters_cli_argument,
@@ -949,14 +950,26 @@ class DescribeData(AppInterface):
             nargs="+",
             help="Path StrainFacts/NetCDF file with one or more parameters.",
         )
+        parser.add_argument(
+            "--header",
+            action="store_true",
+            help="Print the header line above info for one or more samples.",
+        )
 
     @classmethod
     def run(cls, args):
+        keys = ["path"] + list(sf.World.dims)
+        if args.header:
+            print(*keys, sep="\t")
         for path in args.inpath:
-            world = sf.World.load(path)
-            print(path, world.sizes)
-        # for dim in world.dims:
-        #     print('{}: {}'.format(dim, world.sizes[dim]))
+            details = defaultdict(lambda: "")
+            details["path"] = path
+            _sizes = sf.World.peek_netcdf_sizes(path)
+            details.update(_sizes)
+            print(
+                *[details[k] for k in keys],
+                sep="\t",
+            )
 
 
 class Dump(AppInterface):
