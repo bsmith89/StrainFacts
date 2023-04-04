@@ -7,3 +7,5 @@ __pycache__/
 .bash_history
 .parallel
 *.egg-info/
+examples/*.tsv
+examples/*.nc
