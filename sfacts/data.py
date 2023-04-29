@@ -239,6 +239,14 @@ class Metagenotype(WrappedDataArrayMixin):
     variable_name = "metagenotype"
 
     @classmethod
+    def load_from_tsv(cls, path, validate=True):
+        data = pd.read_table(path, index_col=cls.dims)
+        data = data.squeeze().to_xarray()
+        data = data.fillna(0)  # This is required for metagenotypes, specifically.
+        data.name = cls.variable_name
+        return cls._post_load(data)
+
+    @classmethod
     def load_from_merged_gtpro(cls, path, validate=True, **kwargs):
         data = pd.read_table(
             path,
