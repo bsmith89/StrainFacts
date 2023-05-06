@@ -24,10 +24,10 @@ doi:[10.3389/fbinf.2022.867386](https://doi.org/10.3389/fbinf.2022.867386)
 
 ## Installation
 
-The simplest possible installation directly from GitHub
+The simplest possible installation is with `pip`.
 
 ```
-pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts
+pip install StrainFacts
 ```
 
 However, installing [as a conda environment](#with-conda) (described below) is
