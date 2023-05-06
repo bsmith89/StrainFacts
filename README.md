@@ -271,13 +271,16 @@ make start_jupyter
     - [x] Flesh out the example with an explanation of all of the steps.
     - [ ] ~~Example data from SRA with a GT-Pro step, instead of simulated~~
     - [x] Update README/Makefile/Examples to match new CLI interfaces.
-- [x] The parameters selected for use in this paper (which we have found to be
-      applicable across a range of datasets) will be set as the default.
-    - Caveat: All of the hyperparameter annealing parameters should still be set by the user
+- [x] ~~The parameters selected for use in this paper (which we have found to be
+      applicable across a range of datasets) will be set as the default.~~
+    - ~~Caveat: All of the hyperparameter annealing parameters should still be set by the user~~
+    - UPDATE: A new model/hyperparameters/fitting approach seems broadly superior.
+      This will be described in an upcoming manuscript.
 - [x] We will document some useful approaches for hyperparameter tuning.
 - [x] Improve the CLI documentation.
-    - [ ] Explicit blurb about how to run the model as in the paper
-    - [ ] Model description strings.
+    - [x] Explicit blurb about how to run the model as in the paper
+    - [x] Implement model description strings.
+    - [ ] Write model descriptions.
 - [ ] Refactor for the best looking code
     - [x] De-pluralize core datatypes (community not communities)
     - [x] Remove unused CLI apps/workflows/plotting code
@@ -292,3 +295,6 @@ make start_jupyter
       metagenotypes and fits)
 - [ ] Split out metagenotype/community/genotype handling to its own package:
       `mgtp` and make this a StrainFacts dependency.
+- [ ] Release on package indexes
+    - [x] PyPI
+    - [ ] Bioconda
