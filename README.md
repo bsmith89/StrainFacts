@@ -199,7 +199,11 @@ This is a subset of the recently updated
 database.
 The MGnify website provides a convenient way to browse this reference.
 
-## How to Hack on StrainFacts
+## Contributing to StrainFacts
+
+Opening new issues and pull requests is greatly appreciated. Any information
+about how you have tried using StrainFacts and succeeded/failed will be
+appreciated.
 
 ### Editable Installation
 
@@ -218,6 +222,10 @@ Then install with either conda or pip:
 
 #### With `conda`
 
+Conda is highly recommended. While installing with `pip` will also
+work, some optional dependencies (in particular Scikit-Bio) often fail to
+install correctly.
+
 Build the environment:
 
 ```
@@ -229,13 +237,6 @@ conda activate sfacts-dev
 This includes an embedded `pip install --editable` for StrainFacts from the
 cloned repo.
 
-
-#### With `pip`
-
-```
-pip install -r requirements.pip
-pip install -e .
-```
 
 ### Integration Testing
 
@@ -252,7 +253,14 @@ This runs a complex workflow, including
 - genotype refitting
 - evaluation of estimates against the simulated ground-truth
 
+_Note that the evaluation function at the very end of this integration test will fail if SciKit-Bio is not installed correctly._
+
 ### Prototyping in Jupyter
+
+Using the StrainFacts API and visualization functions inside a Jupyter Notebook
+can be very convenient.
+
+To start a JupyterLab server, run the following Make command:
 
 ```
 make start_jupyter
