@@ -1,3 +1,4 @@
+import xarray  # TODO: 2023-05-19: For some reason this fixes a segmentation fault...???
 from sfacts import (
     logging_util,
     pyro_util,
