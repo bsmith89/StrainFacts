@@ -801,8 +801,6 @@ class ConcatGenotypeBlocks(AppInterface):
     def run(cls, args):
         community = sf.data.World.load(args.community).community
         metagenotype = sf.data.Metagenotype.load(args.metagenotype)
-        # FIXME: Not clear why metagenotype and genotype have different coordinates (int vs. str).
-        metagenotype.data["position"] = metagenotype.data.position.astype(str)
         all_genotypes = {}
         for i, gpath in enumerate(args.genotypes):
             all_genotypes[i] = sf.World.load(gpath).genotype
@@ -1055,10 +1053,6 @@ class EvaluateFitAgainstSimulation(AppInterface):
         results = {}
         for fit_path in args.fit:
             fit = sf.World.load(fit_path)
-            # FIXME: dtype of the coordinates changes from int to 'object'
-            # (string) at some point during processing.
-            # NOTE: This fix is just a hack and is probably fairly brittle.
-            fit = sf.World(fit.data.assign_coords(position=fit.position.astype(int)))
             metrics = sf.workflow.evaluate_fit_against_metagenotype(ref, fit)
             if args.simulation:
                 metrics.update(sf.workflow.evaluate_fit_against_simulation(ref, fit))
