@@ -197,34 +197,11 @@ def iteratively_fit_genotype_conditioned_on_community(
     return est_curr, est_list, history_list
 
 
-def evaluate_fit_against_metagenotype(ref, fit):
-    # Re-indexing the simulation by the subset of positions and samples
-    # that were actually fit.
-    ref = ref.sel(position=fit.position.astype(int), sample=fit.sample.astype(int))
-
-    mgen_error = sf.evaluation.metagenotype_error2(fit, discretized=True)
-    # mgen_unifrac_discordance = sf.evaluation.mgen_unifrac_discordance(ref, fit)
-    return dict(
-        mgen_error=mgen_error[0],
-        # mgen_unifrac_discordance=mgen_unifrac_discordance[0],
-    )
-
-
-def evaluate_fit_against_simulation(sim, fit):
+def evaluate_fit_against_ref(sim, fit, score_list):
     # Re-indexing the simulation by the subset of positions and samples
     # that were actually fit.
     sim = sim.sel(position=fit.position.astype(int), sample=fit.sample.astype(int))
-
-    fwd_genotype_error = sf.evaluation.discretized_weighted_genotype_error(sim, fit)
-    rev_genotype_error = sf.evaluation.discretized_weighted_genotype_error(fit, sim)
-    bc_error = sf.evaluation.braycurtis_error(sim, fit)
-    unifrac_error = sf.evaluation.unifrac_error(sim, fit)
-    entropy_error = sf.evaluation.community_entropy_error(sim, fit)
-
-    return dict(
-        fwd_genotype_error=fwd_genotype_error[0],
-        rev_genotype_error=rev_genotype_error[0],
-        bc_error=bc_error[0],
-        unifrac_error=unifrac_error[0],
-        entropy_error=entropy_error[0],
-    )
+    output = {}
+    for score in score_list:
+        output[score] = sf.evaluation.EVALUATION_SCORE_FUNCTIONS[score](sim, fit)
+    return output

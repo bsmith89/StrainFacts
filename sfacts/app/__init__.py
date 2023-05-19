@@ -1025,11 +1025,6 @@ class EvaluateFitAgainstSimulation(AppInterface):
             help="Path to StrainFacts/NetCDF file with reference data for comparison.",
         )
         parser.add_argument(
-            "--simulation",
-            action="store_true",
-            help='Reference includes "ground-truth" community and genotype, i.e. from a simulation',
-        )
-        parser.add_argument(
             "fit",
             nargs="+",
             help="Path(s) to one or more StrainFacts/NetCDF files with estimated parameters.",
@@ -1046,6 +1041,13 @@ class EvaluateFitAgainstSimulation(AppInterface):
             action="store_true",
             help="Transpose rows and columns of output.",
         )
+        parser.add_argument(
+            "--scores",
+            nargs="+",
+            choices=sf.evaluation.EVALUATION_SCORE_FUNCTIONS,
+            default=["mgen_error", "fwd_genotype_error", "rev_genotype_error", "bc_error", "entropy_error"],
+            help="Score function(s) to use to assess fit.",
+        )
 
     @classmethod
     def run(cls, args):
@@ -1054,10 +1056,7 @@ class EvaluateFitAgainstSimulation(AppInterface):
         for fit_path in [args.reference] + args.fit:
             logging.debug("Evaluating: %s", fit_path)
             fit = sf.World.load(fit_path)
-            metrics = sf.workflow.evaluate_fit_against_metagenotype(ref, fit)
-            if args.simulation:
-                metrics.update(sf.workflow.evaluate_fit_against_simulation(ref, fit))
-            results[fit_path] = metrics
+            results[fit_path] = sf.workflow.evaluate_fit_against_ref(ref, fit, score_list=args.scores)
 
         results = pd.DataFrame(results).rename_axis(index="score")
 
