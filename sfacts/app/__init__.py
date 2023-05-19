@@ -1051,7 +1051,8 @@ class EvaluateFitAgainstSimulation(AppInterface):
     def run(cls, args):
         ref = sf.World.load(args.reference)
         results = {}
-        for fit_path in args.fit:
+        for fit_path in [args.reference] + args.fit:
+            logging.debug("Evaluating: %s", fit_path)
             fit = sf.World.load(fit_path)
             metrics = sf.workflow.evaluate_fit_against_metagenotype(ref, fit)
             if args.simulation:
