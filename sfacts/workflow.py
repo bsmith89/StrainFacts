@@ -200,7 +200,7 @@ def iteratively_fit_genotype_conditioned_on_community(
 def evaluate_fit_against_ref(sim, fit, score_list):
     # Re-indexing the simulation by the subset of positions and samples
     # that were actually fit.
-    sim = sim.sel(position=fit.position.astype(int), sample=fit.sample.astype(int))
+    sim = sim.sel(position=fit.position, sample=fit.sample)
     output = {}
     for score in score_list:
         output[score] = sf.evaluation.EVALUATION_SCORE_FUNCTIONS[score](sim, fit)
