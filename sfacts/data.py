@@ -209,11 +209,10 @@ class WrappedDataArrayMixin:
             out_data.append(d)
             if rename:
                 prefix = f"{name}_"
-            else:
-                prefix = ""
-            new_coords.extend([f"{prefix}{i}" for i in d[dim].values])
+                new_coords.extend([f"{prefix}{i}" for i in d[dim].values])
         out_data = xr.concat(out_data, dim)
-        out_data[dim] = new_coords
+        if rename:
+            out_data[dim] = new_coords
         return cls(out_data)
 
     def to_world(self):
