@@ -7,18 +7,18 @@
 <p>B.J. Smith, X. Li, Z.J. Shi, A. Abate, K.S. Pollard. Scalable microbial strain inference in metagenomic data using StrainFacts. <em>Frontiers in Bioinformatics</em> (2022) doi:<a href="https://doi.org/10.3389/fbinf.2022.867386">10.3389/fbinf.2022.867386</a></p>
 </blockquote>
 <h2 id="installation">Installation</h2>
-<p>The simplest possible installation directly from GitHub</p>
-<pre><code>pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts</code></pre>
+<p>The simplest possible installation is with <code>pip</code>.</p>
+<pre><code>pip install StrainFacts</code></pre>
 <p>However, installing <a href="#with-conda">as a conda environment</a> (described below) is probably the more robust option.</p>
 <p>Installing PyTorch/Pyro with GPU support may be more challenging. Consider using a Docker/Singularity container like <a href="https://hub.docker.com/r/bsmith89/sfacts_dev">this one</a>, which has many of the necessary prerequisites (but excluding StrainFacts itself).</p>
 <h2 id="examples">Examples</h2>
 <p>Short vignettes explaining how to use StrainFacts for data processing, visualization, and evaluation are provided as Jupyter Notebooks:</p>
 <ul>
-<li><a href="https://byronjsmith.com/StrainFacts/simulate_data.html"><code>examples/simulate_data.ipynb</code></a></li>
-<li><a href="https://byronjsmith.com/StrainFacts/filter_data.html"><code>examples/filter_data.ipynb</code></a></li>
-<li><a href="https://byronjsmith.com/StrainFacts/fit_metagenotype.html"><code>examples/fit_metagenotype.ipynb</code></a></li>
-<li><a href="https://byronjsmith.com/StrainFacts/fit_metagenotype_advanced.html"><code>examples/fit_metagenotype_advanced.ipynb</code></a></li>
-<li><a href="https://byronjsmith.com/StrainFacts/evaluate_simulation_fit.html"><code>examples/evaluate_simulation_fit.ipynb</code></a></li>
+<li><a href="https://byronjsmith.com/StrainFacts/simulate_data.ipynb.html"><code>examples/simulate_data.ipynb</code></a></li>
+<li><a href="https://byronjsmith.com/StrainFacts/filter_data.ipynb.html"><code>examples/filter_data.ipynb</code></a></li>
+<li><a href="https://byronjsmith.com/StrainFacts/fit_metagenotype.ipynb.html"><code>examples/fit_metagenotype.ipynb</code></a></li>
+<li><a href="https://byronjsmith.com/StrainFacts/fit_metagenotype_advanced.ipynb.html"><code>examples/fit_metagenotype_advanced.ipynb</code></a></li>
+<li><a href="https://byronjsmith.com/StrainFacts/evaluate_simulation_fit.ipynb.html"><code>examples/evaluate_simulation_fit.ipynb</code></a></li>
 </ul>
 <h2 id="usage">Usage</h2>
 <p>(<strong>NOTE</strong>: All of the files described in those notebooks and the usage examples below can be built automatically with Make e.g. try running: <code>make examples/sim.filt.fit.world.nc</code>.)</p>
@@ -107,7 +107,8 @@ sfacts fit --help  # Subcommand specific CLI usage</code></pre>
 <p>GT-Pro is the preferred metagenotyper for StrainFacts. While other metagenotypers will also work (e.g. MIDAS or StrainPhlan assuming their outputs are formatted correctly), only bi-allelic and core genome SNP sites are currently supported.</p>
 <h3 id="uhgg">UHGG</h3>
 <p>GT-Pro is based on the <a href="http://ftp.ebi.ac.uk/pub/databases/metagenomics/mgnify_genomes/human-gut/v1.0/">UHGG v1.0</a> species reference database. This is a subset of the recently updated <a href="https://www.ebi.ac.uk/metagenomics/genome-catalogues/human-gut-v2-0">MGnify / UHGG v2.0</a> database. The MGnify website provides a convenient way to browse this reference.</p>
-<h2 id="how-to-hack-on-strainfacts">How to Hack on StrainFacts</h2>
+<h2 id="contributing-to-strainfacts">Contributing to StrainFacts</h2>
+<p>Opening new issues and pull requests is greatly appreciated. Any information about how you have tried using StrainFacts and succeeded/failed will be appreciated.</p>
 <h3 id="editable-installation">Editable Installation</h3>
 <p>First, clone the repository:</p>
 <pre><code>git clone https://github.com/bsmith89/StrainFacts.git
@@ -116,14 +117,12 @@ cd StrainFacts</code></pre>
 <p><code>make .git_init</code></p>
 <p>Then install with either conda or pip:</p>
 <h4 id="with-conda">With <code>conda</code></h4>
+<p>Conda is highly recommended. While installing with <code>pip</code> will also work, some optional dependencies (in particular Scikit-Bio) often fail to install correctly.</p>
 <p>Build the environment:</p>
 <pre><code>conda env create -n sfacts-dev -f envs/sfacts-dev.yaml
 # Also see `make .conda` to run this command automatically.
 conda activate sfacts-dev</code></pre>
 <p>This includes an embedded <code>pip install --editable</code> for StrainFacts from the cloned repo.</p>
-<h4 id="with-pip">With <code>pip</code></h4>
-<pre><code>pip install -r requirements.pip
-pip install -e .</code></pre>
 <h3 id="integration-testing">Integration Testing</h3>
 <pre><code>make clean
 make test</code></pre>
@@ -131,11 +130,14 @@ make test</code></pre>
 <ul>
 <li>simulation</li>
 <li>data conversion</li>
-<li>initial fitting</li>
+<li>model fitting</li>
 <li>genotype refitting</li>
 <li>evaluation of estimates against the simulated ground-truth</li>
 </ul>
+<p><em>Note that the evaluation function at the very end of this integration test will fail if SciKit-Bio is not installed correctly.</em></p>
 <h3 id="prototyping-in-jupyter">Prototyping in Jupyter</h3>
+<p>Using the StrainFacts API and visualization functions inside a Jupyter Notebook can be very convenient.</p>
+<p>To start a JupyterLab server, run the following Make command:</p>
 <pre><code>make start_jupyter</code></pre>
 <h2 id="todo">TODO</h2>
 <ul class="task-list">
@@ -153,21 +155,24 @@ Simple example fitting a metagenotype</li>
 Flesh out the example with an explanation of all of the steps.</li>
 <li><input type="checkbox" disabled="" />
 <del>Example data from SRA with a GT-Pro step, instead of simulated</del></li>
-<li><input type="checkbox" disabled="" />
+<li><input type="checkbox" disabled="" checked="" />
 Update README/Makefile/Examples to match new CLI interfaces.</li>
 </ul></li>
 <li><input type="checkbox" disabled="" checked="" />
-The parameters selected for use in this paper (which we have found to be applicable across a range of datasets) will be set as the default.<ul>
-<li>Caveat: All of the hyperparameter annealing parameters should still be set by the user</li>
+<del>The parameters selected for use in this paper (which we have found to be applicable across a range of datasets) will be set as the default.</del><ul>
+<li><del>Caveat: All of the hyperparameter annealing parameters should still be set by the user</del></li>
+<li>UPDATE: A new model/hyperparameters/fitting approach seems broadly superior. This will be described in an upcoming manuscript.</li>
 </ul></li>
 <li><input type="checkbox" disabled="" checked="" />
 We will document some useful approaches for hyperparameter tuning.</li>
 <li><input type="checkbox" disabled="" checked="" />
 Improve the CLI documentation.<ul class="task-list">
-<li><input type="checkbox" disabled="" />
+<li><input type="checkbox" disabled="" checked="" />
 Explicit blurb about how to run the model as in the paper</li>
+<li><input type="checkbox" disabled="" checked="" />
+Implement model description strings.</li>
 <li><input type="checkbox" disabled="" />
-Model description strings.</li>
+Write model descriptions.</li>
 </ul></li>
 <li><input type="checkbox" disabled="" />
 Refactor for the best looking code<ul class="task-list">
@@ -183,13 +188,24 @@ Drop stale code in <code>sfacts.data</code>, <code>sfacts.evaluation</code>, and
 Simplify the model structure decorator.</li>
 <li><input type="checkbox" disabled="" />
 Fix mismatch between ‘gamma’/‘pi’ and ‘genotype’/‘community’. (Probably just change variable names in the model, yeah?)</li>
-<li><input type="checkbox" disabled="" />
+<li><input type="checkbox" disabled="" checked="" />
 Move choice of strain numbers for fit and init apps to a set of helper functions.</li>
 <li><input type="checkbox" disabled="" />
 Refactor CLI app architecture to be more intuitive.</li>
 </ul></li>
 <li><input type="checkbox" disabled="" />
 Memoization of expensive calculations on wrapped Datasets and DataArrays.</li>
+<li><input type="checkbox" disabled="" />
+Better tools for model selection (e.g. more evaluation scores based on only metagenotypes and fits)</li>
+<li><input type="checkbox" disabled="" />
+Split out metagenotype/community/genotype handling to its own package: <code>mgtp</code> and make this a StrainFacts dependency.</li>
+<li><input type="checkbox" disabled="" />
+Release on package indexes<ul class="task-list">
+<li><input type="checkbox" disabled="" checked="" />
+PyPI</li>
+<li><input type="checkbox" disabled="" />
+Bioconda</li>
+</ul></li>
 </ul>
 <section class="footnotes" role="doc-endnotes">
 <hr />
