@@ -5,10 +5,9 @@ import pandas as pd
 from scipy.spatial.distance import pdist, squareform
 from scipy.cluster.hierarchy import linkage
 from sklearn.cluster import AgglomerativeClustering
-import scipy as sp
-from functools import partial
-from warnings import warn
 import logging
+from functools import cached_property
+from warnings import warn
 
 
 class Error(Exception):
@@ -158,10 +157,10 @@ class WrappedDataArrayMixin:
         self.validate_fast()
 
     def __getattr__(self, name):
-        if name in self.dims:
-            return getattr(self.data, name)
-        elif name == self.variable_name:
+        if name == self.variable_name:
             return self
+        elif name in self.dims:
+            return getattr(self.data, name)
         elif name in self.safe_unwrapped:
             return getattr(self.data, name)
         elif name in self.safe_lifted:
@@ -210,11 +209,10 @@ class WrappedDataArrayMixin:
             out_data.append(d)
             if rename:
                 prefix = f"{name}_"
-            else:
-                prefix = ""
-            new_coords.extend([f"{prefix}{i}" for i in d[dim].values])
+                new_coords.extend([f"{prefix}{i}" for i in d[dim].values])
         out_data = xr.concat(out_data, dim)
-        out_data[dim] = new_coords
+        if rename:
+            out_data[dim] = new_coords
         return cls(out_data)
 
     def to_world(self):
@@ -238,6 +236,14 @@ class Metagenotype(WrappedDataArrayMixin):
     dims = ("sample", "position", "allele")
     constraints = [POSITIVE_COUNTS]
     variable_name = "metagenotype"
+
+    @classmethod
+    def load_from_tsv(cls, path, validate=True):
+        data = pd.read_table(path, index_col=cls.dims)
+        data = data.squeeze().to_xarray()
+        data = data.fillna(0)  # This is required for metagenotypes, specifically.
+        data.name = cls.variable_name
+        return cls._post_load(data)
 
     @classmethod
     def load_from_merged_gtpro(cls, path, validate=True, **kwargs):
@@ -275,13 +281,6 @@ class Metagenotype(WrappedDataArrayMixin):
             data.astype(int).reorder_levels(cls.dims).sort_index().to_xarray().fillna(0)
         )
         return cls._post_load(data)
-
-    @classmethod
-    def peak_netcdf_sizes(cls, filename_or_obj):
-        data = xr.open_dataarray(filename_or_obj)
-        sizes = data.sizes
-        data.close()
-        return sizes
 
     @classmethod
     def from_counts_and_totals(cls, y, m, coords=None):
@@ -361,7 +360,18 @@ class Metagenotype(WrappedDataArrayMixin):
             m=self.total_counts().values,
         )
 
+    @cached_property
+    def _sample_pdist_pseudo0(self):
+        return (
+            self.to_estimated_genotype(pseudo=0.0)
+            .pdist(dim="strain")
+            .rename_axis(columns="sample", index="sample")
+        )
+
     def pdist(self, dim="sample", pseudo=0.0, **kwargs):
+        # Use the special cached property for this common invocation.
+        if (dim == "sample") and (pseudo == 0.0) and (not kwargs):
+            return self._sample_pdist_pseudo0
         if dim == "sample":
             _dim = "strain"
         else:
@@ -380,7 +390,14 @@ class Metagenotype(WrappedDataArrayMixin):
             squareform(pdist(d.values, metric="cosine")), index=d.index, columns=d.index
         )
 
-    def clusters(self, s_or_thresh, linkage="average", **kwargs):
+    def podlesny_pdist(self, dim="sample"):
+        assert dim == "sample", "Not Implemented"
+        d = self.data.values
+        return pd.DataFrame(
+            sf.math.podlesny_cdist(d, d), index=self.sample, columns=self.sample
+        )
+
+    def clusters(self, s_or_thresh, linkage="complete", **kwargs):
         if s_or_thresh < 1:
             s = None
             thresh = float(s_or_thresh)
@@ -418,14 +435,31 @@ class Metagenotype(WrappedDataArrayMixin):
             cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
         )
 
-    def entropy(self, dim="sample"):
+    def podlesny_linkage(
+        self,
+        dim="sample",
+        method="complete",
+        optimal_ordering=False,
+        **kwargs,
+    ):
+        dmat = self.podlesny_pdist(dim=dim)
+        cdmat = squareform(dmat)
+        return linkage(
+            cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
+        )
+
+    def entropy(self, dim="sample", norm=1):
         if dim == "sample":
             over = "position"
         elif dim == "position":
             over = "sample"
 
-        ent_scaled = sf.math.entropy(self.frequencies(), "allele") * self.total_counts()
-        return (ent_scaled.sum(over) / self.total_counts().sum(over)).rename("entropy")
+        ent_scaled = (
+            sf.math.entropy(self.frequencies(), "allele") ** norm
+        ) * self.total_counts()
+        return (
+            (ent_scaled.sum(over) / self.total_counts().sum(over)) ** (1 / norm)
+        ).rename("entropy")
 
 
 class Genotype(WrappedDataArrayMixin):
@@ -444,18 +478,28 @@ class Genotype(WrappedDataArrayMixin):
         data.name = cls.variable_name
         return cls._post_load(data)
 
-    def softmask_missing(self, missingness, eps=1e-10):
-        clip = partial(np.clip, a_min=eps, a_max=(1 - eps))
-        return self.lift(
-            lambda g, m: sp.special.expit(sp.special.logit(clip(g)) * clip(m)),
-            m=missingness.data,
-        )
-
     def discretized(self):
         return self.lift(np.round)
 
     def fuzzed(self, eps=1e-5):
         return self.lift(lambda x: (x + eps) / (1 + 2 * eps))
+
+    def cdist(self, other, **kwargs):
+        "Compare distances between strain genotypes."
+        # Gather indexes
+        self_strains = self.strain
+        other_strains = other.strain
+        positions = list(set(self.position.values) & set(other.position.values))
+
+        # Align data
+        self = self.sel(position=positions).values
+        other = other.sel(position=positions).values
+
+        # Calculate distances
+        dmat = sf.math.genotype_cdist(self, other, **kwargs)
+        # Reboxing
+        dmat = pd.DataFrame(dmat, index=self_strains, columns=other_strains)
+        return dmat
 
     def pdist(self, dim="strain", **kwargs):
         index = getattr(self, dim)
@@ -505,7 +549,7 @@ class Genotype(WrappedDataArrayMixin):
             cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
         )
 
-    def entropy(self, dim="strain"):
+    def entropy(self, dim="strain", norm=1):
         if dim == "strain":
             over = "position"
         elif dim == "position":
@@ -519,9 +563,9 @@ class Genotype(WrappedDataArrayMixin):
             .stack()
             .to_xarray()
         )
-        return ent.mean(over).rename("entropy")
+        return ((ent ** norm).mean(over) ** (1 / norm)).rename("entropy")
 
-    def clusters(self, thresh, linkage="average", **kwargs):
+    def clusters(self, thresh, linkage="complete", **kwargs):
         dist = self.pdist("strain", **kwargs)
         return pd.Series(
             AgglomerativeClustering(
@@ -532,12 +576,6 @@ class Genotype(WrappedDataArrayMixin):
             ).fit_predict(dist),
             index=dist.columns,
         )
-
-
-class Missingness(WrappedDataArrayMixin):
-    dims = ("strain", "position")
-    constraints = [ON_2_SIMPLEX]
-    variable_name = "missingness"
 
 
 class Community(WrappedDataArrayMixin):
@@ -569,8 +607,8 @@ class Community(WrappedDataArrayMixin):
 
     def linkage(
         self,
-        dim="strain",
-        method="average",
+        dim="sample",
+        method="complete",
         optimal_ordering=False,
         **kwargs,
     ):
@@ -589,24 +627,21 @@ class Community(WrappedDataArrayMixin):
         ent = sf.math.entropy(p, axis=sum_over)
         return pd.Series(ent, index=getattr(p, dim)).rename_axis(index=dim).to_xarray()
 
-
-# class Overdispersion(WrappedDataArrayMixin):
-#     dims = ("sample",)
-#     constraints = dict(strictly_positive=_strictly_positive)
-#     variable_name = "overdispersion"
-#
-#
-# class ErrorRate(WrappedDataArrayMixin):
-#     dims = ("sample",)
-#     constraints = dict(on_2_simplex=_on_2_simplex)
-#     variable_name = "error_rate"
+    def renormalize(self):
+        return Community(
+            self.data.to_series()
+            .unstack()
+            .apply(lambda x: x / x.sum(), axis=1)
+            .stack()
+            .to_xarray()
+        )
 
 
 class World:
-    safe_lifted = ["isel", "sel"]
+    safe_lifted = ["isel", "sel", "drop_sel"]
     safe_unwrapped = ["sizes"]
     dims = ("sample", "position", "strain", "allele")
-    variables = [Genotype, Missingness, Community, Metagenotype]
+    variables = [Genotype, Community, Metagenotype]
     _variable_wrapper_map = {wrapper.variable_name: wrapper for wrapper in variables}
 
     def __init__(self, data):
@@ -617,6 +652,21 @@ class World:
     #     def _align_dims(cls, data):
     #         missing_dims = [k for k in cls.dims if k not in data.dims]
     #         return data.expand_dims(missing_dims).transpose(*cls.dims)
+
+    @cached_property
+    def metagenotype(self):
+        name = "metagenotype"
+        return self._variable_wrapper_map[name](self.data[name])
+
+    @cached_property
+    def genotype(self):
+        name = "genotype"
+        return self._variable_wrapper_map[name](self.data[name])
+
+    @cached_property
+    def community(self):
+        name = "community"
+        return self._variable_wrapper_map[name](self.data[name])
 
     @classmethod
     def from_combined(cls, *args):
@@ -632,6 +682,14 @@ class World:
             if variable_name in self.data:
                 wrapped_variable = getattr(self, variable_name)
                 wrapped_variable.validate_constraints()
+
+    def cull_empty_dims(self):
+        empty_dims = []
+        for dim in self.data.dims:
+            if self.sizes[dim] == 0:
+                empty_dims.append(dim)
+        warn(f"Empty dimensions {empty_dims} removed from dataset.")
+        return World(self.data.drop_dims(empty_dims))
 
     def dump(self, path, validate=True, **kwargs):
         if validate:
@@ -654,6 +712,13 @@ class World:
             world.validate_constraints()
         return world
 
+    @classmethod
+    def peek_netcdf_sizes(cls, filename_or_obj):
+        data = xr.open_dataset(filename_or_obj)
+        sizes = data.sizes
+        data.close()
+        return sizes
+
     def random_sample(self, replace=False, keep_order=True, **kwargs):
         isel = {}
         for dim in kwargs:
@@ -664,10 +729,6 @@ class World:
                 ii = sorted(ii)
             isel[dim] = ii
         return self.__class__(data=self.data.isel(**isel))
-
-    @property
-    def masked_genotype(self):
-        return self.genotype.softmask_missing(self.missingness)
 
     def __getattr__(self, name):
         if name in self.dims:
@@ -719,12 +780,18 @@ class World:
         out_data[dim] = new_coords
         return cls(out_data)
 
-    def unifrac_pdist(self, **kwargs):
-        return sf.unifrac.unifrac_pdist(self, **kwargs)
+    @cached_property
+    def _unifrac_pdist_discretized(self):
+        return sf.unifrac.unifrac_pdist(self, discretized=True)
+
+    def unifrac_pdist(self, discretized=True, **kwargs):
+        if discretized and (not kwargs):
+            return self._unifrac_pdist_discretized
+        return sf.unifrac.unifrac_pdist(self, discretized=discretized, **kwargs)
 
     def unifrac_linkage(
         self,
-        method="average",
+        method="complete",
         optimal_ordering=False,
         **kwargs,
     ):
@@ -732,24 +799,30 @@ class World:
         cdmat = squareform(dmat)
         return linkage(cdmat, method=method, optimal_ordering=optimal_ordering)
 
-    def collapse_strains(self, thresh, discretized=False, **kwargs):
-        if discretized:
-            clust = self.genotype.discretized().clusters(thresh=thresh, **kwargs)
-        else:
-            clust = self.genotype.clusters(thresh=thresh, **kwargs)
-
+    def merge_strains(self, relabel, discretized=False):
+        clust = relabel
         total_strain_depth = (
             (self.metagenotype.mean_depth("sample") * self.community.data)
             .sum("sample")
             .to_series()
         )
+
+        def weighted_mean_genotype(genotype, total_depth, **kwargs):
+            try:
+                out = np.average(genotype, weights=total_depth, **kwargs)
+            except ZeroDivisionError:
+                out = np.average(genotype, **kwargs)
+            return out
+
         genotype = Genotype(
             self.genotype.to_series()
             .unstack("strain")
             .groupby(clust, axis="columns")
             .apply(
                 lambda x: pd.Series(
-                    np.average(x, weights=total_strain_depth.loc[x.columns], axis=1),
+                    weighted_mean_genotype(
+                        x, total_strain_depth.loc[x.columns], axis=1
+                    ),
                     index=x.index,
                 )
             )
@@ -765,12 +838,66 @@ class World:
             .rename_axis(columns="strain")
             .stack()
             .to_xarray()
-        )
+        ).renormalize()
         if "metagenotype" in self.data:
             world = World.from_combined(genotype, community, self.metagenotype)
         else:
             world = World.from_combined(genotype, community)
         return world
+
+    def drop_low_abundance_strains(self, thresh):
+        is_abundant = (self.community.max("sample") >= thresh).to_series()
+        relabel = self.strain.to_series().where(is_abundant, -1)
+        return self.merge_strains(relabel, discretized=False)
+
+    def drop_high_entropy_strains(self, thresh, norm=1):
+        is_low_entropy = (self.genotype.entropy(norm=norm) <= thresh).to_series()
+        relabel = self.strain.to_series().where(is_low_entropy, -1)
+        return self.merge_strains(relabel, discretized=False)
+
+    def collapse_similar_strains(self, thresh, discretized=False, **kwargs):
+        if discretized:
+            geno = self.genotype.discretized()
+        else:
+            geno = self.genotype
+        relabel = geno.clusters(thresh=thresh, **kwargs)
+        return self.merge_strains(relabel, discretized=discretized)
+
+    def reassign_high_community_entropy_samples(self, thresh, norm=1):
+        high_entropy_samples = (self.community.entropy(norm=norm) > thresh).to_series()
+        comm = self.community.to_series().unstack("strain")
+        comm.loc[:, -1] = 0
+        comm.loc[high_entropy_samples, :] = 0
+        comm.loc[high_entropy_samples, -1] = 1
+        comm = sf.Community(comm.stack().to_xarray()).renormalize()
+        geno = self.genotype.to_series().unstack()
+        geno.loc[-1, :] = 0.5
+        geno = sf.Genotype(geno.stack().to_xarray())
+        return sf.World.from_combined(comm, geno, self.metagenotype)
+
+    def reassign_plurality_strain(self):
+        comm = sf.Community(
+            self.community.to_series()
+            .unstack("strain")
+            .apply(lambda x: x == x.max(), axis=1)
+            .astype(float)
+            .stack()
+            .to_xarray()
+        )
+        return sf.World.from_combined(comm, self.genotype, self.metagenotype)
+
+    def expected_dominant_allele_fraction(self):
+        return (
+            (self.community.data @ self.genotype.data)
+            .to_series()
+            .to_frame(name="alt")
+            .rename_axis(columns="allele")
+            .assign(ref=lambda x: 1 - x)
+            .stack()
+            .to_xarray()
+            .transpose(*Metagenotype.dims)
+            .max("allele")
+        )
 
 
 def latent_metagenotype_pdist(world, dim="sample"):
@@ -780,7 +907,7 @@ def latent_metagenotype_pdist(world, dim="sample"):
 
 
 def latent_metagenotype_linkage(
-    world, dim="sample", method="average", optimal_ordering=False
+    world, dim="sample", method="complete", optimal_ordering=False
 ):
     return linkage(
         squareform(latent_metagenotype_pdist(world, dim=dim)),

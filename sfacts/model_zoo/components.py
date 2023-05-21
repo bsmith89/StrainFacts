@@ -5,8 +5,10 @@ import torch
 from pyro.distributions import TorchDistribution
 from torch.distributions import constraints
 from torch.nn.functional import pad as torch_pad
+
 # from sfacts.pyro_util import log1mexp
 import warnings
+
 # import scipy as sp
 # import numpy as np
 
@@ -294,9 +296,8 @@ class LogSoftTriangle(TorchDistribution):
         a, b = self.a, self.b
         exp = torch.exp
         x = value
-        return (
-            (b * (-exp(a * x)) + a * exp(b) * (exp(-b * x) - 1) + b)
-            / (a * (-exp(b)) - exp(a) * b + a + b)
+        return (b * (-exp(a * x)) + a * exp(b) * (exp(-b * x) - 1) + b) / (
+            a * (-exp(b)) - exp(a) * b + a + b
         )
 
     # def icdf(self, value):
@@ -306,5 +307,7 @@ class LogSoftTriangle(TorchDistribution):
     #
     def sample(self, sample_shape=()):
         _approx = LogTriangle(a=self.a)
-        warnings.warn("Using LogTriangle as an approximation for random sampling. This is probably a bad idea.")
+        warnings.warn(
+            "Using LogTriangle as an approximation for random sampling. This is probably a bad idea."
+        )
         return _approx.sample(sample_shape=sample_shape)

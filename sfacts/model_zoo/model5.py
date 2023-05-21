@@ -14,9 +14,7 @@ import pyro.distributions as dist
 @sf.model.structure(
     text_summary="""Metagenotype model intended for inference, designed for simplicity and speed.
 
-No explicit error and no overdispersion of counts.
-
-TODO
+Just like model4 but with uniform sequencing error.
 
     """,
     dims=SHARED_DIMS,
@@ -32,7 +30,6 @@ TODO
             "genotype",
             "community",
             "metagenotype",
-            "mu",
         ],
     ),
     default_hyperparameters=dict(
@@ -109,7 +106,10 @@ def model(
     # Expected fractions of each allele at each position
     p_noerr = pyro.deterministic("p_noerr", pi @ gamma)
     p = pyro.deterministic(
-        "p", torch.clamp((1 - epsilon / 2) * (p_noerr) + (epsilon / 2) * (1 - p_noerr), min=0, max=1)
+        "p",
+        torch.clamp(
+            (1 - epsilon / 2) * (p_noerr) + (epsilon / 2) * (1 - p_noerr), min=0, max=1
+        ),
     )
 
     # Observation

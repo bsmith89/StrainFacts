@@ -12,18 +12,15 @@ import pyro.distributions as dist
 
 
 @sf.model.structure(
-    text_summary="""Metagenotype model intended for inference, designed for simplicity and speed.
+    text_summary="""Metagenotype model intended for inference of large datasets, designed for simplicity and speed.
 
-No explicit error and no overdispersion of counts.
-
-Used the LogSoftTriangle prior on genotypes.
+No hierarchical control on community composition.
 
     """,
     dims=SHARED_DIMS,
     description=_mapping_subset(
         SHARED_DESCRIPTIONS,
         [
-            "rho",
             "p",
             "mu",
             "m",
@@ -35,8 +32,8 @@ Used the LogSoftTriangle prior on genotypes.
     ),
     default_hyperparameters=dict(
         gamma_hyper=1e-10,
-        rho_hyper=0.2,
         pi_hyper=0.5,
+        pi_hyper2=0.5,
         mu_hyper_mean=1.0,
         mu_hyper_scale=1.0,
         m_hyper_concentration=1.0,
@@ -48,8 +45,8 @@ def model(
     s,
     a,
     gamma_hyper,
-    rho_hyper,
     pi_hyper,
+    pi_hyper2,
     mu_hyper_mean,
     mu_hyper_scale,
     m_hyper_concentration,
@@ -64,13 +61,13 @@ def model(
             )
     pyro.deterministic("genotype", gamma)
 
-    # Meta-community composition
-    rho = pyro.sample("rho", dist.Dirichlet(rho_hyper.repeat(s)))
-
     with pyro.plate("sample", n, dim=-1):
         # Community composition
         pi = pyro.sample(
-            "pi", ShiftedScaledDirichlet(_unit.repeat(s), rho, 1 / pi_hyper)
+            "pi",
+            ShiftedScaledDirichlet(
+                pi_hyper2.repeat(s), _unit.repeat(s) / s, 1 / pi_hyper
+            ),
         )
         mu = pyro.sample(
             "mu", dist.LogNormal(loc=torch.log(mu_hyper_mean), scale=mu_hyper_scale)

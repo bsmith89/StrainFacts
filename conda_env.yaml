@@ -1,4 +1,4 @@
-name: StrainFacts-dev
+name: strainfacts
 channels:
   - conda-forge
   - bioconda
@@ -18,4 +18,4 @@ dependencies:
   - pip=23.1.2
   - pip:
     - pyro-ppl
-    - -e ..
+    - git+https://github.com/bsmith89/StrainFacts.git

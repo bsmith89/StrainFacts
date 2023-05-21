@@ -15,7 +15,10 @@ import pyro.distributions as dist
 @sf.model.structure(
     text_summary="""Metagenotype model harnessing the shifted-scaled Dirichlet distribution.
 
-TODO
+This is the StrainFacts model used in the paper (Smith et al. 2022, Frontiers in Bioinformatics).
+
+ShiftedScaledDirichlet distributions are used for each of genotype, metacommunity, and community.
+The model includes both error and overdispersion parameters of which may be different for each sample.
 
     """,
     dims=SHARED_DIMS,
@@ -32,7 +35,6 @@ TODO
             "genotype",
             "community",
             "metagenotype",
-            "mu",
         ],
     ),
     default_hyperparameters=dict(

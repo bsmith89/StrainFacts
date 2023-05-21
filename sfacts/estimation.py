@@ -170,6 +170,7 @@ def estimate_parameters(
         k: anneal_hyperparameters[k][-1] for k in anneal_hyperparameters
     }
     model = model.with_passed_hyperparameters(*anneal_hyperparameters.keys())
+    logging.debug("anneal_hyperparameters=%s", anneal_hyperparameters)
 
     sf.pyro_util.set_random_seed(seed)
 
@@ -341,14 +342,7 @@ def community_aggregated_by_strain_cluster(
 def nmf_approximation(
     world,
     s,
-    regularization="both",
-    alpha=1.0,
-    l1_ratio=1.0,
-    tol=1e-4,
-    max_iter=int(1e4),
-    random_state=None,
-    init="random",
-    eps=1e-10,
+    eps=0,
     **kwargs,
 ):
     d = (
@@ -362,17 +356,6 @@ def nmf_approximation(
     gamma0, pi0, _ = non_negative_factorization(
         d.values,
         n_components=s,
-        regularization={
-            "community": "components",
-            "genotype": "transformation",
-            "both": "both",
-        }[regularization],
-        alpha=alpha,
-        l1_ratio=l1_ratio,
-        tol=tol,
-        max_iter=max_iter,
-        random_state=random_state,
-        init=init,
         **kwargs,
     )
     pi1 = (
@@ -425,6 +408,10 @@ def clust_approximation(
 
     nclust = len(clust.unique())
     logging.info(f"Clustering approximated {nclust} strains.")
+    assert nclust <= s, (
+        "Clustering identified too many clusters (> allowed nstrains). "
+        "Try either increasing the number of strains or the clustering threshold."
+    )
     geno = sf.Metagenotype(
         mgen.to_series()
         .unstack("sample")

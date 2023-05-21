@@ -15,7 +15,8 @@ import pyro.distributions as dist
 @sf.model.structure(
     text_summary="""Metagenotype model with fixed and uniform error, and sequencing depth.
 
-TODO
+Intended as a lowest-common-denomenator metagenotype simulator.
+Used for ben benchmarks in the paper (Smith et al. 2022, Frontiers in Bioinformatics)
 
     """,
     dims=SHARED_DIMS,
@@ -23,6 +24,7 @@ TODO
         SHARED_DESCRIPTIONS,
         [
             "p",
+            "p_noerr",
             "mu",
             "epsilon",
             "m",
@@ -49,7 +51,8 @@ def model(
 ):
     with pyro.plate("position", g, dim=-1):
         with pyro.plate("strain", s, dim=-2):
-            gamma = pyro.sample("genotype", dist.Bernoulli(_unit * 0.5))
+            gamma = pyro.sample("gamma", dist.Bernoulli(_unit * 0.5))
+        genotype = pyro.deterministic("genotype", gamma)
 
     with pyro.plate("sample", n, dim=-1):
         # Community composition

@@ -163,7 +163,10 @@ def metagenotype_error(reference, estimate):
 
 def metagenotype_error2(world, metagenotype=None, discretized=False):
     if metagenotype is None:
-        metagenotype = world.metagenotype
+        metagenotype = world
+    metagenotype = (
+        metagenotype.metagenotype
+    )  # In case metagenotype is a full World object.
     if discretized:
         g = world.genotype.discretized().data
     else:
@@ -252,3 +255,17 @@ def unifrac_error2(reference, estimate, coef=1e6, discretized=True):
         np.mean(out),
         pd.Series(out, index=reference.sample).rename_axis(index="sample"),
     )
+
+
+EVALUATION_SCORE_FUNCTIONS = dict(
+    mgen_error=lambda sim, fit: metagenotype_error2(fit, sim, discretized=True)[0],
+    fwd_genotype_error=lambda sim, fit: discretized_weighted_genotype_error(sim, fit)[
+        0
+    ],
+    rev_genotype_error=lambda sim, fit: discretized_weighted_genotype_error(fit, sim)[
+        0
+    ],
+    bc_error=lambda sim, fit: braycurtis_error(sim, fit)[0],
+    unifrac_error=lambda sim, fit: unifrac_error(sim, fit)[0],
+    entropy_error=lambda sim, fit: community_entropy_error(sim, fit)[0],
+)

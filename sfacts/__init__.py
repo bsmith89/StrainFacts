@@ -1,10 +1,10 @@
+import xarray  # TODO: 2023-05-19: For some reason this fixes a segmentation fault...???
 from sfacts import (
     logging_util,
     pyro_util,
     pandas_util,
     math,
     model,
-    model_zoo,
     plot,
     estimation,
     evaluation,
@@ -39,3 +39,6 @@ from sfacts.workflow import (
     fit_metagenotype_complex,
     iteratively_fit_genotype_conditioned_on_community,
 )
+from sfacts import model_zoo
+
+__version__ = "0.4.0b"

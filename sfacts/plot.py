@@ -286,14 +286,20 @@ plot_prediction_error = plot_generic_clustermap_factory(
 )
 
 plot_dominance = plot_generic_clustermap_factory(
-    matrix_func=lambda w: w.metagenotype.dominant_allele_fraction(pseudo=0).T,
+    matrix_func=lambda w: (
+        w.metagenotype.dominant_allele_fraction()
+        * (1 - w.metagenotype.dominant_allele_fraction())
+        * np.sqrt(w.metagenotype.total_counts())
+    ).T,
     col_linkage_func=lambda w: w.metagenotype.linkage(dim="sample"),
     row_linkage_func=lambda w: w.metagenotype.linkage(dim="position"),
     metric="cosine",
     scalex=0.15,
     scaley=0.01,
     vmin=0,
-    vmax=1,
+    vmax=None,
+    cmap=sns.cm.rocket_r,
+    norm=mpl.colors.PowerNorm(1 / 2),
     xticklabels=1,
     yticklabels=0,
     col_colors_func=(
@@ -392,7 +398,9 @@ plot_community = plot_generic_clustermap_factory(
 )
 
 
-def plot_loss_history(*args):
+def plot_loss_history(*args, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
     traces = []
     trace_min = []
     for trace in args:
@@ -400,9 +408,10 @@ def plot_loss_history(*args):
         trace_min.append(traces[-1].min())
     trace_min = np.min(trace_min)
     for i, trace in enumerate(traces):
-        plt.plot(trace - trace_min, label=f"{trace[-1]:0.3e} ({i})")
-    plt.yscale("log")
-    plt.legend(loc="upper right")
+        ax.plot(trace - trace_min, label=f"{trace[-1]:0.3e} ({i})")
+    ax.set_yscale("log")
+    ax.legend(loc="upper right")
+    return ax
 
 
 def nmds_ordination(dmat):
@@ -478,6 +487,29 @@ def ordination_plot(
 
 
 def plot_metagenotype_frequency_spectrum(
+    world,
+    sample,
+    bins=None,
+    ax=None,
+    **kwargs,
+):
+    hist_kwargs = dict()
+    hist_kwargs.update(kwargs)
+
+    if not ax:
+        fig, ax = plt.subplots()
+
+    if bins is None:
+        bins = np.linspace(0.5, 1.0, num=21)
+
+    frequencies = world.metagenotype.dominant_allele_fraction()
+    ax.hist(frequencies.sel(sample=sample), bins=bins, color="black", **hist_kwargs)
+    ax.set_title(sample)
+    ax.set_xlim(0.5, 1)
+    return ax
+
+
+def plot_metagenotype_frequency_spectrum_compare_samples(
     world,
     sample_list=None,
     show_dominant=False,
@@ -556,7 +588,7 @@ def plot_metagenotype_frequency_spectrum(
     ax.set_xlim(0.5, 1)
 
 
-def plot_metagenotype_frequency_spectrum_comparison(
+def plot_metagenotype_frequency_spectrum_compare_worlds(
     worlds, sample, alpha=0.5, bins=None, ax=None
 ):
     if bins is None:

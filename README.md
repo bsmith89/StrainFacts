@@ -24,10 +24,10 @@ doi:[10.3389/fbinf.2022.867386](https://doi.org/10.3389/fbinf.2022.867386)
 
 ## Installation
 
-The simplest possible installation directly from GitHub
+The simplest possible installation is with `pip`.
 
 ```
-pip install git+https://github.com/bsmith89/StrainFacts.git#egg=sfacts
+pip install StrainFacts
 ```
 
 However, installing [as a conda environment](#with-conda) (described below) is
@@ -43,11 +43,11 @@ necessary prerequisites (but excluding StrainFacts itself).
 Short vignettes explaining how to use StrainFacts for data processing,
 visualization, and evaluation are provided as Jupyter Notebooks:
 
-- [`examples/simulate_data.ipynb`](https://byronjsmith.com/StrainFacts/simulate_data.html)
-- [`examples/filter_data.ipynb`](https://byronjsmith.com/StrainFacts/filter_data.html)
-- [`examples/fit_metagenotype.ipynb`](https://byronjsmith.com/StrainFacts/fit_metagenotype.html)
-- [`examples/fit_metagenotype_advanced.ipynb`](https://byronjsmith.com/StrainFacts/fit_metagenotype_advanced.html)
-- [`examples/evaluate_simulation_fit.ipynb`](https://byronjsmith.com/StrainFacts/evaluate_simulation_fit.html)
+- [`examples/simulate_data.ipynb`](https://byronjsmith.com/StrainFacts/simulate_data.ipynb.html)
+- [`examples/filter_data.ipynb`](https://byronjsmith.com/StrainFacts/filter_data.ipynb.html)
+- [`examples/fit_metagenotype.ipynb`](https://byronjsmith.com/StrainFacts/fit_metagenotype.ipynb.html)
+- [`examples/fit_metagenotype_advanced.ipynb`](https://byronjsmith.com/StrainFacts/fit_metagenotype_advanced.ipynb.html)
+- [`examples/evaluate_simulation_fit.ipynb`](https://byronjsmith.com/StrainFacts/evaluate_simulation_fit.ipynb.html)
 
 ## Usage
 
@@ -199,7 +199,11 @@ This is a subset of the recently updated
 database.
 The MGnify website provides a convenient way to browse this reference.
 
-## How to Hack on StrainFacts
+## Contributing to StrainFacts
+
+Opening new issues and pull requests is greatly appreciated. Any information
+about how you have tried using StrainFacts and succeeded/failed will be
+appreciated.
 
 ### Editable Installation
 
@@ -218,6 +222,10 @@ Then install with either conda or pip:
 
 #### With `conda`
 
+Conda is highly recommended. While installing with `pip` will also
+work, some optional dependencies (in particular Scikit-Bio) often fail to
+install correctly.
+
 Build the environment:
 
 ```
@@ -230,13 +238,6 @@ This includes an embedded `pip install --editable` for StrainFacts from the
 cloned repo.
 
 
-#### With `pip`
-
-```
-pip install -r requirements.pip
-pip install -e .
-```
-
 ### Integration Testing
 
 ```
@@ -248,11 +249,18 @@ This runs a complex workflow, including
 
 - simulation
 - data conversion
-- initial fitting
+- model fitting
 - genotype refitting
 - evaluation of estimates against the simulated ground-truth
 
+_Note that the evaluation function at the very end of this integration test will fail if SciKit-Bio is not installed correctly._
+
 ### Prototyping in Jupyter
+
+Using the StrainFacts API and visualization functions inside a Jupyter Notebook
+can be very convenient.
+
+To start a JupyterLab server, run the following Make command:
 
 ```
 make start_jupyter
@@ -270,14 +278,17 @@ make start_jupyter
     - [x] Simple example fitting a metagenotype
     - [x] Flesh out the example with an explanation of all of the steps.
     - [ ] ~~Example data from SRA with a GT-Pro step, instead of simulated~~
-    - [ ] Update README/Makefile/Examples to match new CLI interfaces.
-- [x] The parameters selected for use in this paper (which we have found to be
-      applicable across a range of datasets) will be set as the default.
-    - Caveat: All of the hyperparameter annealing parameters should still be set by the user
+    - [x] Update README/Makefile/Examples to match new CLI interfaces.
+- [x] ~~The parameters selected for use in this paper (which we have found to be
+      applicable across a range of datasets) will be set as the default.~~
+    - ~~Caveat: All of the hyperparameter annealing parameters should still be set by the user~~
+    - UPDATE: A new model/hyperparameters/fitting approach seems broadly superior.
+      This will be described in an upcoming manuscript.
 - [x] We will document some useful approaches for hyperparameter tuning.
 - [x] Improve the CLI documentation.
-    - [ ] Explicit blurb about how to run the model as in the paper
-    - [ ] Model description strings.
+    - [x] Explicit blurb about how to run the model as in the paper
+    - [x] Implement model description strings.
+    - [ ] Write model descriptions.
 - [ ] Refactor for the best looking code
     - [x] De-pluralize core datatypes (community not communities)
     - [x] Remove unused CLI apps/workflows/plotting code
@@ -285,6 +296,13 @@ make start_jupyter
     - [ ] Drop stale code in `sfacts.data`, `sfacts.evaluation`, and `sfacts.plot`
     - [ ] Simplify the model structure decorator.
     - [ ] Fix mismatch between 'gamma'/'pi' and 'genotype'/'community'. (Probably just change variable names in the model, yeah?)
-    - [ ] Move choice of strain numbers for fit and init apps to a set of helper functions.
+    - [x] Move choice of strain numbers for fit and init apps to a set of helper functions.
     - [ ] Refactor CLI app architecture to be more intuitive.
 - [ ] Memoization of expensive calculations on wrapped Datasets and DataArrays.
+- [ ] Better tools for model selection (e.g. more evaluation scores based on only
+      metagenotypes and fits)
+- [ ] Split out metagenotype/community/genotype handling to its own package:
+      `mgtp` and make this a StrainFacts dependency.
+- [ ] Release on package indexes
+    - [x] PyPI
+    - [ ] Bioconda
