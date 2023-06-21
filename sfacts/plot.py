@@ -350,6 +350,21 @@ plot_genotype = plot_generic_clustermap_factory(
     # row_colors_func=(lambda w: (w.genotype.entropy())),
 )
 
+plot_genotype_entropy = plot_generic_clustermap_factory(
+    matrix_func=lambda w: (
+        w.genotype.to_pandas().apply(sf.math.binary_entropy).stack().to_xarray()
+    ),
+    row_linkage_func=lambda w: w.genotype.linkage(dim="strain"),
+    col_linkage_func=lambda w: w.genotype.linkage(dim="position"),
+    scaley=0.20,
+    scalex=0.01,
+    vmin=0,
+    cmap=sns.cm.rocket_r,
+    yticklabels=1,
+    xticklabels=0,
+    # row_colors_func=(lambda w: (w.genotype.entropy())),
+)
+
 plot_masked_genotype = plot_generic_clustermap_factory(
     matrix_func=lambda w: w.masked_genotype,
     row_linkage_func=lambda w: w.masked_genotype.linkage(dim="strain"),
