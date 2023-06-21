@@ -478,6 +478,10 @@ class Genotype(WrappedDataArrayMixin):
         data.name = cls.variable_name
         return cls._post_load(data)
 
+    def dominant_allele_fraction(self):
+        "Convert metagenotype counts to a frequencies with optional pseudocount."
+        return self.pipe(lambda x: np.maximum(x, 1 - x))
+
     def discretized(self):
         return self.lift(np.round)
 

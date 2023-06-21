@@ -486,6 +486,33 @@ def ordination_plot(
     return ax, ordin
 
 
+def plot_genotype_frequency_spectrum(
+    world,
+    strain,
+    bins=None,
+    ax=None,
+    **kwargs,
+):
+    hist_kwargs = dict()
+    hist_kwargs.update(kwargs)
+
+    if not ax:
+        fig, ax = plt.subplots()
+
+    if bins is None:
+        bins = np.linspace(0.5, 1.0, num=21)
+
+    frequencies = (
+        world.genotype.sel(strain=[strain])
+        .dominant_allele_fraction()
+        .sel(strain=strain)
+    )
+    ax.hist(frequencies, bins=bins, color="black", **hist_kwargs)
+    ax.set_title(strain)
+    ax.set_xlim(0.5, 1)
+    return ax
+
+
 def plot_metagenotype_frequency_spectrum(
     world,
     sample,
