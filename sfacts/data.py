@@ -397,14 +397,14 @@ class Metagenotype(WrappedDataArrayMixin):
             sf.math.podlesny_cdist(d, d), index=self.sample, columns=self.sample
         )
 
-    def clusters(self, s_or_thresh, linkage="complete", **kwargs):
+    def clusters(self, s_or_thresh, linkage="complete", **pdist_kwargs):
         if s_or_thresh < 1:
             s = None
             thresh = float(s_or_thresh)
         elif s_or_thresh > 1:
             s = int(s_or_thresh)
             thresh = None
-        dist = self.pdist("sample", **kwargs)
+        dist = self.pdist("sample", **pdist_kwargs)
         return pd.Series(
             AgglomerativeClustering(
                 n_clusters=s,
@@ -526,9 +526,12 @@ class Genotype(WrappedDataArrayMixin):
         dim="strain",
         method="complete",
         optimal_ordering=False,
+        pdist_kwargs=None,
         **kwargs,
     ):
-        dmat = self.pdist(dim=dim)
+        if pdist_kwargs is None:
+            pdist_kwargs = {}
+        dmat = self.pdist(dim=dim, **pdist_kwargs)
         cdmat = squareform(dmat)
         return linkage(
             cdmat, method=method, optimal_ordering=optimal_ordering, **kwargs
