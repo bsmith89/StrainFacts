@@ -19,16 +19,14 @@ def genotype_binary_to_sign(p):
     return 2 * p - 1
 
 
-def genotype_dissimilarity(x, y, q=2):
+def genotype_dissimilarity(x, y, q=1):
     "Dissimilarity between 1D genotypes, accounting for fuzzyness."
-    assert q == 2, "Not implemented"
     x = genotype_binary_to_sign(x)
     y = genotype_binary_to_sign(y)
 
-    # FIXME: This sqrt(abs(.)) is a no-op
-    dist = np.abs(x - y)
-    weight = np.sqrt(np.abs(x * y))
-    wmean_dist = (weight * dist).sum() / weight.sum()
+    dist = np.abs((x - y) / 2) ** q
+    weight = np.abs(x * y)
+    wmean_dist = ((weight * dist).sum() / weight.sum())**(1/q)
 
     # While the basic function is undefined where weight.sum() == 0
     # (and this is only true when one of x or y is always exactly 0.5 at every
