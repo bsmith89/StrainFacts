@@ -26,7 +26,7 @@ def genotype_dissimilarity(x, y, q=1):
 
     dist = np.abs((x - y) / 2) ** q
     weight = np.abs(x * y)
-    wmean_dist = ((weight * dist).sum() / weight.sum())**(1/q)
+    wmean_dist = ((weight * dist).sum() / weight.sum())
 
     # While the basic function is undefined where weight.sum() == 0
     # (and this is only true when one of x or y is always exactly 0.5 at every
