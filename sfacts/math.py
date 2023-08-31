@@ -19,34 +19,11 @@ def genotype_binary_to_sign(p):
     return 2 * p - 1
 
 
-def genotype_dissimilarity(x, y, q=1):
-    "Dissimilarity between 1D genotypes, accounting for fuzzyness."
-    x = genotype_binary_to_sign(x)
-    y = genotype_binary_to_sign(y)
-
+def genotype_dissimilarity_transformed_values(x, y, q=1):
     dist = np.abs((x - y) / 2) ** q
     weight = np.abs(x * y)
-    wmean_dist = ((weight * dist).sum() / weight.sum())
-
-    # While the basic function is undefined where weight.sum() == 0
-    # (and this is only true when one of x or y is always exactly 0.5 at every
-    # index),
-    # the limit approaches the same value from both directions.
-    # We therefore redefine the dissimilarity as a piecewise function,
-    # but one that is nonetheless everywhere smooth and defined.
-    return np.where(np.isnan(wmean_dist), dist.mean(), wmean_dist)
-
-
-def discrete_genotype_dissimilarity(x, y, q=2):
-    "Dissimilarity between 1D genotypes, accounting for fuzzyness."
-    x = genotype_binary_to_sign(x)
-    y = genotype_binary_to_sign(y)
-    x_sign, y_sign = np.sign(x), np.sign(y)
-
-    dist = np.abs((x_sign - y_sign) / 2)
-    weight = np.abs(x * y)
-    wmean_dist = ((weight * dist).sum()) / ((weight.sum()))
-    # Why not finish up by powering it by (1 / q)?
+    wmean_dist = (weight * dist).sum() / weight.sum()
+    # NOTE: Why not finish up by powering it by (1 / q)?
     # I don't do this part because it loses the city-block distance
     # interpretation when x and y are both discrete (i.e. one of {0, 1}).
 
@@ -57,6 +34,16 @@ def discrete_genotype_dissimilarity(x, y, q=2):
     # We therefore redefine the dissimilarity as a piecewise function,
     # but one that is nonetheless everywhere smooth and defined.
     return np.where(np.isnan(wmean_dist), dist.mean(), wmean_dist)
+
+
+def genotype_dissimilarity(x, y, q=1, discretized=False):
+    "Dissimilarity between 1D genotypes, accounting for fuzzyness."
+    x = genotype_binary_to_sign(x)
+    y = genotype_binary_to_sign(y)
+    if discretized:
+        x, y = np.sign(x), np.sign(y)
+
+    return genotype_dissimilarity_transformed_values(x, y, q=q)
 
 
 def genotype_masked_hamming_distance(x, y):
