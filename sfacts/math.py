@@ -53,7 +53,7 @@ def genotype_masked_hamming_distance(x, y):
     return diff[mask].sum() / np.ones_like(diff)[mask].sum()
 
 
-def genotype_cdist(xx, yy, q=2):
+def genotype_cdist(xx, yy, q=1):
     return cdist(xx, yy, genotype_dissimilarity, q=q)
 
 
@@ -65,7 +65,7 @@ def genotype_masked_hamming_cdist(xx, yy):
     return cdist(xx, yy, genotype_masked_hamming_distance)
 
 
-def genotype_pdist(xx, q=2):
+def genotype_pdist(xx, q=1):
     return pdist(xx, genotype_dissimilarity, q=q)
 
 
