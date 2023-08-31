@@ -306,3 +306,7 @@ make start_jupyter
 - [ ] Release on package indexes
     - [x] PyPI
     - [ ] Bioconda
+- [ ] Upgrade pdist/linkage calculation
+    - [ ] Better caching of pdist/linkage calculations.
+    - [ ] Use fastcluster package for linkage calculations
+    - [ ] Optimal leaf ordering
