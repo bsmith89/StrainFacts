@@ -648,6 +648,19 @@ class Fit(AppInterface):
         else:
             metagenotype = sf.data.Metagenotype.load(args.inpath)
 
+        # NOTE (2023-08-31): While I could theoretically "fit" just one
+        # position or one sample these fail with the current implementation of
+        # loading the model fitting results.  Instead of making a silly thing
+        # work, here I'm simply short-circuiting early to save compute.
+        if metagenotype.sizes["position"] < 2:
+            raise RuntimeError(
+                "Two or more metagenotyped positions are required for fitting."
+            )
+        if metagenotype.sizes["sample"] < 2:
+            raise RuntimeError(
+                "Two or more metagenotyped samples are required for fitting."
+            )
+
         if args.init_from:
             init_from = sf.World.load(args.init_from)
             logging.info(f"Initialization data shapes: {init_from.sizes}.")
