@@ -1058,7 +1058,13 @@ class EvaluateFitAgainstSimulation(AppInterface):
             "--scores",
             nargs="+",
             choices=sf.evaluation.EVALUATION_SCORE_FUNCTIONS,
-            default=["mgen_error", "fwd_genotype_error", "rev_genotype_error", "bc_error", "entropy_error"],
+            default=[
+                "mgen_error",
+                "fwd_genotype_error",
+                "rev_genotype_error",
+                "bc_error",
+                "entropy_error",
+            ],
             help="Score function(s) to use to assess fit.",
         )
 
@@ -1069,7 +1075,9 @@ class EvaluateFitAgainstSimulation(AppInterface):
         for fit_path in [args.reference] + args.fit:
             logging.debug("Evaluating: %s", fit_path)
             fit = sf.World.load(fit_path)
-            results[fit_path] = sf.workflow.evaluate_fit_against_ref(ref, fit, score_list=args.scores)
+            results[fit_path] = sf.workflow.evaluate_fit_against_ref(
+                ref, fit, score_list=args.scores
+            )
 
         results = pd.DataFrame(results).rename_axis(index="score")
 
