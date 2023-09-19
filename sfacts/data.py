@@ -200,6 +200,14 @@ class WrappedDataArrayMixin:
     def __repr__(self):
         return f"{self.__class__.__name__}({self.data})"
 
+    def rename_coords(self, **kwargs):
+        data = self.data.copy()
+        for k in kwargs:
+            assert k in data.dims
+            renamer = kwargs[k]
+            data[k] = data[k].to_series().map(renamer)
+        return self.__class__(data)
+
     @classmethod
     def concat(cls, data, dim, rename=True):
         out_data = []
@@ -482,8 +490,11 @@ class Genotype(WrappedDataArrayMixin):
         "Convert metagenotype counts to a frequencies with optional pseudocount."
         return self.pipe(lambda x: np.maximum(x, 1 - x))
 
-    def discretized(self):
-        return self.lift(np.round)
+    def discretized(self, max_ambiguity=None):
+        if max_ambiguity is None:
+            max_ambiguity = 0.5
+        assert (max_ambiguity > 0) and (max_ambiguity <= 0.5)
+        return self.__class__(self.data.where(self.dominant_allele_fraction() > (1 - max_ambiguity), np.nan).round())
 
     def fuzzed(self, eps=1e-5):
         return self.lift(lambda x: (x + eps) / (1 + 2 * eps))
