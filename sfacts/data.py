@@ -205,8 +205,9 @@ class WrappedDataArrayMixin:
         for k in kwargs:
             assert k in data.dims
             renamer = kwargs[k]
-            data[k] = data[k].to_series().map(renamer)
+            data[k] = data[k].to_series().rename(renamer).index
         return self.__class__(data)
+
 
     @classmethod
     def concat(cls, data, dim, rename=True):
@@ -747,6 +748,14 @@ class World:
                 ii = sorted(ii)
             isel[dim] = ii
         return self.__class__(data=self.data.isel(**isel))
+
+    def rename_coords(self, **kwargs):
+        data = self.data.copy()
+        for k in kwargs:
+            assert k in data.dims
+            renamer = kwargs[k]
+            data[k] = data[k].to_series().rename(renamer).index
+        return self.__class__(data)
 
     def __getattr__(self, name):
         if name in self.dims:
