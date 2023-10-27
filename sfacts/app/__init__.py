@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from collections import defaultdict
 import logging
+from sfacts.pandas_util import idxwhere
 from sfacts.app.components import (
     add_hyperparameters_cli_argument,
     parse_hyperparameter_strings,
@@ -879,6 +880,80 @@ class CleanInferences(AppInterface):
         world.dump(args.outpath)
 
 
+class CleanInferences2(AppInterface):
+    app_name = "cleanup_fit2"
+    description = "Drop badly fit samples."
+
+    @classmethod
+    def add_subparser_arguments(cls, parser):
+        parser.add_argument(
+            "--entropy-error",
+            "-e",
+            type=float,
+            default=np.inf,
+            help="Maximum entropy error for sample culling.",
+        )
+        parser.add_argument(
+            "--monte-carlo-draws",
+            "-n",
+            type=int,
+            default=1,
+            help=(
+                "How many simulations to run to estimate entropy expectation. "
+                "One draw is often sufficiently stable; larger numbers are "
+                "useful for low depth samples or when few positions are in "
+                "the metagenotype."
+            ),
+        )
+        parser.add_argument(
+            "--random-seed",
+            type=int,
+            help="Seed for random number generator; must be set for reproducible subsampling.",
+        )
+        parser.add_argument(
+            "--metagenotype-error",
+            "-m",
+            type=float,
+            default=np.inf,
+            help="Maximum metagenotype error for sample culling.",
+        )
+        parser.add_argument(
+            "inpath",
+            help="Path to StrainFacts/NetCDF file to be cleaned.",
+        )
+        parser.add_argument(
+            "outpath",
+            help="Path to write the StrainFacts/NetCDF file with dropped samples.",
+        )
+
+    @classmethod
+    def run(cls, args):
+        warnings.filterwarnings(
+            "ignore",
+            category=RuntimeWarning,
+            module="xarray",
+            lineno=771,
+            message="divide by zero encountered in log",
+        )
+
+        np.random.seed(args.random_seed)
+
+        world = sf.World.load(args.inpath)
+        logging.info(f"{world.sizes} (input data sizes)")
+        mgtp_error = sf.evaluation.metagenotype_error2(world, discretized=False)[1]
+        entrp_error = sf.evaluation.metagenotype_entropy_error(
+            world, discretized=False, p=1, montecarlo_draws=args.monte_carlo_draws
+        )[1]
+        fails_mgtp_error = mgtp_error >= args.metagenotype_error
+        fails_entrp_error = entrp_error >= args.entropy_error
+        world_filt = sf.data.World(
+            world.data.drop_sel(sample=idxwhere(fails_mgtp_error | fails_entrp_error))
+        )
+        logging.info(f"{world.sizes} (after dropping high-error samples)")
+        logging.info("Writing output.")
+        world_filt.dump(args.outpath)
+
+
 class DescribeModel(AppInterface):
     app_name = "model_info"
     description = "Summarize a model and its hyperparameters."
@@ -1112,6 +1187,7 @@ SUBCOMMANDS = [
     SubsampleMetagenotype,
     ConcatGenotypeBlocks,
     CleanInferences,
+    CleanInferences2,
     # Simulation:
     Simulate,
     # Fitting:
