@@ -946,7 +946,7 @@ class CleanInferences2(AppInterface):
 
         world = sf.World.load(args.inpath)
         logging.info(f"{world.sizes} (input data sizes)")
-        comm_entrp = world.community.entropy()
+        comm_entrp = world.community.entropy().to_series()
         mgtp_error = sf.evaluation.metagenotype_error2(world, discretized=False)[1]
         entrp_error = sf.evaluation.metagenotype_entropy_error(
             world, discretized=False, p=1, montecarlo_draws=args.monte_carlo_draws
