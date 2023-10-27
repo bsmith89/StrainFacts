@@ -911,6 +911,12 @@ class CleanInferences2(AppInterface):
             help="Seed for random number generator; must be set for reproducible subsampling.",
         )
         parser.add_argument(
+            "--community-entropy",
+            type=float,
+            default=np.inf,
+            help="Community entropy threshold for sample culling",
+        )
+        parser.add_argument(
             "--metagenotype-error",
             "-m",
             type=float,
@@ -940,14 +946,16 @@ class CleanInferences2(AppInterface):
 
         world = sf.World.load(args.inpath)
         logging.info(f"{world.sizes} (input data sizes)")
+        comm_entrp = world.community.entropy()
         mgtp_error = sf.evaluation.metagenotype_error2(world, discretized=False)[1]
         entrp_error = sf.evaluation.metagenotype_entropy_error(
             world, discretized=False, p=1, montecarlo_draws=args.monte_carlo_draws
         )[1]
+        fails_comm_entrp_thresh = comm_entrp >= args.community_entropy
         fails_mgtp_error = mgtp_error >= args.metagenotype_error
         fails_entrp_error = entrp_error >= args.entropy_error
         world_filt = sf.data.World(
-            world.data.drop_sel(sample=idxwhere(fails_mgtp_error | fails_entrp_error))
+            world.data.drop_sel(sample=idxwhere(fails_mgtp_error | fails_entrp_error | fails_comm_entrp_thresh))
         )
         logging.info(f"{world.sizes} (after dropping high-error samples)")
         logging.info("Writing output.")
