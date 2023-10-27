@@ -310,3 +310,5 @@ make start_jupyter
     - [ ] Better caching of pdist/linkage calculations.
     - [ ] Use fastcluster package for linkage calculations
     - [ ] Optimal leaf ordering
+- [ ] Filter warnings from e.g. numpy/pytorch/xarray in the calling functions
+      (rather than the application layer).
