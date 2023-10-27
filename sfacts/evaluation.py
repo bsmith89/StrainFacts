@@ -11,6 +11,7 @@ from sfacts.unifrac import (
 from sfacts.data import Genotype, Metagenotype
 import pandas as pd
 import numpy as np
+import xarray as xr
 
 
 def _rmse(x, y):
@@ -182,7 +183,7 @@ def metagenotype_error2(world, metagenotype=None, discretized=False):
 
 
 def metagenotype_entropy_error(
-    world, metagenotype=None, discretized=False, fuzz_eps=1e-5, montecarlo_draws=1
+    world, metagenotype=None, discretized=False, fuzz_eps=1e-5, montecarlo_draws=1, p=1,
 ):
     if metagenotype is None:
         metagenotype = world
@@ -193,26 +194,28 @@ def metagenotype_entropy_error(
         g = world.genotype.discretized().fuzzed(fuzz_eps).data
     else:
         g = world.genotype.data
-    p = world.community.data @ g
+    expect = world.community.data @ g
     m = metagenotype.total_counts().astype(int)
     mu = m.mean("position")
 
-    obs_entropy = metagenotype.entropy()
+    obs_entropy_elementwise = entropy(metagenotype.frequencies(), "allele")
     err_accum = 0
     for i in range(montecarlo_draws):
-        sim = binom(m, p).rvs()
+        sim = binom(m, expect).rvs()
         sim_mgtp = Metagenotype.from_counts_and_totals(
             sim,
             m,
             coords=dict(sample=metagenotype.sample, position=metagenotype.position),
         )
-        sim_sample_entropy = sim_mgtp.entropy()
-        err = obs_entropy - sim_sample_entropy
-        err_accum += err
+        sim_sample_entropy_elementwise = entropy(sim_mgtp.frequencies(), "allele")
 
-    err = err_accum / montecarlo_draws
+        err_accum += (obs_entropy_elementwise - sim_sample_entropy_elementwise)
 
-    return ((err * mu).sum() / mu.sum()).values, err.to_series()
+    err_elementwise = xr.DataArray(err_accum / montecarlo_draws, coords=dict(sample=metagenotype.sample, position=metagenotype.position))
+    sample_mean_err = (np.abs(err_elementwise**p * m).mean("position") / mu) ** (1 / p)
+    overall_mean_err = (sample_mean_err * mu).mean("sample") / mu.mean()
+
+    return overall_mean_err.values, sample_mean_err.to_series()
 
 
 def rank_abundance_error(reference, estimate, p=1):
