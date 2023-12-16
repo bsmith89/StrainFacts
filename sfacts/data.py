@@ -208,6 +208,9 @@ class WrappedDataArrayMixin:
             data[k] = data[k].to_series().rename(renamer).index
         return self.__class__(data)
 
+    def empty(self):
+        return np.product(self.data.shape) == 0
+
 
     @classmethod
     def concat(cls, data, dim, rename=True):
@@ -278,7 +281,9 @@ class Metagenotype(WrappedDataArrayMixin):
                 "alt_count": "alt",
             }
         )
-        assert len(data.species_id.unique()) == 1
+        if data.empty:
+            warn("Input data is empty.")
+        assert len(data.species_id.unique()) <= 1
         data = (
             data[["sample", "position", "ref", "alt"]]
             .set_index(["sample", "position"])

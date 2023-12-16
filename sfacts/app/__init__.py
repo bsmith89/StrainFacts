@@ -21,6 +21,12 @@ from sfacts.app.components import (
     calculate_strain_count,
 )
 
+EMPTY_METAGENOTYPE = sf.data.Metagenotype(
+    pd.DataFrame([], columns=["sample", "position", "allele", "tally"])
+    .set_index(["sample", "position", "allele"])
+    .tally.to_xarray()
+)
+
 
 class ArgumentConstraintError(Exception):
     pass
@@ -182,6 +188,14 @@ class FilterMetagenotype(AppInterface):
             thresh=args.min_minor_allele_freq
         ).select_samples_with_coverage(args.min_horizontal_cvrg)
         logging.info(f"Output metagenotype shapes: {mgen_filt.sizes}.")
+
+        if mgen_filt.empty:
+            # NOTE: (2023-12-13) This edge case is necessary
+            # only because some empty xr.DataArray objects
+            # don't like to dump to NetCDF.
+            warnings.warn("Metagenotype empty after filtering.")
+            mgen_filt = EMPTY_METAGENOTYPE
+
         mgen_filt.dump(args.outpath)
 
 
@@ -955,7 +969,11 @@ class CleanInferences2(AppInterface):
         fails_mgtp_error = mgtp_error >= args.metagenotype_error
         fails_entrp_error = entrp_error >= args.entropy_error
         world_filt = sf.data.World(
-            world.data.drop_sel(sample=idxwhere(fails_mgtp_error | fails_entrp_error | fails_comm_entrp_thresh))
+            world.data.drop_sel(
+                sample=idxwhere(
+                    fails_mgtp_error | fails_entrp_error | fails_comm_entrp_thresh
+                )
+            )
         )
         logging.info(f"{world.sizes} (after dropping high-error samples)")
         logging.info("Writing output.")
