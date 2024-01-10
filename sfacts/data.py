@@ -881,10 +881,16 @@ class World:
             world = World.from_combined(genotype, community)
         return world
 
-    def drop_low_abundance_strains(self, thresh, agg_strain_coord=-1):
-        is_abundant = (self.community.max("sample") >= thresh).to_series()
-        relabel = self.strain.to_series().where(is_abundant, agg_strain_coord)
+    def keep_only_strain_list(self, strain_list, agg_strain_coord=-1):
+        is_in_strain_list = self.strain.to_series().isin(strain_list)
+        relabel = self.strain.to_series().where(is_in_strain_list, agg_strain_coord)
         return self.merge_strains(relabel, discretized=False)
+
+    def drop_low_abundance_strains(self, thresh, agg_strain_coord=-1):
+        is_abundant_list = sf.pandas_util.idxwhere(
+            (self.community.max("sample") >= thresh).to_series()
+        )
+        return self.keep_only_strain_list(is_abundant_list)
 
     def drop_high_entropy_strains(self, thresh, norm=1):
         is_low_entropy = (self.genotype.entropy(norm=norm) <= thresh).to_series()
