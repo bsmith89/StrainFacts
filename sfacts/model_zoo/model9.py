@@ -57,7 +57,6 @@ def model(
     m_hyper_concentration,
     _unit,
 ):
-
     with pyro.plate("position", g, dim=-1):
         with pyro.plate("strain", s, dim=-2):
             gamma = pyro.sample(

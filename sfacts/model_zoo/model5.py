@@ -62,7 +62,6 @@ def model(
     epsilon_hyper_spread,
     _unit,
 ):
-
     with pyro.plate("position", g, dim=-1):
         with pyro.plate("strain", s, dim=-2):
             gamma = pyro.sample(

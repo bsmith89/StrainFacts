@@ -82,7 +82,7 @@ def calculate_strain_count(n_samples, args):
         int(
             np.ceil(
                 args.num_strains
-                + args.strains_per_sample * n_samples ** args.strain_sample_exponent
+                + args.strains_per_sample * n_samples**args.strain_sample_exponent
             )
         ),
     )

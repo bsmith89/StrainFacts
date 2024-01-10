@@ -109,7 +109,6 @@ def plot_generic_clustermap_factory(
         background_color=background_color,
         **kwargs,
     ):
-
         if isinstance(world, sf.data.WrappedDataArrayMixin):
             world = world.to_world()
 

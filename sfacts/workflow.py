@@ -60,7 +60,6 @@ def fit_metagenotype_complex(
     nmf_seed=None,
     estimation_kwargs=None,
 ):
-
     if estimation_kwargs is None:
         estimation_kwargs = {}
 
@@ -125,7 +124,6 @@ def iteratively_fit_genotype_conditioned_on_community(
     dtype=torch.float32,
     estimation_kwargs=None,
 ):
-
     if estimation_kwargs is None:
         estimation_kwargs = {}
 

@@ -212,7 +212,6 @@ class WrappedDataArrayMixin:
     def empty(self):
         return np.product(self.data.shape) == 0
 
-
     @classmethod
     def concat(cls, data, dim, rename=True):
         out_data = []
@@ -501,7 +500,11 @@ class Genotype(WrappedDataArrayMixin):
         if max_ambiguity is None:
             max_ambiguity = 0.5
         assert (max_ambiguity > 0) and (max_ambiguity <= 0.5)
-        return self.__class__(self.data.where(self.dominant_allele_fraction() > (1 - max_ambiguity), np.nan).round())
+        return self.__class__(
+            self.data.where(
+                self.dominant_allele_fraction() > (1 - max_ambiguity), np.nan
+            ).round()
+        )
 
     def fuzzed(self, eps=1e-5):
         return self.lift(lambda x: (x + eps) / (1 + 2 * eps))
@@ -588,7 +591,7 @@ class Genotype(WrappedDataArrayMixin):
             .stack()
             .to_xarray()
         )
-        return ((ent ** norm).mean(over) ** (1 / norm)).rename("entropy")
+        return ((ent**norm).mean(over) ** (1 / norm)).rename("entropy")
 
     def clusters(self, thresh, linkage="complete", **kwargs):
         dist = self.pdist("strain", **kwargs)

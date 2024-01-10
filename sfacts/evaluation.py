@@ -183,7 +183,12 @@ def metagenotype_error2(world, metagenotype=None, discretized=False):
 
 
 def metagenotype_entropy_error(
-    world, metagenotype=None, discretized=False, fuzz_eps=1e-5, montecarlo_draws=1, p=1,
+    world,
+    metagenotype=None,
+    discretized=False,
+    fuzz_eps=1e-5,
+    montecarlo_draws=1,
+    p=1,
 ):
     if metagenotype is None:
         metagenotype = world
@@ -209,10 +214,15 @@ def metagenotype_entropy_error(
         )
         sim_sample_entropy_elementwise = entropy(sim_mgtp.frequencies(), "allele")
 
-        err_accum += (obs_entropy_elementwise - sim_sample_entropy_elementwise)
+        err_accum += obs_entropy_elementwise - sim_sample_entropy_elementwise
 
-    err_elementwise = xr.DataArray(err_accum / montecarlo_draws, coords=dict(sample=metagenotype.sample, position=metagenotype.position))
-    sample_mean_err = (np.abs(err_elementwise**p * m).mean("position") / mu) ** (1 / p)
+    err_elementwise = xr.DataArray(
+        err_accum / montecarlo_draws,
+        coords=dict(sample=metagenotype.sample, position=metagenotype.position),
+    )
+    sample_mean_err = (np.abs(err_elementwise**p * m).mean("position") / mu) ** (
+        1 / p
+    )
     overall_mean_err = (sample_mean_err * mu).mean("sample") / mu.mean()
 
     return overall_mean_err.values, sample_mean_err.to_series()
