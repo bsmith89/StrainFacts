@@ -852,26 +852,24 @@ class World:
 
         genotype = Genotype(
             self.genotype.to_series()
-            .unstack("strain")
-            .groupby(clust, axis="columns")
+            .unstack("position")
+            .groupby(clust)
             .apply(
                 lambda x: pd.Series(
-                    weighted_mean_genotype(
-                        x, total_strain_depth.loc[x.columns], axis=1
-                    ),
-                    index=x.index,
+                    weighted_mean_genotype(x, total_strain_depth.loc[x.index], axis=0),
+                    index=x.columns,
                 )
             )
-            .rename_axis(columns="strain")
-            .T.stack()
+            .rename_axis(index="strain")
+            .stack()
             .to_xarray()
         )
         community = Community(
             self.community.to_series()
             .unstack("strain")
-            .groupby(clust, axis="columns")
+            .T.groupby(clust)
             .sum()
-            .rename_axis(columns="strain")
+            .T.rename_axis(columns="strain")
             .stack()
             .to_xarray()
         ).renormalize()
@@ -890,7 +888,9 @@ class World:
         is_abundant_list = sf.pandas_util.idxwhere(
             (self.community.max("sample") >= thresh).to_series()
         )
-        return self.keep_only_strain_list(is_abundant_list)
+        return self.keep_only_strain_list(
+            is_abundant_list, agg_strain_coord=agg_strain_coord
+        )
 
     def drop_high_entropy_strains(self, thresh, norm=1):
         is_low_entropy = (self.genotype.entropy(norm=norm) <= thresh).to_series()
