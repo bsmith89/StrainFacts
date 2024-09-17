@@ -220,7 +220,7 @@ def metagenotype_entropy_error(
         err_accum / montecarlo_draws,
         coords=dict(sample=metagenotype.sample, position=metagenotype.position),
     )
-    sample_mean_err = (np.abs(err_elementwise**p * m).mean("position") / mu) ** (
+    sample_mean_err = (np.abs(err_elementwise ** p * m).mean("position") / mu) ** (
         1 / p
     )
     overall_mean_err = (sample_mean_err * mu).mean("sample") / mu.mean()

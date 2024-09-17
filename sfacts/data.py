@@ -591,7 +591,7 @@ class Genotype(WrappedDataArrayMixin):
             .stack()
             .to_xarray()
         )
-        return ((ent**norm).mean(over) ** (1 / norm)).rename("entropy")
+        return ((ent ** norm).mean(over) ** (1 / norm)).rename("entropy")
 
     def clusters(self, thresh, linkage="complete", **kwargs):
         dist = self.pdist("strain", **kwargs)
