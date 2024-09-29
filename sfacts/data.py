@@ -209,7 +209,7 @@ class WrappedDataArrayMixin:
         return self.__class__(data)
 
     def empty(self):
-        return np.product(self.data.shape) == 0
+        return np.prod(self.data.shape) == 0
 
     @classmethod
     def concat(cls, data, dim, rename=True):
