@@ -208,7 +208,6 @@ class WrappedDataArrayMixin:
             data[k] = data[k].to_series().rename(renamer).index
         return self.__class__(data)
 
-    @property
     def empty(self):
         return np.product(self.data.shape) == 0
 

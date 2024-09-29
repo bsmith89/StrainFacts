@@ -189,7 +189,7 @@ class FilterMetagenotype(AppInterface):
         ).select_samples_with_coverage(args.min_horizontal_cvrg)
         logging.info(f"Output metagenotype shapes: {mgen_filt.sizes}.")
 
-        if mgen_filt.empty:
+        if mgen_filt.empty():
             # NOTE: (2023-12-13) This edge case is necessary
             # only because some empty xr.DataArray objects
             # don't like to dump to NetCDF.
